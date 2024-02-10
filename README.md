@@ -25,32 +25,23 @@ pip install daimon-sdk
 
 ## Get Started
 
-### Connect to a Server
+### Create an Acount
 
-Create an account on the [Hub](https://hub.naptha.ai/). You get 1000 free NPT credits when you join. Explore available compute nodes. 
+Create an account on the [Hub](https://hub.naptha.ai/). You get 1000 free NPT credits when you join. 
 
-### Buy Compute
+### Explore Available Compute Nodes
 
-You can buy compute from a specific provider through the app, or via the command line:
+Navigate to the Compute Providers page to explore available compute nodes and compare prices. 
 
-```
-daimon purchase <auction_id>
-daimon purchases
-```
-
-### Connect to a Server
-
-Once you've bought credits you can connect to the server.
+Alternatively, you can use the CLI to see a list of available compute providers:
 
 ```
-from daimon_sdk import Daimon
-
-server_address = "https://node0.naptha.ai/"
-daimon = Daimon(server_address)
-daimon.login(username)
+daimon auctions
 ```
 
 ### Check out existing AI Modules
+
+Navigate to the AI Modules page to explore available AI modules to run on your compute node.
 
 ```
 daimon modules
@@ -60,11 +51,29 @@ daimon modules
 
 (Coming Soon)
 
+### Connect to a Server
+
+Once you've chosen a compute provider and an AI module, you can connect to the server via the commandline.
+
+```
+from daimon_sdk import Daimon
+
+server_address = "https://node0.naptha.ai/"
+daimon = Daimon(server_address)
+daimon.login(username)
+```
+
 ## Run module
 
 ```
 # usage: daimon run <module_id> <win_id> <module args>
 daimon run lot:e7pou44qbji8thduz9w9 wins:432tslnhplglb5gj5mz5 --prompt "what is the capital of france?"
+```
+
+## Check how much you spent
+
+```
+daimon purchases
 ```
 
 # Run a Node
