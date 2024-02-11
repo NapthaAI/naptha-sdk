@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "daimon-sdk-python"
+version = "0.1.0"
+description = ""
+authors = ["Richard Blythman <richardblythman@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+httpx = "^0.26.0"
+protobuf = "^4.25.2"
+surrealdb = "^0.3.2"
+pyjwt = "^2.8.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

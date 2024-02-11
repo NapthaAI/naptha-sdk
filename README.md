@@ -66,8 +66,7 @@ daimon.login(username)
 ## Run module
 
 ```
-# usage: daimon run <module_id> <win_id> <module args>
-daimon run lot:e7pou44qbji8thduz9w9 wins:432tslnhplglb5gj5mz5 --prompt "what is the capital of france?"
+daimon.run_task("chatflowmodule", prompt="what is the capital of france?")
 ```
 
 ## Check how much you spent
