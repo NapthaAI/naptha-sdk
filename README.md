@@ -28,7 +28,11 @@ pip install daimon-sdk
 
 ### Create an Acount
 
-Create an account on the [Hub](https://hub.naptha.ai/). You get 1000 free NPT credits when you join. 
+Create an account on the [Hub](https://hub.naptha.ai/). You get 1000 free NAP credits when you join. 
+
+```
+naptha credits
+```
 
 ### Explore Coworkers on the Network
 
@@ -37,7 +41,13 @@ Navigate to the Coworkers page. Coworkers are users that run full compute nodes 
 Alternatively, you can use the CLI to see a list of available Coworkers:
 
 ```
-daimon coworkers
+naptha coworkers
+```
+
+And their pricing plans:
+
+```
+naptha plans
 ```
 
 ### Check out available Co-Ops
@@ -47,7 +57,7 @@ Navigate to the Co-Ops page. You can think of a Co-Op like a decentralized workf
 You can also use the CLI to explore available Co-Ops that you can take part in with Coworkers, along with their price:
 
 ```
-daimon coops
+naptha coops
 ```
 
 ### Create your own Co-Op
@@ -61,6 +71,12 @@ Once you've found a Coworker and a Co-Op you'd like to engage in, you can run an
 Alternatively, you can use the commandline tool to connect with the Coworker and run the Co-Op
 
 ```
+# usage: naptha run <coworker_id> <coop_id> <coop args>
+naptha run coworker1 chat-coop --prompt "what is the capital of france?"
+naptha run node:coworker1 chat_coop --prompt "what is the capital of france?"
+```
+
+```
 from daimon_sdk import Daimon
 
 coworker_address = "https://node0.naptha.ai/"
@@ -72,7 +88,7 @@ daimon.run_task("chat-coop", prompt="what is the capital of france?")
 ## Check how much you spent
 
 ```
-daimon purchases
+naptha purchases
 ```
 
 # Run a Node

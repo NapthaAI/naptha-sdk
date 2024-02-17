@@ -6,19 +6,17 @@ from typing import Dict, List, Tuple, Optional
 import httpx
 
 
-class Daimon:
-    """The Daimon class is the entry point into NapthaAI Daimon."""
-
+class Coworker:
     def __init__(self, username, password, node_address):
         self.username = username
         self.password = password
         self.node_address = node_address
 
-    async def run_task(self, job):
+    async def run_task(self, task_input):
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    f"{self.node_address}/CreateTask", json=job
+                    f"{self.node_address}/CreateTask", json=task_input
                 )
                 if response.status_code != 200:
                     print(f"Failed to create task: {response.text}")

@@ -15,3 +15,6 @@ pyjwt = "^2.8.0"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+naptha = "cli:cli"

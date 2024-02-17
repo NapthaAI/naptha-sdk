@@ -64,11 +64,43 @@ class Hub:
         user_id = self._decode_token(user)
         return True, user, user_id
 
+    async def get_user(self, user_id: str) -> Optional[Dict]:
+        return await self.surrealdb.select(user_id)
+
     async def list_sellers(self) -> List:
         return await self.surrealdb.query("SELECT * FROM auction;")
 
-    async def check_credits(self, purchases: Dict) -> List:
-        return await self.surrealdb.query("SELECT * FROM wins WHERE in=$user;", {"user": purchases['me']})
+    async def get_credits(self) -> List:
+        user = await self.get_user(self.user_id)
+        return user['credits']
 
-    async def buy_credits(self, purchase: Dict) -> Tuple[bool, Optional[Dict]]:
-        return await self.surrealdb.query("RELATE $me->requests_to_bid_on->$auction SET amount=10.0;", purchase)
+    async def get_node(self, node_id: str) -> Optional[Dict]:
+        return await self.surrealdb.select(node_id)
+
+    async def list_nodes(self) -> List:
+        return await self.surrealdb.select("node")
+
+    async def list_modules(self, module_id=None) -> List:
+        if not module_id:
+            modules = await self.surrealdb.query("SELECT * FROM module;")
+            return modules[0]['result']
+        else:
+            module = await self.surrealdb.query("SELECT * FROM module WHERE id=$module_id;", {"module_id": module_id})
+            return module[0]['result'][0]
+
+    async def list_plans(self, node: Dict) -> List:
+        plans = await self.surrealdb.query("SELECT * FROM auction WHERE node=$node;", node)
+        plans = plans[0]['result']
+        return plans
+
+    async def list_purchases(self, plan_id=None) -> List:
+        if not plan_id:
+            purchases = await self.surrealdb.query("SELECT * FROM wins WHERE in=$user;", {"user": self.user_id})
+            return purchases[0]['result']
+        else:
+            purchases = await self.surrealdb.query("SELECT * FROM wins WHERE in=$user AND out=$plan;", {"user": self.user_id, "plan": plan_id})
+            return purchases[0]['result'][0]
+
+    async def purchase(self, purchase: Dict) -> Tuple[bool, Optional[Dict]]:
+        purchase = await self.surrealdb.query("RELATE $me->requests_to_bid_on->$auction SET amount=1.0;", purchase)
+        return purchase[0]['result'][0]
