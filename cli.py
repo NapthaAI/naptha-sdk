@@ -1,7 +1,7 @@
 import argparse
 import asyncio
-from naptha.hub import Hub
-from naptha.coworker import Coworker
+from naptha_sdk.hub import Hub
+from naptha_sdk.coworker import Coworker
 import time
 
 async def creds(hub):

@@ -1,9 +1,0 @@
-syntax = "proto3";
-
-message Request {
-    string prompt = 1;
-}
-
-message Reply {
-    string answer = 1;
-}
