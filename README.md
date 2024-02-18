@@ -16,12 +16,12 @@
           #%#%#%%#               Decentralized Compute for Multi-Agent Co-Ops   
                                                                 www.naptha.ai
 
-# Daimon Python SDK
+# Naptha Python SDK
 
 ## Install
 
 ```
-pip install daimon-sdk
+pip install naptha-sdk
 ```
 
 ## Get Started
@@ -72,17 +72,7 @@ Alternatively, you can use the commandline tool to connect with the Coworker and
 
 ```
 # usage: naptha run <coworker_id> <coop_id> <coop args>
-naptha run coworker1 chat-coop --prompt "what is the capital of france?"
 naptha run node:coworker1 chat_coop --prompt "what is the capital of france?"
-```
-
-```
-from daimon_sdk import Daimon
-
-coworker_address = "https://node0.naptha.ai/"
-daimon = Daimon(coworker_address)
-daimon.login(username)
-daimon.run_task("chat-coop", prompt="what is the capital of france?")
 ```
 
 ## Check how much you spent
@@ -93,4 +83,4 @@ naptha purchases
 
 # Run a Node
 
-You can run your own Daimon node to become a Coworker, and earn rewards for engaging in Co-Ops. Follow the instructions at https://github.com/NapthaAI/daimon-node
+You can run your own Naptha Coworker node to become a Coworker, and earn rewards for engaging in Co-Ops. Follow the instructions at https://github.com/NapthaAI/coworker-node

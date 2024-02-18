@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "daimon-sdk-python"
+name = "naptha-sdk"
 version = "0.1.0"
 description = ""
 authors = ["Richard Blythman <richardblythman@gmail.com>"]

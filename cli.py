@@ -1,7 +1,7 @@
 import argparse
 import asyncio
-from daimon_sdk_python.hub import Hub
-from daimon_sdk_python.coworker import Coworker
+from naptha.hub import Hub
+from naptha.coworker import Coworker
 import time
 
 async def creds(hub):
