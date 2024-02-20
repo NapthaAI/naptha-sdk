@@ -26,7 +26,7 @@ pip install naptha-sdk
 
 ## Get Started
 
-### Create an Acount
+### Create an Account
 
 Create an account on the [Hub](https://hub.naptha.ai/). You get 1000 free NAP credits when you join. 
 
@@ -50,6 +50,8 @@ And their pricing plans:
 naptha plans
 ```
 
+Make note of a Node ID for running a Co-Op below.
+
 ### Check out available Co-Ops
 
 Navigate to the Co-Ops page. You can think of a Co-Op like a decentralized workflow or app that you can take part in with one or more Coworkers. Rather than running on a central server, Co-Ops can run across many compute nodes with many local data sources, opening up new use cases. Co-Ops typically involve one or more LLMs, along with humans in the loop. Coworkers can set a price for running Co-Ops. 
@@ -64,15 +66,15 @@ naptha coops
 
 (Coming Soon)
 
-### Connect to a Coworker and Run a Co-Op
+### Run a Co-Op
 
 Once you've found a Coworker and a Co-Op you'd like to engage in, you can run and view the results using the Hub. 
 
-Alternatively, you can use the commandline tool to connect with the Coworker and run the Co-Op
+Alternatively, you can use the commandline tool to connect with the Coworker and run the Co-Op (replace the node ID with a real node ID found on the Hub).
 
 ```
 # usage: naptha run <coworker_id> <coop_id> <coop args>
-naptha run node:coworker1 chat_coop --prompt "what is the capital of france?"
+naptha run node:j9viyti2xh1qkeglsr41 chat_coop --prompt "what is the capital of france?"
 ```
 
 ## Check how much you spent
