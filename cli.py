@@ -3,6 +3,14 @@ import asyncio
 from naptha_sdk.hub import Hub
 from naptha_sdk.coworker import Coworker
 import time
+import yaml
+
+def load_yaml_to_dict(file_path):
+    with open(file_path, 'r') as file:
+        # Load the YAML content into a Python dictionary
+        yaml_content = yaml.safe_load(file)
+    return yaml_content
+
 
 async def creds(hub):
     return await hub.get_credits()
@@ -29,7 +37,13 @@ async def plans(hub, node):
         print(plan) 
     return plans
 
-async def run(hub, node_id, module_id, prompt):
+async def run(hub, node_id, module_id, prompt=None, yaml_file=None):
+    if yaml_file:
+        module_params = load_yaml_to_dict(yaml_file)
+        print(f"Running module {module_id} with parameters: {module_params}")
+    else:
+        module_params = None
+
     creds = await hub.get_credits()
     plans = await hub.list_plans({"node": f"{node_id}"})
     plans = plans[0]
@@ -56,12 +70,20 @@ async def run(hub, node_id, module_id, prompt):
 
         coworker = Coworker("buyer1", "buyer1pass", node['address'])
 
-        job = await coworker.run_task(task_input={
-            'user_id': hub.user_id,
-            'purchase_id': purchases['id'], # "wins:7uihf6oem7b9bho9e216", 
-            "module_id": module_id,
-            "module_params": {"prompt": "tell me a joke"}
-        })
+        if module_params:
+            job = await coworker.run_task(task_input={
+                'user_id': hub.user_id,
+                'purchase_id': purchases['id'], 
+                "module_id": module_id,
+                "module_params": module_params
+            })
+        else:
+            job = await coworker.run_task(task_input={
+                'user_id': hub.user_id,
+                'purchase_id': purchases['id'], 
+                "module_id": module_id,
+                "module_params": {"prompt": prompt}
+            })
 
         while True:
             j = await coworker.check_task({"id": job['id']})
@@ -93,16 +115,27 @@ async def main():
     parser = argparse.ArgumentParser(description="CLI with 'auctions' and 'run' commands")
     subparsers = parser.add_subparsers(title="commands", dest="command")
 
-    # Subparser for 'auctions' command
+    # Subparser for co-workers
     coworkers_parser = subparsers.add_parser("coworkers", help="List available Coworker Nodes.")
+
+    # Subparser for co-ops
     coops_parser = subparsers.add_parser("coops", help="List available Co-Ops.")
+
+    # Subparser for plans
     plans_parser = subparsers.add_parser("plans", help="List available plans.")
     plans_parser.add_argument("node", help="Select the node.")
+
+    # Subparser for run
     run_parser = subparsers.add_parser("run", help="Execute run command.")
     run_parser.add_argument("node", help="Select the node to run on")
     run_parser.add_argument("module", help="Select the module to run")
-    run_parser.add_argument("--prompt", help="Prompt message")
+    run_parser.add_argument("-p", "--prompt", help="Prompt message")
+    run_parser.add_argument("-f", "--file", help="YAML file containing command parameters")
+    
+    # Subparser for credits
     credits_parser = subparsers.add_parser("credits", help="Show available credits.")
+
+    # Subparser for purchases
     purchases_parser = subparsers.add_parser("purchases", help="Show previous purchases.")
 
     args = parser.parse_args()
@@ -116,7 +149,7 @@ async def main():
     elif args.command == "plans":
         await plans(hub, args.node)    
     elif args.command == "run":
-        await run(hub, args.node, args.module, args.prompt)    
+        await run(hub, args.node, args.module, args.prompt, args.file)
     elif args.command == "purchases":
         await purchases(hub)   
     else:
