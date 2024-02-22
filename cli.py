@@ -4,6 +4,24 @@ from naptha_sdk.hub import Hub
 from naptha_sdk.coworker import Coworker
 import time
 import yaml
+from pathlib import Path
+import tarfile
+import tempfile
+import logging
+
+def get_logger(name: str) -> logging.Logger:
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+    return logger
+
+logger = get_logger(__name__)
 
 def load_yaml_to_dict(file_path):
     with open(file_path, 'r') as file:
@@ -57,10 +75,10 @@ async def run(hub, node_id, module_id, prompt=None, yaml_file=None):
             elif response == 'n':
                 return False
             else:
-                print("Invalid input. Please enter 'y' or 'n'.")
+                logger.error("Invalid input. Please enter 'y' or 'n'.")
 
     if confirm():
-        print("Running...")
+        logger.info("Purchasing plan...")
 
         purchase = await hub.purchase(purchase={
             "me": hub.user_id,
@@ -89,7 +107,7 @@ async def run(hub, node_id, module_id, prompt=None, yaml_file=None):
             j = await coworker.check_task({"id": job['id']})
 
             status = j['status']
-            print(status)   
+            logger.info(f"Job status: {status}")  
 
             if status == 'completed':
                 break
@@ -99,17 +117,64 @@ async def run(hub, node_id, module_id, prompt=None, yaml_file=None):
             time.sleep(3)
 
         if j['status'] == 'completed':
-            print(j['reply'])
+            logger.info(f"Job completed successfully! Job details: {job}")
+            logger.info(f"Job output:\n{j['reply']}")
+
         else:
-            print(j['error_message'])
+            logger.error(f"Job failed. Job details: {job}")
+            logger.error(f"Job output:\n{j['error_message']}")
 
     else:
-        print("Exiting...")
+        logger.info("Exiting...")
 
+async def write_to_storage(node_id, storage_input):
+    """Write to storage."""
+    logger.info("Writing to storage...")
+    logger.info(f"Storage input: {storage_input}")
+    hub = await Hub("buyer1", "buyer1pass", "wss://hub.algoverai.link")
+    node = await hub.get_node(node_id)
+    coworker = Coworker("buyer1", "buyer1pass", node['address'])
+    storage = await coworker.write_storage(storage_input)
+    logger.info(f"Storage written: {storage}")
+    return storage
 
+async def read_from_storage(node_id, storage_input, output_dir):
+    """Read from storage."""
+    logger.info("Reading from storage...")
+    hub = await Hub("buyer1", "buyer1pass", "wss://hub.algoverai.link")
+    node = await hub.get_node(node_id)
+    coworker = Coworker("buyer1", "buyer1pass", node['address'])
+    response = await coworker.read_storage(storage_input)
+    if response.status_code == 200:
+        storage = response.content  # Here's the crucial change
+        logger.info("Retrieved storage.")
+        
+        # Temporary file handling
+        temp_file_name = None
+        with tempfile.NamedTemporaryFile(delete=False, mode='wb') as tmp_file:
+            tmp_file.write(storage)  # storage is now a bytes-like object
+            temp_file_name = tmp_file.name
+    
+        # Ensure output directory exists
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+    
+        # Extract the tar.gz file
+        with tarfile.open(temp_file_name, "r:gz") as tar:
+            tar.extractall(path=output_dir)
+    
+        logger.info(f"Extracted storage to {output_dir}.")
+        
+        # Cleanup temporary file
+        Path(temp_file_name).unlink(missing_ok=True)
+    
+        return output_dir
+    else:
+        logger.error("Failed to retrieve storage.")
 
 async def main():
-    hub_endpoint = "ws://localhost:3003/rpc"
+    # hub_endpoint = "ws://54.82.77.109:3003/rpc"
+    hub_endpoint = "wss://hub.algoverai.link"
     hub = await Hub("buyer1", "buyer1pass", hub_endpoint)
 
     parser = argparse.ArgumentParser(description="CLI with 'auctions' and 'run' commands")
@@ -138,6 +203,17 @@ async def main():
     # Subparser for purchases
     purchases_parser = subparsers.add_parser("purchases", help="Show previous purchases.")
 
+    # subparser for write_storage
+    write_storage_parser = subparsers.add_parser("write_storage", help="Write to storage.")
+    write_storage_parser.add_argument("-n", "--node", help="Select the node to write to")
+    write_storage_parser.add_argument("-i", "--storage_input", help="Comma separated list of files or directories to write to storage")
+
+    # subparser for read_storage
+    read_storage_parser = subparsers.add_parser("read_storage", help="Read from storage.")
+    read_storage_parser.add_argument("-n", "--node", help="Select the node to read from")
+    read_storage_parser.add_argument("-id", "--job_id", help="Job ID to read from")
+    read_storage_parser.add_argument("-o", "--output_dir", help="Output directory to write to")
+
     args = parser.parse_args()
 
     if args.command == "credits":
@@ -151,7 +227,11 @@ async def main():
     elif args.command == "run":
         await run(hub, args.node, args.module, args.prompt, args.file)
     elif args.command == "purchases":
-        await purchases(hub)   
+        await purchases(hub)
+    elif args.command == "write_storage":
+        await write_to_storage(args.node, args.storage_input.split(','))   
+    elif args.command == "read_storage":
+        await read_from_storage(args.node, args.job_id, args.output_dir)
     else:
         parser.print_help()
 
