@@ -30,7 +30,7 @@ echo "Module Name: $MODULE_NAME"
 echo "Prompt: $PROMPT"
 
 # Construct and run the command
-COMMAND="naptha run $NODE_ID $MODULE_NAME -p \"$PROMPT\""
+COMMAND="naptha run $NODE_ID $MODULE_NAME -p \"$PROMPT\" -y"
 echo "Running command: $COMMAND"
 eval $COMMAND
 

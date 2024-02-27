@@ -9,6 +9,8 @@ import tarfile
 import tempfile
 import logging
 
+HUB_ENDPOINT = "wss://hub.algoverai.link"
+
 def get_logger(name: str) -> logging.Logger:
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
@@ -55,7 +57,7 @@ async def plans(hub, node):
         print(plan) 
     return plans
 
-async def run(hub, node_id, module_id, prompt=None, yaml_file=None):
+async def run(hub, node_id, module_id, prompt=None, yaml_file=None, save_path=None):
     if yaml_file:
         module_params = load_yaml_to_dict(yaml_file)
         print(f"Running module {module_id} with parameters: {module_params}")
@@ -119,29 +121,28 @@ async def run(hub, node_id, module_id, prompt=None, yaml_file=None):
         if j['status'] == 'completed':
             logger.info(f"Job completed successfully! Job details: {job}")
             logger.info(f"Job output:\n{j['reply']}")
+            return job['id']
 
         else:
             logger.error(f"Job failed. Job details: {job}")
             logger.error(f"Job output:\n{j['error_message']}")
+            return job['id']
 
     else:
         logger.info("Exiting...")
 
-async def write_to_storage(node_id, storage_input):
+async def write_to_storage(hub, node_id, storage_input):
     """Write to storage."""
     logger.info("Writing to storage...")
-    logger.info(f"Storage input: {storage_input}")
-    hub = await Hub("buyer1", "buyer1pass", "wss://hub.algoverai.link")
     node = await hub.get_node(node_id)
     coworker = Coworker("buyer1", "buyer1pass", node['address'])
     storage = await coworker.write_storage(storage_input)
     logger.info(f"Storage written: {storage}")
     return storage
 
-async def read_from_storage(node_id, storage_input, output_dir):
+async def read_from_storage(hub, node_id, storage_input, output_dir):
     """Read from storage."""
     logger.info("Reading from storage...")
-    hub = await Hub("buyer1", "buyer1pass", "wss://hub.algoverai.link")
     node = await hub.get_node(node_id)
     coworker = Coworker("buyer1", "buyer1pass", node['address'])
     response = await coworker.read_storage(storage_input)
@@ -229,9 +230,9 @@ async def main():
     elif args.command == "purchases":
         await purchases(hub)
     elif args.command == "write_storage":
-        await write_to_storage(args.node, args.storage_input.split(','))   
+        await write_to_storage(hub, args.node, args.storage_input.split(','))   
     elif args.command == "read_storage":
-        await read_from_storage(args.node, args.job_id, args.output_dir)
+        await read_from_storage(hub, args.node, args.job_id, args.output_dir)
     else:
         parser.print_help()
 
