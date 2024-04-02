@@ -28,7 +28,7 @@ pip install naptha-sdk
 
 ### Create an Account
 
-Create an account on the [Hub](https://hub.naptha.ai/). You get 1000 free NAP credits when you join. 
+Create an account on the [Hub](https://hub.naptha.ai/) and buy a Naptha subscription ($1 for 1000 credits).
 
 ```
 naptha credits
@@ -74,7 +74,7 @@ Alternatively, you can use the commandline tool to connect with the Coworker and
 
 ```
 # usage: naptha run <coworker_id> <coop_id> <coop args>
-naptha run node:j9viyti2xh1qkeglsr41 chat_coop --prompt "what is the capital of france?"
+naptha run node:58d8iv526jr6fbxlndrw chat_coop --prompt "what is the capital of france?"
 ```
 
 ## Check how much you spent

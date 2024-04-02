@@ -11,6 +11,8 @@ httpx = "^0.26.0"
 protobuf = "^4.25.2"
 surrealdb = "^0.3.2"
 pyjwt = "^2.8.0"
+python-dotenv = "^1.0.1"
+payments-py = "^0.1.0"
 
 [build-system]
 requires = ["poetry-core"]
