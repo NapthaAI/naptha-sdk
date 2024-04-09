@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple, Optional
 
 
 class Hub:
-    """The Hub class is the entry point into NapthaAI Hub."""
+    """The Hub class is the entry point into Naptha AI Hub."""
 
     def __init__(self, username, password, endpoint, *args, **kwargs):
         self.username = username
@@ -67,9 +67,6 @@ class Hub:
     async def get_user(self, user_id: str) -> Optional[Dict]:
         return await self.surrealdb.select(user_id)
 
-    async def list_sellers(self) -> List:
-        return await self.surrealdb.query("SELECT * FROM auction;")
-
     async def get_credits(self) -> List:
         user = await self.get_user(self.user_id)
         return user['credits']
@@ -88,19 +85,30 @@ class Hub:
             module = await self.surrealdb.query("SELECT * FROM module WHERE id=$module_id;", {"module_id": module_id})
             return module[0]['result'][0]
 
-    async def list_plans(self, node: Dict) -> List:
-        plans = await self.surrealdb.query("SELECT * FROM auction WHERE node=$node;", node)
-        plans = plans[0]['result']
-        return plans
+    async def list_tasks(self) -> List:
+        tasks = await self.surrealdb.query("SELECT * FROM lot;")
+        return tasks[0]['result']
 
-    async def list_purchases(self, plan_id=None) -> List:
+    async def list_rfps(self) -> List:
+        rfps = await self.surrealdb.query("SELECT * FROM auction;")
+        return rfps[0]['result']
+
+    async def list_rfps_from_consumer(self, consumer: Dict) -> List:
+        proposals = await self.surrealdb.query("SELECT * FROM auction WHERE node=$node;", consumer)
+        proposals = proposals[0]['result']
+        return proposals
+
+    async def submit_proposal(self, proposal: Dict) -> Tuple[bool, Optional[Dict]]:
+        proposal = await self.surrealdb.query("RELATE $me->requests_to_bid_on->$auction SET amount=1.0;", proposal)
+        return proposal[0]['result'][0]
+
+    def list_active_proposals(self):
+        pass
+
+    async def list_accepted_proposals(self, plan_id=None) -> List:
         if not plan_id:
-            purchases = await self.surrealdb.query("SELECT * FROM wins WHERE in=$user;", {"user": self.user_id})
-            return purchases[0]['result']
+            proposals = await self.surrealdb.query("SELECT * FROM wins WHERE in=$user;", {"user": self.user_id})
+            return proposals[0]['result']
         else:
-            purchases = await self.surrealdb.query("SELECT * FROM wins WHERE in=$user AND out=$plan;", {"user": self.user_id, "plan": plan_id})
-            return purchases[0]['result'][0]
-
-    async def purchase(self, purchase: Dict) -> Tuple[bool, Optional[Dict]]:
-        purchase = await self.surrealdb.query("RELATE $me->requests_to_bid_on->$auction SET amount=1.0;", purchase)
-        return purchase[0]['result'][0]
+            proposals = await self.surrealdb.query("SELECT * FROM wins WHERE in=$user AND out=$plan;", {"user": self.user_id, "plan": plan_id})
+            return proposals[0]['result'][0]
