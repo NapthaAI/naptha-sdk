@@ -1,38 +1,41 @@
 import argparse
 import asyncio
 from dotenv import load_dotenv
-# from naptha_sdk.hub import Hub
-from naptha_sdk.payments import Hub
-from naptha_sdk.coworker import Coworker
+from naptha_sdk.hub import Hub
+from naptha_sdk.services import Services
+import os
 import time
 
 load_dotenv()
 
-def creds(hub):
-    return hub.show_credits()
+def creds(services):
+    return services.show_credits()
 
-async def coworkers(hub):
-    coworkers = await hub.list_nodes()
-    for coworker in coworkers:
-        print(coworker) 
+async def list_nodes(hub):
+    nodes = await hub.list_nodes()
+    for node in nodes:
+        print(node) 
 
-async def coops(hub):
+async def list_modules(hub):
     modules = await hub.list_modules()
     for module in modules:
         print(module) 
 
-async def plans(hub, node):
-    plans = await hub.list_plans({"node": node})
-    plans = plans
-    for plan in plans:
-        print(plan) 
-    return plans
+async def list_tasks(hub):
+    tasks = await hub.list_tasks()
+    for task in tasks:
+        print(task) 
 
-async def run(hub, node_id, module_id, prompt):
-    creds = await hub.get_credits()
-    plans = await hub.list_plans({"node": f"{node_id}"})
-    plans = plans[0]
-    node = await hub.get_node(node_id)
+async def list_rfps(hub):
+    rfps = await hub.list_rfps()
+    for rfp in rfps:
+        print(rfp) 
+
+async def run(services, node_id, module_id, prompt):
+    creds = await services.show_credits()
+    print('=========', creds)
+
+    nodes = services.get_nodes()
 
     def confirm():
         while True:
@@ -47,23 +50,21 @@ async def run(hub, node_id, module_id, prompt):
     if confirm():
         print("Running...")
 
-        purchase = await hub.purchase(purchase={
+        purchase = await services.purchase(purchase={
             "me": hub.user_id,
             "auction": plans['id'], 
         })
-        purchases = await hub.list_purchases(plan_id=purchase['out'])
+        purchases = await services.list_purchases(plan_id=purchase['out'])
 
-        coworker = Coworker("buyer1", "buyer1pass", node['address'])
-
-        job = await coworker.run_task(task_input={
+        job = await services.run_task(task_input={
             'user_id': hub.user_id,
             'purchase_id': purchases['id'], # "wins:7uihf6oem7b9bho9e216", 
             "module_id": module_id,
-            "module_params": {"prompt": "tell me a joke"}
+            "module_params": {"points": ["Loves to travel", "Enjoys reading", "Loves to cook"]}
         })
 
         while True:
-            j = await coworker.check_task({"id": job['id']})
+            j = await services.check_task({"id": job['id']})
 
             status = j['status']
             print(status)   
@@ -86,39 +87,40 @@ async def run(hub, node_id, module_id, prompt):
 
 
 async def main():
-    hub_endpoint = "ws://localhost:3001/rpc"
-    # hub_endpoint = "wss://hub.algoverai.link"
-    # hub = await Hub("buyer1", "buyer1pass", hub_endpoint)
-    hub = Hub()
+    hub_endpoint = os.getenv("HUB_ENDPOINT")
+    username = os.getenv("HUB_USER")
+    password = os.getenv("HUB_PASS")
 
-    parser = argparse.ArgumentParser(description="CLI with 'auctions' and 'run' commands")
+    hub = await Hub(username, password, hub_endpoint)
+    services = Services()
+
+    parser = argparse.ArgumentParser(description="CLI with for Naptha")
     subparsers = parser.add_subparsers(title="commands", dest="command")
 
-    coworkers_parser = subparsers.add_parser("coworkers", help="List available Coworker Nodes.")
-    coops_parser = subparsers.add_parser("coops", help="List available Co-Ops.")
-    plans_parser.add_argument("node", help="Select the node.")
+    nodes_parser = subparsers.add_parser("nodes", help="List available nodes.")
+    modules_parser = subparsers.add_parser("modules", help="List available modules.")
+    tasks_parser = subparsers.add_parser("tasks", help="List available tasks.")
+    rfps_parser = subparsers.add_parser("rfps", help="List available RFPs.")
     run_parser = subparsers.add_parser("run", help="Execute run command.")
     run_parser.add_argument("node", help="Select the node to run on")
     run_parser.add_argument("module", help="Select the module to run")
     run_parser.add_argument("--prompt", help="Prompt message")
     credits_parser = subparsers.add_parser("credits", help="Show available credits.")
-    services_parser = subparsers.add_parser("services", help="List available services.")
-    subscription_parser = subparsers.add_parser("subscription", help="Order subscription.")
 
     args = parser.parse_args()
 
     if args.command == "credits":
-        creds(hub)  
-    elif args.command == "coworkers":
-        await coworkers(hub)   
-    elif args.command == "coops":
-        await coops(hub)  
+        creds(services)  
+    elif args.command == "nodes":
+        await list_nodes(hub)   
+    elif args.command == "modules":
+        await list_modules(hub)  
+    elif args.command == "tasks":
+        await list_tasks(hub)  
+    elif args.command == "rfps":
+        await list_rfps(hub)  
     elif args.command == "run":
         await run(hub, args.node, args.module, args.prompt)    
-    elif args.command == "services":
-        get_service_details(hub, "did:nv:a9ff0f7a6632c944d277af2c65e7d80e1579239695e1c4e2ff3fd278f4d0e1aa" )  
-    elif args.command == "subscription":
-        get_naptha_subscription()   
     else:
         parser.print_help()
 
