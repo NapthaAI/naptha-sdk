@@ -31,15 +31,14 @@ async def list_rfps(hub):
     for rfp in rfps:
         print(rfp) 
 
-async def run(services, node_id, module_id, prompt):
-    creds = await services.show_credits()
-    print('=========', creds)
-
-    nodes = services.get_nodes()
+async def run(hub, services, module_id, prompt):
+    creds = services.show_credits()
+    creds = 1000
+    price = 0
 
     def confirm():
         while True:
-            response = input(f"You have {creds} credits. Running this Co-Op will cost {plans['buy_it_now_price']} credits. Would you like to proceed? (y/n): ").strip().lower()
+            response = input(f"You have {creds} credits. Running this workflow will cost {price} credits. Would you like to proceed? (y/n): ").strip().lower()
             if response == 'y':
                 return True
             elif response == 'n':
@@ -50,17 +49,10 @@ async def run(services, node_id, module_id, prompt):
     if confirm():
         print("Running...")
 
-        purchase = await services.purchase(purchase={
-            "me": hub.user_id,
-            "auction": plans['id'], 
-        })
-        purchases = await services.list_purchases(plan_id=purchase['out'])
-
         job = await services.run_task(task_input={
             'user_id': hub.user_id,
-            'purchase_id': purchases['id'], # "wins:7uihf6oem7b9bho9e216", 
             "module_id": module_id,
-            "module_params": {"points": ["Loves to travel", "Enjoys reading", "Loves to cook"]}
+            "module_params": {"prompt": prompt}
         })
 
         while True:
@@ -102,7 +94,6 @@ async def main():
     tasks_parser = subparsers.add_parser("tasks", help="List available tasks.")
     rfps_parser = subparsers.add_parser("rfps", help="List available RFPs.")
     run_parser = subparsers.add_parser("run", help="Execute run command.")
-    run_parser.add_argument("node", help="Select the node to run on")
     run_parser.add_argument("module", help="Select the module to run")
     run_parser.add_argument("--prompt", help="Prompt message")
     credits_parser = subparsers.add_parser("credits", help="Show available credits.")
@@ -120,7 +111,7 @@ async def main():
     elif args.command == "rfps":
         await list_rfps(hub)  
     elif args.command == "run":
-        await run(hub, args.node, args.module, args.prompt)    
+        await run(hub, services, args.module, args.prompt)    
     else:
         parser.print_help()
 

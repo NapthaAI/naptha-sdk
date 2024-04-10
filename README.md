@@ -85,20 +85,28 @@ Modules can be workflows, agents or multi-agent systems. Modules typically invol
 naptha modules
 ```
 
-### Create your own Module
+### Get Credits (Nevermined app currently not working)
 
-(Coming Soon)
+Log in and subscribe to Naptha's [Free Subscription](https://testing.nevermined.app/en/subscription/did:nv:bcc485bc7155a50d13ba425a3b8bbd30eea8e4c90ecfeadfedf5cdd702e3c793) tier on the Nevermined app.
+
+You can check your credits using:
+
+```
+naptha credits
+```
 
 ### Run a Module
 
-Once you've found a nodes and a worklfow you'd like to run, you can run and view the results. 
-
-You can use the commandline tool to connect with the node and run the workflow (replace the node ID with a real node ID found on the Hub).
+Now you've found a node and a workflow you'd like to run, so let's run it! You can use the commandline tool to connect with the node and run the workflow (replace the node ID with a real node ID found on the Hub).
 
 ```
-# usage: naptha run <coworker_id> <coop_id> <coop args>
-naptha run node:58d8iv526jr6fbxlndrw chat_coop --prompt "what is the capital of france?"
+# usage: naptha run <module_id> <module args>
+naptha run chat --prompt "tell me a joke" 
 ```
+
+### Create your own Module
+
+(Coming Soon)
 
 # Run a Node
 
