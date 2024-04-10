@@ -36,6 +36,8 @@ async def run(hub, services, module_id, prompt):
     creds = 1000
     price = 0
 
+    modules = await hub.list_modules()
+
     def confirm():
         while True:
             response = input(f"You have {creds} credits. Running this workflow will cost {price} credits. Would you like to proceed? (y/n): ").strip().lower()
