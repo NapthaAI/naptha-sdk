@@ -119,19 +119,23 @@ from naptha_sdk.services import Services
 ```
 
 You'll also want to set the necessary environmental variables before running the rest of your script. One simple way to do this is like so:
+
 ```python
 from dotenv import load_dotenv
 
 load_dotenv()
 ```
 
-Decentralized agent workflows are necessarily asyncranous. We'll need a library to handle async updates.
+Decentralized agent workflows are necessarily asynchronous. We'll need a library to handle async updates:
+
 ```python
 import asyncio
 ```
-Now that we've imported the necessary compoenents, we can easily define functions to assist in orchestration.
+
+Now that we've imported the necessary components, we can easily define functions to assist in orchestration.
 
 A function to list tasks could look like this:
+
 ```python
 async def list_tasks(hub):
     tasks = await hub.list_tasks()
