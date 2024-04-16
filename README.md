@@ -92,14 +92,18 @@ Modules can be workflows, agents or multi-agent systems. Modules typically invol
 naptha modules
 ```
 
-### Get Credits (Nevermined app currently not working)
+### Get Credits
 
-Log in and subscribe to Naptha's [Free Subscription](https://testing.nevermined.app/en/subscription/did:nv:bcc485bc7155a50d13ba425a3b8bbd30eea8e4c90ecfeadfedf5cdd702e3c793) tier on the Nevermined app.
-
-You can check your credits using:
+Log in and subscribe to Naptha's [Free Subscription](https://testing.nevermined.app/en/subscription/did:nv:bcc485bc7155a50d13ba425a3b8bbd30eea8e4c90ecfeadfedf5cdd702e3c793) tier on the Nevermined app. Select the Profile button in the top right-hand corner, and copy the address beside My Wallet. Paste this value to ```WALLET_ADDRESS``` in the ```.env``` file. You can now check your credits using:
 
 ```bash
 naptha credits
+```
+
+You can list available compute node services using:
+
+```bash
+naptha services
 ```
 
 ### Run a Module
@@ -108,7 +112,7 @@ Now you've found a node and a workflow you'd like to run, so let's run it! You c
 
 ```bash
 # usage: naptha run <module_id> <module args>
-naptha run chat --prompt "tell me a joke" 
+naptha run chat --prompt "tell me a joke" --local
 ```
 
 ## Using the SDK non-interactively

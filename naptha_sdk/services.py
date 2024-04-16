@@ -23,7 +23,8 @@ class Services:
 
     def get_service_url(self, service_did):
         response = self.payments.get_service_details(service_did)
-        print('=========', response)
+        print('Service URL: ', response)
+        return response
 
     def get_service_details(self, service_did):
         response = self.payments.get_service_token(service_did)
@@ -36,15 +37,22 @@ class Services:
         response = self.payments.get_asset_ddo(service_did)
         result = json.loads(response.content.decode())
         service_name = result['service'][0]['attributes']['main']['name']
-        return {service_name : service_did}
+        return service_name
 
-    def get_services(self):
-        response = self.payments.get_subscription_associated_services("did:nv:98fc642054d5a1a65ea9838bc4bad47ad6a2016e3b7b5ca9b2de693e2ea46d18")
-        print('========', response.content)
+    def list_services(self):
+        response = self.payments.get_subscription_associated_services(self.naptha_plan_did)
+        service_dids = json.loads(response.content.decode())
+        service_names = []
+        for did in service_dids:
+            service_names.append(self.get_asset_ddo(did))
+        print('Services: ', service_names)
+        return service_names
 
-    async def run_task(self, task_input):
-        self.access_token, self.proxy_address = os.getenv("JWT_TOKEN"), self.node_address
-        # self.access_token, self.proxy_address = self.get_service_details(service_did)
+    async def run_task(self, task_input, local):
+        if local:
+            self.access_token, self.proxy_address = None, self.node_address
+        else:
+            self.access_token, self.proxy_address = self.get_service_details(service_did)
         endpoint = self.proxy_address + "/CreateTask"
         try:
             async with httpx.AsyncClient() as client:

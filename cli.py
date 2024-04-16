@@ -11,6 +11,11 @@ load_dotenv()
 def creds(services):
     return services.show_credits()
 
+def list_services(services):
+    services = services.list_services()
+    for service in services:
+        print(service) 
+
 async def list_nodes(hub):
     nodes = await hub.list_nodes()
     for node in nodes:
@@ -31,12 +36,9 @@ async def list_rfps(hub):
     for rfp in rfps:
         print(rfp) 
 
-async def run(hub, services, module_id, prompt):
+async def run(hub, services, module_id, prompt, local):
     creds = services.show_credits()
-    creds = 1000
     price = 0
-
-    modules = await hub.list_modules()
 
     def confirm():
         while True:
@@ -55,7 +57,7 @@ async def run(hub, services, module_id, prompt):
             'user_id': hub.user_id,
             "module_id": module_id,
             "module_params": {"prompt": prompt}
-        })
+        }, local=local)
 
         while True:
             j = await services.check_task({"id": job['id']})
@@ -95,15 +97,20 @@ async def main():
     modules_parser = subparsers.add_parser("modules", help="List available modules.")
     tasks_parser = subparsers.add_parser("tasks", help="List available tasks.")
     rfps_parser = subparsers.add_parser("rfps", help="List available RFPs.")
+    orgs_parser = subparsers.add_parser("orgs", help="List current organizations.")
     run_parser = subparsers.add_parser("run", help="Execute run command.")
     run_parser.add_argument("module", help="Select the module to run")
     run_parser.add_argument("--prompt", help="Prompt message")
+    run_parser.add_argument("--local", action='store_true', help="Whether to run on local node.")
     credits_parser = subparsers.add_parser("credits", help="Show available credits.")
+    services_parser = subparsers.add_parser("services", help="Show available services.")
 
     args = parser.parse_args()
 
     if args.command == "credits":
         creds(services)  
+    elif args.command == "services":
+        list_services(services)  
     elif args.command == "nodes":
         await list_nodes(hub)   
     elif args.command == "modules":
@@ -113,7 +120,7 @@ async def main():
     elif args.command == "rfps":
         await list_rfps(hub)  
     elif args.command == "run":
-        await run(hub, services, args.module, args.prompt)    
+        await run(hub, services, args.module, args.prompt, args.local)    
     else:
         parser.print_help()
 
