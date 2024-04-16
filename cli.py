@@ -37,8 +37,6 @@ async def list_rfps(hub):
         print(rfp) 
 
 async def run(hub, services, module_id, prompt, local):
-    creds = services.show_credits()
-    price = 0
 
     def confirm():
         while True:
@@ -50,35 +48,41 @@ async def run(hub, services, module_id, prompt, local):
             else:
                 print("Invalid input. Please enter 'y' or 'n'.")
 
-    if confirm():
-        print("Running...")
-
-        job = await services.run_task(task_input={
-            'user_id': hub.user_id,
-            "module_id": module_id,
-            "module_params": {"prompt": prompt}
-        }, local=local)
-
-        while True:
-            j = await services.check_task({"id": job['id']})
-
-            status = j['status']
-            print(status)   
-
-            if status == 'completed':
-                break
-            if status == 'error':
-                break
-
-            time.sleep(3)
-
-        if j['status'] == 'completed':
-            print(j['reply'])
-        else:
-            print(j['error_message'])
-
+    if local == False:
+        creds = services.show_credits()
+        price = 0
+        confirm = confirm()
+        if not confirm:
+            print("Exiting...")
+            return None
     else:
-        print("Exiting...")
+        confirm = True
+
+    print("Running...")
+
+    job = await services.run_task(task_input={
+        'user_id': hub.user_id,
+        "module_id": module_id,
+        "module_params": {"prompt": prompt}
+    }, local=local)
+
+    while True:
+        j = await services.check_task({"id": job['id']})
+
+        status = j['status']
+        print(status)   
+
+        if status == 'completed':
+            break
+        if status == 'error':
+            break
+
+        time.sleep(3)
+
+    if j['status'] == 'completed':
+        print(j['reply'])
+    else:
+        print(j['error_message'])
 
 
 
