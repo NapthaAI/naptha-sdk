@@ -115,6 +115,10 @@ Now you've found a node and a workflow you'd like to run, so let's run it! You c
 naptha run chat --prompt "tell me a joke" --local
 ```
 
+```bash
+naptha run olas_prediction --prompt "Will there be an initial public offering on either the Shanghai Stock Exchange or the Shenzhen Stock Exchange before 1 January 2016?" --local
+```
+
 ## Using the SDK non-interactively
 To use the SDK as part of a script, start with importing the hub and service subcomponents.
 ```python
