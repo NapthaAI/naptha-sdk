@@ -43,10 +43,7 @@ async def list_rfps(hub):
     for rfp in rfps:
         print(rfp) 
 
-async def run(hub, services, module_id, prompt=None, yaml_file=None, local=False):
-    # convert local to bool
-    local = True if local == 'true' else False
-
+async def run(hub, services, module_id, prompt=None, yaml_file=None, local=False):   
     if yaml_file:
         module_params = load_yaml_to_dict(yaml_file)
         print(f"Running module {module_id} with parameters: {module_params}")
