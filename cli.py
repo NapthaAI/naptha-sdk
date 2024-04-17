@@ -43,7 +43,9 @@ async def list_rfps(hub):
     for rfp in rfps:
         print(rfp) 
 
-async def run(hub, services, module_id, prompt=None, yaml_file=None):
+async def run(hub, services, module_id, prompt=None, yaml_file=None, local=False):
+    # convert local to bool
+    local = True if local == 'true' else False
 
     if yaml_file:
         module_params = load_yaml_to_dict(yaml_file)
@@ -144,6 +146,7 @@ async def main():
     run_parser.add_argument("module", help="Select the module to run")
     run_parser.add_argument("--prompt", help="Prompt message")
     run_parser.add_argument("-f", "--file", help="YAML file with module parameters")
+    run_parser.add_argument("-l", "--local", help="Run locally", action="store_true")
 
     # Credits command
     credits_parser = subparsers.add_parser("credits", help="Show available credits.")
@@ -174,7 +177,7 @@ async def main():
     elif args.command == "rfps":
         await list_rfps(hub)  
     elif args.command == "run":
-        await run(hub, services, args.module, args.prompt, args.file)
+        await run(hub, services, args.module, args.prompt, args.file, args.local)
     elif args.command == "read_storage":
         await read_from_storage(services, args.job_id, args.output_dir)
     elif args.command == "write_storage":
