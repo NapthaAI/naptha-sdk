@@ -13,6 +13,7 @@ surrealdb = "^0.3.2"
 pyjwt = "^2.8.0"
 python-dotenv = "^1.0.1"
 payments-py = "^0.1.2"
+pyyaml = "^6.0.1"
 
 [build-system]
 requires = ["poetry-core"]

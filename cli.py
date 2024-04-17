@@ -5,8 +5,15 @@ from naptha_sdk.hub import Hub
 from naptha_sdk.services import Services
 import os
 import time
+import yaml
 
 load_dotenv()
+
+def load_yaml_to_dict(file_path):
+    with open(file_path, 'r') as file:
+        # Load the YAML content into a Python dictionary
+        yaml_content = yaml.safe_load(file)
+    return yaml_content
 
 def creds(services):
     return services.show_credits()
@@ -36,7 +43,13 @@ async def list_rfps(hub):
     for rfp in rfps:
         print(rfp) 
 
-async def run(hub, services, module_id, prompt, local):
+async def run(hub, services, module_id, prompt=None, yaml_file=None):
+
+    if yaml_file:
+        module_params = load_yaml_to_dict(yaml_file)
+        print(f"Running module {module_id} with parameters: {module_params}")
+    else:
+        module_params = {"prompt": prompt}        
 
     def confirm():
         while True:
@@ -66,6 +79,7 @@ async def run(hub, services, module_id, prompt, local):
         "module_params": {"prompt": prompt}
     }, local=local)
 
+    print(f"Job ID: {job['id']}")
     while True:
         j = await services.check_task({"id": job['id']})
 
@@ -85,6 +99,22 @@ async def run(hub, services, module_id, prompt, local):
         print(j['error_message'])
 
 
+async def read_from_storage(services, job_id, output_dir='.'):
+    """Read from storage."""
+    try:
+        await services.read_storage(job_id, output_dir)
+    except Exception as err:
+        print(f"Error: {err}")
+
+
+async def write_from_storage(services, storage_input):
+    """Write to storage."""
+    try:
+        response = await services.write_storage(storage_input)
+        print(response)
+    except Exception as err:
+        print(f"Error: {err}")
+
 
 async def main():
     hub_endpoint = os.getenv("HUB_ENDPOINT")
@@ -97,18 +127,38 @@ async def main():
     parser = argparse.ArgumentParser(description="CLI with for Naptha")
     subparsers = parser.add_subparsers(title="commands", dest="command")
 
+    # Node commands
     nodes_parser = subparsers.add_parser("nodes", help="List available nodes.")
+
+    # Module commands
     modules_parser = subparsers.add_parser("modules", help="List available modules.")
+
+    # Task commands
     tasks_parser = subparsers.add_parser("tasks", help="List available tasks.")
+
+    # RFP commands
     rfps_parser = subparsers.add_parser("rfps", help="List available RFPs.")
-    orgs_parser = subparsers.add_parser("orgs", help="List current organizations.")
+
+    # Run command
     run_parser = subparsers.add_parser("run", help="Execute run command.")
     run_parser.add_argument("module", help="Select the module to run")
     run_parser.add_argument("--prompt", help="Prompt message")
-    run_parser.add_argument("--local", action='store_true', help="Whether to run on local node.")
+    run_parser.add_argument("-f", "--file", help="YAML file with module parameters")
+
+    # Credits command
     credits_parser = subparsers.add_parser("credits", help="Show available credits.")
     services_parser = subparsers.add_parser("services", help="Show available services.")
 
+    # Read storage commands
+    read_storage_parser = subparsers.add_parser("read_storage", help="Read from storage.")
+    read_storage_parser.add_argument("-id", "--job_id", help="Job ID to read from")
+    read_storage_parser.add_argument("-o", "--output_dir", help="Output directory to write to")
+
+    # Write storage commands
+    write_storage_parser = subparsers.add_parser("write_storage", help="Write to storage.")
+    write_storage_parser.add_argument("-i", "--storage_input", help="Comma separated list of files or directories to write to storage")
+
+    # Parse arguments
     args = parser.parse_args()
 
     if args.command == "credits":
@@ -124,7 +174,11 @@ async def main():
     elif args.command == "rfps":
         await list_rfps(hub)  
     elif args.command == "run":
-        await run(hub, services, args.module, args.prompt, args.local)    
+        await run(hub, services, args.module, args.prompt, args.file)
+    elif args.command == "read_storage":
+        await read_from_storage(services, args.job_id, args.output_dir)
+    elif args.command == "write_storage":
+        await write_from_storage(services, args.storage_input.split(','))
     else:
         parser.print_help()
 
