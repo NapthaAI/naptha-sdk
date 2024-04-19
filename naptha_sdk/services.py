@@ -56,6 +56,8 @@ class Services:
             self.access_token, self.proxy_address = None, self.node_address
         else:
             self.access_token, self.proxy_address = self.get_service_details(service_did)
+        print("Running module...")
+        print(f"Node address: {self.node_address}")
         endpoint = self.proxy_address + "/CreateTask"
         try:
             async with httpx.AsyncClient() as client:
@@ -98,22 +100,28 @@ class Services:
         except Exception as e:
             print(f"Exception occurred: {e}")
 
-    async def read_storage(self, job_id, output_dir):
+    async def read_storage(self, job_id, output_dir, local):
         """Read from storage."""
+        if local:
+            self.access_token, self.node_address = None, self.node_address
+        else:
+            self.access_token, self.node_address = self.get_service_details(service_did)
         print("Reading from storage...")
+        print(f"Node address: {self.node_address}")
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
                     f"{self.node_address}/GetStorage/{job_id}"
                 )
+
             if response.status_code == 200:
-                storage = response.content  # Here's the crucial change
+                storage = response.content  
                 print("Retrieved storage.")
                 
                 # Temporary file handling
                 temp_file_name = None
                 with tempfile.NamedTemporaryFile(delete=False, mode='wb') as tmp_file:
-                    tmp_file.write(storage)  # storage is now a bytes-like object
+                    tmp_file.write(storage)  # storage is a bytes-like object
                     temp_file_name = tmp_file.name
             
                 # Ensure output directory exists

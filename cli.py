@@ -99,15 +99,15 @@ async def run(hub, services, module_id, parameters=None, yaml_file=None, local=F
         print(j['error_message'])
 
 
-async def read_from_storage(services, job_id, output_dir='.'):
+async def read_storage(services, job_id, output_dir='files', local=False):
     """Read from storage."""
     try:
-        await services.read_storage(job_id, output_dir)
+        await services.read_storage(job_id, output_dir, local=local)
     except Exception as err:
         print(f"Error: {err}")
 
 
-async def write_from_storage(services, storage_input):
+async def write_storage(services, storage_input):
     """Write to storage."""
     try:
         response = await services.write_storage(storage_input)
@@ -153,7 +153,8 @@ async def main():
     # Read storage commands
     read_storage_parser = subparsers.add_parser("read_storage", help="Read from storage.")
     read_storage_parser.add_argument("-id", "--job_id", help="Job ID to read from")
-    read_storage_parser.add_argument("-o", "--output_dir", help="Output directory to write to")
+    read_storage_parser.add_argument("-o", "--output_dir", default="files", help="Output directory to write to")
+    read_storage_parser.add_argument("-l", "--local", help="Run locally", action="store_true")
 
     # Write storage commands
     write_storage_parser = subparsers.add_parser("write_storage", help="Write to storage.")
@@ -183,9 +184,9 @@ async def main():
             parsed_params[key] = value
         await run(hub, services, args.module, parsed_params, args.file, args.local)
     elif args.command == "read_storage":
-        await read_from_storage(services, args.job_id, args.output_dir)
+        await read_storage(services, args.job_id, args.output_dir, args.local)
     elif args.command == "write_storage":
-        await write_from_storage(services, args.storage_input.split(','))
+        await write_storage(services, args.storage_input.split(','))
     else:
         parser.print_help()
 
