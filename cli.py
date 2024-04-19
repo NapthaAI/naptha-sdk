@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from naptha_sdk.hub import Hub
 from naptha_sdk.services import Services
 import os
+import shlex
 import time
 import yaml
 
@@ -43,12 +44,12 @@ async def list_rfps(hub):
     for rfp in rfps:
         print(rfp) 
 
-async def run(hub, services, module_id, prompt=None, yaml_file=None, local=False):   
+async def run(hub, services, module_id, parameters=None, yaml_file=None, local=False):   
     if yaml_file:
         module_params = load_yaml_to_dict(yaml_file)
         print(f"Running module {module_id} with parameters: {module_params}")
     else:
-        module_params = {"prompt": prompt}        
+        module_params = parameters        
 
     def confirm():
         while True:
@@ -75,7 +76,7 @@ async def run(hub, services, module_id, prompt=None, yaml_file=None, local=False
     job = await services.run_task(task_input={
         'user_id': hub.user_id,
         "module_id": module_id,
-        "module_params": {"prompt": prompt}
+        "module_params": module_params
     }, local=local)
 
     print(f"Job ID: {job['id']}")
@@ -141,7 +142,7 @@ async def main():
     # Run command
     run_parser = subparsers.add_parser("run", help="Execute run command.")
     run_parser.add_argument("module", help="Select the module to run")
-    run_parser.add_argument("--prompt", help="Prompt message")
+    run_parser.add_argument('parameters', type=str, help='Parameters in "key=value" format')
     run_parser.add_argument("-f", "--file", help="YAML file with module parameters")
     run_parser.add_argument("-l", "--local", help="Run locally", action="store_true")
 
@@ -174,7 +175,13 @@ async def main():
     elif args.command == "rfps":
         await list_rfps(hub)  
     elif args.command == "run":
-        await run(hub, services, args.module, args.prompt, args.file, args.local)
+        # Split the parameters string into key-value pairs
+        params = shlex.split(args.parameters)
+        parsed_params = {}
+        for param in params:
+            key, value = param.split('=')
+            parsed_params[key] = value
+        await run(hub, services, args.module, parsed_params, args.file, args.local)
     elif args.command == "read_storage":
         await read_from_storage(services, args.job_id, args.output_dir)
     elif args.command == "write_storage":
