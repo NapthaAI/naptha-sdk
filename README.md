@@ -98,25 +98,25 @@ Now you've found a node and a workflow you'd like to run, so let's run it locall
 
 ```bash
 # usage: naptha run <module_id> <module args>
-naptha run chat "prompt='tell me a joke'" --local
+naptha run chat -p "prompt='tell me a joke'" --local
 ```
 
 Try a module that makes predictions about future events using:
 
 ```bash
-naptha run olas_prediction "prompt='Will there be an initial public offering on either the Shanghai Stock Exchange or the Shenzhen Stock Exchange before 1 January 2016?'" --local
+naptha run olas_prediction -p "prompt='Will there be an initial public offering on either the Shanghai Stock Exchange or the Shenzhen Stock Exchange before 1 January 2016?'" --local
 ```
 
 Try a module that generates images using:
 
 ```bash
-naptha run generate_image "prompt='Beautiful green mountains and clear blue skies. Sun shining and birds chirping. A perfect day for a hike. You are walking through the forest, enjoying the scenery, when you come across a fork in the road. Do you go left or right?'" --local
+naptha run generate_image -p "prompt='Beautiful green mountains and clear blue skies. Sun shining and birds chirping. A perfect day for a hike. You are walking through the forest, enjoying the scenery, when you come across a fork in the road. Do you go left or right?'" --local
 ```
 
 Now let's run an image-to-image model on this image:
 
 ```bash
-naptha run image_to_image "prompt='Cyberpunk with a wolf' input_dir=<job_id_1>" --local
+naptha run image_to_image -p "prompt='Cyberpunk with a wolf' input_dir=<job_id_1>" --local
 ```
 
 ### Interact with Node Storage

@@ -142,7 +142,7 @@ async def main():
     # Run command
     run_parser = subparsers.add_parser("run", help="Execute run command.")
     run_parser.add_argument("module", help="Select the module to run")
-    run_parser.add_argument('parameters', type=str, help='Parameters in "key=value" format')
+    run_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format', required=False)
     run_parser.add_argument("-f", "--file", help="YAML file with module parameters")
     run_parser.add_argument("-l", "--local", help="Run locally", action="store_true")
 
@@ -176,12 +176,15 @@ async def main():
     elif args.command == "rfps":
         await list_rfps(hub)  
     elif args.command == "run":
-        # Split the parameters string into key-value pairs
-        params = shlex.split(args.parameters)
-        parsed_params = {}
-        for param in params:
-            key, value = param.split('=')
-            parsed_params[key] = value
+        if hasattr(args, 'parameters') and args.parameters is not None:
+            # Split the parameters string into key-value pairs
+            params = shlex.split(args.parameters)
+            parsed_params = {}
+            for param in params:
+                key, value = param.split('=')
+                parsed_params[key] = value
+        else:
+            parsed_params = None
         await run(hub, services, args.module, parsed_params, args.file, args.local)
     elif args.command == "read_storage":
         await read_storage(services, args.job_id, args.output_dir, args.local)
