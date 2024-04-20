@@ -1,7 +1,10 @@
 import asyncio
 from dotenv import load_dotenv
 import os
+import tempfile
+import tarfile
 import json
+from pathlib import Path
 from payments_py import Payments, Environment
 from typing import Dict, List, Tuple, Optional
 import httpx
@@ -53,6 +56,8 @@ class Services:
             self.access_token, self.proxy_address = None, self.node_address
         else:
             self.access_token, self.proxy_address = self.get_service_details(service_did)
+        print("Running module...")
+        print(f"Node address: {self.node_address}")
         endpoint = self.proxy_address + "/CreateTask"
         try:
             async with httpx.AsyncClient() as client:
@@ -94,3 +99,77 @@ class Services:
             return json.loads(response.text)
         except Exception as e:
             print(f"Exception occurred: {e}")
+
+    async def read_storage(self, job_id, output_dir, local):
+        """Read from storage."""
+        if local:
+            self.access_token, self.node_address = None, self.node_address
+        else:
+            self.access_token, self.node_address = self.get_service_details(service_did)
+        print("Reading from storage...")
+        print(f"Node address: {self.node_address}")
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.node_address}/GetStorage/{job_id}"
+                )
+
+            if response.status_code == 200:
+                storage = response.content  
+                print("Retrieved storage.")
+                
+                # Temporary file handling
+                temp_file_name = None
+                with tempfile.NamedTemporaryFile(delete=False, mode='wb') as tmp_file:
+                    tmp_file.write(storage)  # storage is a bytes-like object
+                    temp_file_name = tmp_file.name
+            
+                # Ensure output directory exists
+                output_path = Path(output_dir)
+                output_path.mkdir(parents=True, exist_ok=True)
+            
+                # Extract the tar.gz file
+                with tarfile.open(temp_file_name, "r:gz") as tar:
+                    tar.extractall(path=output_dir)
+            
+                print(f"Extracted storage to {output_dir}.")
+                
+                # Cleanup temporary file
+                Path(temp_file_name).unlink(missing_ok=True)
+            
+                return output_dir
+            else:
+                print("Failed to retrieve storage.")            
+        except Exception as err:
+            print(f"Error: {err}")        
+
+    def prepare_files(self, files: List[str]) -> List[Tuple[str, str]]:
+        """Prepare files for upload."""
+        print(f"Preparing files: {files}")
+        files = [Path(file) for file in files]
+        f = []
+        for path in files:
+            if path.is_dir():
+                for file_path in path.rglob('*'):
+                    if file_path.is_file():
+                        relative_path = file_path.relative_to(path.parent)
+                        f.append(('files', (relative_path.as_posix(), open(file_path, 'rb'))))
+            elif path.is_file():
+                f.append(('files', (path.name, open(path, 'rb'))))
+        return f
+    
+    async def write_storage(self, storage_input: List[str]) -> Dict[str, str]:
+        """Write storage to the node."""
+        files = self.prepare_files(storage_input)
+        print(f"Writing storage: {files}")
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.node_address}/WriteStorage", 
+                    files=files
+                )
+                if response.status_code != 201:
+                    logger.error(f"Failed to write storage: {response.text}")
+        except Exception as e:
+            print(f"Exception occurred: {e}")
+        return json.loads(response.text)

@@ -4,9 +4,17 @@ from dotenv import load_dotenv
 from naptha_sdk.hub import Hub
 from naptha_sdk.services import Services
 import os
+import shlex
 import time
+import yaml
 
 load_dotenv()
+
+def load_yaml_to_dict(file_path):
+    with open(file_path, 'r') as file:
+        # Load the YAML content into a Python dictionary
+        yaml_content = yaml.safe_load(file)
+    return yaml_content
 
 def creds(services):
     return services.show_credits()
@@ -36,7 +44,12 @@ async def list_rfps(hub):
     for rfp in rfps:
         print(rfp) 
 
-async def run(hub, services, module_id, prompt, local):
+async def run(hub, services, module_id, parameters=None, yaml_file=None, local=False):   
+    if yaml_file:
+        module_params = load_yaml_to_dict(yaml_file)
+        print(f"Running module {module_id} with parameters: {module_params}")
+    else:
+        module_params = parameters        
 
     def confirm():
         while True:
@@ -63,9 +76,10 @@ async def run(hub, services, module_id, prompt, local):
     job = await services.run_task(task_input={
         'user_id': hub.user_id,
         "module_id": module_id,
-        "module_params": {"prompt": prompt}
+        "module_params": module_params
     }, local=local)
 
+    print(f"Job ID: {job['id']}")
     while True:
         j = await services.check_task({"id": job['id']})
 
@@ -85,6 +99,22 @@ async def run(hub, services, module_id, prompt, local):
         print(j['error_message'])
 
 
+async def read_storage(services, job_id, output_dir='files', local=False):
+    """Read from storage."""
+    try:
+        await services.read_storage(job_id, output_dir, local=local)
+    except Exception as err:
+        print(f"Error: {err}")
+
+
+async def write_storage(services, storage_input):
+    """Write to storage."""
+    try:
+        response = await services.write_storage(storage_input)
+        print(response)
+    except Exception as err:
+        print(f"Error: {err}")
+
 
 async def main():
     hub_endpoint = os.getenv("HUB_ENDPOINT")
@@ -97,18 +127,40 @@ async def main():
     parser = argparse.ArgumentParser(description="CLI with for Naptha")
     subparsers = parser.add_subparsers(title="commands", dest="command")
 
+    # Node commands
     nodes_parser = subparsers.add_parser("nodes", help="List available nodes.")
+
+    # Module commands
     modules_parser = subparsers.add_parser("modules", help="List available modules.")
+
+    # Task commands
     tasks_parser = subparsers.add_parser("tasks", help="List available tasks.")
+
+    # RFP commands
     rfps_parser = subparsers.add_parser("rfps", help="List available RFPs.")
-    orgs_parser = subparsers.add_parser("orgs", help="List current organizations.")
+
+    # Run command
     run_parser = subparsers.add_parser("run", help="Execute run command.")
     run_parser.add_argument("module", help="Select the module to run")
-    run_parser.add_argument("--prompt", help="Prompt message")
-    run_parser.add_argument("--local", action='store_true', help="Whether to run on local node.")
+    run_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format', required=False)
+    run_parser.add_argument("-f", "--file", help="YAML file with module parameters")
+    run_parser.add_argument("-l", "--local", help="Run locally", action="store_true")
+
+    # Credits command
     credits_parser = subparsers.add_parser("credits", help="Show available credits.")
     services_parser = subparsers.add_parser("services", help="Show available services.")
 
+    # Read storage commands
+    read_storage_parser = subparsers.add_parser("read_storage", help="Read from storage.")
+    read_storage_parser.add_argument("-id", "--job_id", help="Job ID to read from")
+    read_storage_parser.add_argument("-o", "--output_dir", default="files", help="Output directory to write to")
+    read_storage_parser.add_argument("-l", "--local", help="Run locally", action="store_true")
+
+    # Write storage commands
+    write_storage_parser = subparsers.add_parser("write_storage", help="Write to storage.")
+    write_storage_parser.add_argument("-i", "--storage_input", help="Comma separated list of files or directories to write to storage")
+
+    # Parse arguments
     args = parser.parse_args()
 
     if args.command == "credits":
@@ -124,7 +176,20 @@ async def main():
     elif args.command == "rfps":
         await list_rfps(hub)  
     elif args.command == "run":
-        await run(hub, services, args.module, args.prompt, args.local)    
+        if hasattr(args, 'parameters') and args.parameters is not None:
+            # Split the parameters string into key-value pairs
+            params = shlex.split(args.parameters)
+            parsed_params = {}
+            for param in params:
+                key, value = param.split('=')
+                parsed_params[key] = value
+        else:
+            parsed_params = None
+        await run(hub, services, args.module, parsed_params, args.file, args.local)
+    elif args.command == "read_storage":
+        await read_storage(services, args.job_id, args.output_dir, args.local)
+    elif args.command == "write_storage":
+        await write_storage(services, args.storage_input.split(','))
     else:
         parser.print_help()
 
