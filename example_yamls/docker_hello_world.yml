@@ -1,8 +1,3 @@
-docker_image: "sum-app"
-docker_command: "python sum.py --num1 3 --num2 4"
+docker_image: "hello-world"
+docker_command: ""
 docker_num_gpus: 0
-# docker_input_dir: "/path/to/input/dir"
-# docker_output_dir: "/path/to/output/dir"
-docker_env_vars:
-  ENV_VAR1: "value1"
-  ENV_VAR2: "value2"

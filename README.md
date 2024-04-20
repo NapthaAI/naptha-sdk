@@ -98,6 +98,12 @@ Now you've found a node and a workflow you'd like to run, so let's run it locall
 
 ```bash
 # usage: naptha run <module_id> <module args>
+naptha run hello_world -p "param1=world param2=naptha" --local
+```
+
+Try a module that uses the local LLM running on your node:
+
+```bash
 naptha run chat -p "prompt='tell me a joke'" --local
 ```
 
@@ -117,6 +123,18 @@ Now let's run an image-to-image model on this image:
 
 ```bash
 naptha run image_to_image -p "prompt='Cyberpunk with a wolf' input_dir=<job_id_1>" --local
+```
+
+You can also run modules from yaml files using: 
+
+```bash
+naptha run create_profile_description -f ./example_yamls/create_profile_description.yml --local
+```
+
+Or docker images:
+
+```bash
+naptha run docker_hello_world -f ./example_yamls/docker_hello_world.yml --local
 ```
 
 ### Interact with Node Storage

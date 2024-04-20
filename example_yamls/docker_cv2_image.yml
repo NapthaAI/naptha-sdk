@@ -1,4 +1,0 @@
-docker_image: "cv2-image"
-docker_command: "python inference.py --prompt daimonxdaimon"
-docker_num_gpus: 0
-docker_output_dir: "/app/output"
