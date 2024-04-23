@@ -50,7 +50,6 @@ Create a copy of the .env file:
 ```bash
 cp .env.example .env
 ```
-After running the last command you will be dropped into an interactive shell where you can experiment with the commands below.
 
 ## Get Started
 
@@ -86,15 +85,17 @@ Make note of a Node ID for running a workflow below.
 
 ### Check out available Modules
 
-Modules can be workflows, agents or multi-agent systems. Modules typically involve one or more LLMs, along with humans in the loop. You can also use the CLI to explore available modules that you can run on nodes:
+Modules can be workflows, agents or multi-agent systems. Modules typically involve one or more LLMs, along with humans in the loop. You can also use the CLI to explore available modules that you can run on a node:
 
 ```bash
 naptha modules
 ```
 
+For each module, you will see a url where you can check out the code. 
+
 ### Run a Module
 
-Now you've found a node and a workflow you'd like to run, so let's run it locally! You can use the commandline tool to connect with the node and run the workflow.
+Now you've found a node and a workflow you'd like to run, so let's run it locally! You can use the commandline tool to connect with the node and run the workflow. 
 
 ```bash
 # usage: naptha run <module_id> <module args>
@@ -113,7 +114,7 @@ Try a module that makes predictions about future events using:
 naptha run olas_prediction -p "prompt='Will there be an initial public offering on either the Shanghai Stock Exchange or the Shenzhen Stock Exchange before 1 January 2016?'" --local
 ```
 
-Try a module that generates images using:
+You can also try a module that generates images (make sure that the .env file in node has a valid Stability platform API key):
 
 ```bash
 naptha run generate_image -p "prompt='Beautiful green mountains and clear blue skies. Sun shining and birds chirping. A perfect day for a hike. You are walking through the forest, enjoying the scenery, when you come across a fork in the road. Do you go left or right?'" --local
