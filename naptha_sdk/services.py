@@ -8,6 +8,7 @@ from pathlib import Path
 from payments_py import Payments, Environment
 from typing import Dict, List, Tuple, Optional
 import httpx
+import zipfile
 
 load_dotenv()
 
@@ -100,7 +101,7 @@ class Services:
         except Exception as e:
             print(f"Exception occurred: {e}")
 
-    async def read_storage(self, job_id, output_dir, local):
+    async def read_storage(self, job_id, output_dir, local, ipfs=False):
         """Read from storage."""
         if local:
             self.access_token, self.node_address = None, self.node_address
@@ -109,9 +110,13 @@ class Services:
         print("Reading from storage...")
         print(f"Node address: {self.node_address}")
         try:
+            if ipfs:
+                endpoint = f"{self.node_address}/read_ipfs/{job_id}"
+            else:
+                endpoint = f"{self.node_address}/read_storage/{job_id}"
             async with httpx.AsyncClient() as client:
                 response = await client.get(
-                    f"{self.node_address}/GetStorage/{job_id}"
+                    endpoint
                 )
 
             if response.status_code == 200:
@@ -128,12 +133,15 @@ class Services:
                 output_path = Path(output_dir)
                 output_path.mkdir(parents=True, exist_ok=True)
             
-                # Extract the tar.gz file
-                with tarfile.open(temp_file_name, "r:gz") as tar:
-                    tar.extractall(path=output_dir)
-            
-                print(f"Extracted storage to {output_dir}.")
-                
+                # Check if the file is a zip file and extract if true
+                if zipfile.is_zipfile(temp_file_name):
+                    with zipfile.ZipFile(temp_file_name, 'r') as zip_ref:
+                        zip_ref.extractall(output_path)
+                    print(f"Extracted storage to {output_dir}.")
+                else:
+                    shutil.copy(temp_file_name, output_path)
+                    print(f"Copied storage to {output_dir}.")
+
                 # Cleanup temporary file
                 Path(temp_file_name).unlink(missing_ok=True)
             
@@ -153,23 +161,27 @@ class Services:
                 for file_path in path.rglob('*'):
                     if file_path.is_file():
                         relative_path = file_path.relative_to(path.parent)
-                        f.append(('files', (relative_path.as_posix(), open(file_path, 'rb'))))
+                        f.append(('file', (relative_path.as_posix(), open(file_path, 'rb'))))
             elif path.is_file():
-                f.append(('files', (path.name, open(path, 'rb'))))
+                f.append(('file', (path.name, open(path, 'rb'))))
         return f
     
-    async def write_storage(self, storage_input: List[str]) -> Dict[str, str]:
+    async def write_storage(self, storage_input: List[str], ipfs: bool = False) -> Dict[str, str]:
         """Write storage to the node."""
-        files = self.prepare_files(storage_input)
-        print(f"Writing storage: {files}")
+        print("Writing storage")
         try:
+            if ipfs:
+                endpoint = f"{self.node_address}/write_ipfs"
+            else:
+                files = self.prepare_files(storage_input)
+                endpoint = f"{self.node_address}/write_storage"
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    f"{self.node_address}/WriteStorage", 
+                    endpoint, 
                     files=files
                 )
                 if response.status_code != 201:
-                    logger.error(f"Failed to write storage: {response.text}")
+                    print(f"Failed to write storage: {response.text}")
         except Exception as e:
             print(f"Exception occurred: {e}")
         return json.loads(response.text)

@@ -99,18 +99,18 @@ async def run(hub, services, module_id, parameters=None, yaml_file=None, local=F
         print(j['error_message'])
 
 
-async def read_storage(services, job_id, output_dir='files', local=False):
+async def read_storage(services, job_id, output_dir='files', local=False, ipfs=False):
     """Read from storage."""
     try:
-        await services.read_storage(job_id, output_dir, local=local)
+        await services.read_storage(job_id.strip(), output_dir, local=local, ipfs=ipfs)
     except Exception as err:
         print(f"Error: {err}")
 
 
-async def write_storage(services, storage_input):
+async def write_storage(services, storage_input, ipfs=False):
     """Write to storage."""
     try:
-        response = await services.write_storage(storage_input)
+        response = await services.write_storage(storage_input, ipfs=ipfs)
         print(response)
     except Exception as err:
         print(f"Error: {err}")
@@ -155,10 +155,12 @@ async def main():
     read_storage_parser.add_argument("-id", "--job_id", help="Job ID to read from")
     read_storage_parser.add_argument("-o", "--output_dir", default="files", help="Output directory to write to")
     read_storage_parser.add_argument("-l", "--local", help="Run locally", action="store_true")
+    read_storage_parser.add_argument("--ipfs", help="Read from IPFS", action="store_true")
 
     # Write storage commands
     write_storage_parser = subparsers.add_parser("write_storage", help="Write to storage.")
-    write_storage_parser.add_argument("-i", "--storage_input", help="Comma separated list of files or directories to write to storage")
+    write_storage_parser.add_argument("-i", "--storage_input", help="Path to file or directory to write to storage")
+    write_storage_parser.add_argument("--ipfs", help="Write to IPFS", action="store_true")
 
     # Parse arguments
     args = parser.parse_args()
@@ -187,9 +189,9 @@ async def main():
             parsed_params = None
         await run(hub, services, args.module, parsed_params, args.file, args.local)
     elif args.command == "read_storage":
-        await read_storage(services, args.job_id, args.output_dir, args.local)
+        await read_storage(services, args.job_id, args.output_dir, args.local, args.ipfs)
     elif args.command == "write_storage":
-        await write_storage(services, args.storage_input.split(','))
+        await write_storage(services, args.storage_input.split(','), args.ipfs)
     else:
         parser.print_help()
 
