@@ -109,56 +109,51 @@ class Services:
         else:
             self.access_token, self.node_address = self.get_service_details(service_did)
         print("Reading from storage...")
-        print(f"Node address: {self.node_address}")
         try:
-            if ipfs:
-                endpoint = f"{self.node_address}/read_ipfs/{job_id}"
-            else:
-                endpoint = f"{self.node_address}/read_storage/{job_id}"
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    endpoint
-                )
+            endpoint = f"{self.node_address}/{'read_ipfs' if ipfs else 'read_storage'}/{job_id}"
 
-            if response.status_code == 200:
-                storage = response.content  
-                print("Retrieved storage.")
-                
-                # Temporary file handling
-                temp_file_name = None
-                with tempfile.NamedTemporaryFile(delete=False, mode='wb') as tmp_file:
-                    tmp_file.write(storage)  # storage is a bytes-like object
-                    temp_file_name = tmp_file.name
+            async with httpx.AsyncClient(timeout=30.0) as client:  # Increased timeout to 30 seconds
+                response = await client.get(endpoint)
+                if response.status_code == 200:
+                    storage = response.content  
+                    print("Retrieved storage.")
+
+                    # Temporary file handling
+                    temp_file_name = None
+                    with tempfile.NamedTemporaryFile(delete=False, mode='wb') as tmp_file:
+                        tmp_file.write(storage)  # storage is a bytes-like object
+                        temp_file_name = tmp_file.name
             
-                # Ensure output directory exists
-                output_path = Path(output_dir)
-                output_path.mkdir(parents=True, exist_ok=True)
+                    # Ensure output directory exists
+                    output_path = Path(output_dir)
+                    output_path.mkdir(parents=True, exist_ok=True)
             
-                # Check if the file is a zip file and extract if true
-                if zipfile.is_zipfile(temp_file_name):
-                    with zipfile.ZipFile(temp_file_name, 'r') as zip_ref:
-                        zip_ref.extractall(output_path)
-                    print(f"Extracted storage to {output_dir}.")
+                    # Check if the file is a zip file and extract if true
+                    if zipfile.is_zipfile(temp_file_name):
+                        with zipfile.ZipFile(temp_file_name, 'r') as zip_ref:
+                            zip_ref.extractall(output_path)
+                        print(f"Extracted storage to {output_dir}.")
+                    else:
+                        shutil.copy(temp_file_name, output_path)
+                        print(f"Copied storage to {output_dir}.")
+
+                    # Cleanup temporary file
+                    Path(temp_file_name).unlink(missing_ok=True)
+            
+                    return output_dir
                 else:
-                    shutil.copy(temp_file_name, output_path)
-                    print(f"Copied storage to {output_dir}.")
-
-                # Cleanup temporary file
-                Path(temp_file_name).unlink(missing_ok=True)
-            
-                return output_dir
-            else:
-                print("Failed to retrieve storage.")            
+                    print("Failed to retrieve storage.")            
         except Exception as err:
             print(f"Error: {err}")
 
     def zip_directory(self, file_path, zip_path):
-        """Utility function to zip the content of a directory."""
+        """Utility function to zip the content of a directory while preserving the folder structure."""
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for root, dirs, files in os.walk(file_path):
                 for file in files:
                     file_path = os.path.join(root, file)
-                    zipf.write(file_path, os.path.relpath(file_path, os.path.dirname(file_path)))
+                    arcname = os.path.relpath(file_path, start=os.path.abspath(file_path).split(os.sep)[0])
+                    zipf.write(file_path, arcname)
 
     def prepare_files(self, file_path: str) -> List[Tuple[str, str]]:
         """Prepare files for upload."""
