@@ -9,6 +9,7 @@ from payments_py import Payments, Environment
 from typing import Dict, List, Tuple, Optional
 import httpx
 import zipfile
+import shutil
 
 load_dotenv()
 
@@ -149,27 +150,33 @@ class Services:
             else:
                 print("Failed to retrieve storage.")            
         except Exception as err:
-            print(f"Error: {err}")        
+            print(f"Error: {err}")
 
-    def prepare_files(self, files: List[str]) -> List[Tuple[str, str]]:
+    def zip_directory(self, file_path, zip_path):
+        """Utility function to zip the content of a directory."""
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for root, dirs, files in os.walk(file_path):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    zipf.write(file_path, os.path.relpath(file_path, os.path.dirname(file_path)))
+
+    def prepare_files(self, file_path: str) -> List[Tuple[str, str]]:
         """Prepare files for upload."""
-        print(f"Preparing files: {files}")
-        files = [Path(file) for file in files]
-        f = []
-        for path in files:
-            if path.is_dir():
-                for file_path in path.rglob('*'):
-                    if file_path.is_file():
-                        relative_path = file_path.relative_to(path.parent)
-                        f.append(('file', (relative_path.as_posix(), open(file_path, 'rb'))))
-            elif path.is_file():
-                f.append(('file', (path.name, open(path, 'rb'))))
-        return f
+        if os.path.isdir(file_path):
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.zip') as tmpfile:
+                self.zip_directory(file_path, tmpfile.name)
+                tmpfile.close()  
+                file = {'file': open(tmpfile.name, 'rb')}
+        else:
+            file = {'file': open(file_path, 'rb')}
+        
+        return file
     
-    async def write_storage(self, storage_input: List[str], ipfs: bool = False) -> Dict[str, str]:
+    async def write_storage(self, storage_input: str, ipfs: bool = False) -> Dict[str, str]:
         """Write storage to the node."""
         print("Writing storage")
         try:
+            file = self.prepare_files(storage_input)
             if ipfs:
                 endpoint = f"{self.node_address}/write_ipfs"
             else:
@@ -178,7 +185,7 @@ class Services:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     endpoint, 
-                    files=files
+                    files=file
                 )
                 if response.status_code != 201:
                     print(f"Failed to write storage: {response.text}")

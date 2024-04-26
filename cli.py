@@ -191,7 +191,7 @@ async def main():
     elif args.command == "read_storage":
         await read_storage(services, args.job_id, args.output_dir, args.local, args.ipfs)
     elif args.command == "write_storage":
-        await write_storage(services, args.storage_input.split(','), args.ipfs)
+        await write_storage(services, args.storage_input, args.ipfs)
     else:
         parser.print_help()
 
