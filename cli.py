@@ -44,12 +44,32 @@ async def list_rfps(hub):
     for rfp in rfps:
         print(rfp) 
 
-async def run(hub, services, module_id, parameters=None, yaml_file=None, local=False):   
+async def run(
+    hub, 
+    services, 
+    module_id, 
+    parameters=None, 
+    yaml_file=None, 
+    local=False, 
+    docker=False
+):   
+    if yaml_file and parameters:
+        raise ValueError("Cannot pass both yaml_file and parameters")
+    
     if yaml_file:
-        module_params = load_yaml_to_dict(yaml_file)
-        print(f"Running module {module_id} with parameters: {module_params}")
+        parameters = load_yaml_to_dict(yaml_file)
+
+    task_input = {
+        "user_id": hub.user_id,
+        "module_id": module_id,
+    }
+    
+    if docker:
+        task_input["docker_params"] = parameters
     else:
-        module_params = parameters        
+        task_input["module_params"] = parameters
+    
+    print(f"Running module {module_id} with parameters: {task_input}")
 
     def confirm():
         while True:
@@ -72,12 +92,7 @@ async def run(hub, services, module_id, parameters=None, yaml_file=None, local=F
         confirm = True
 
     print("Running...")
-
-    job = await services.run_task(task_input={
-        'user_id': hub.user_id,
-        "module_id": module_id,
-        "module_params": module_params
-    }, local=local)
+    job = await services.run_task(task_input=task_input, local=local)
 
     print(f"Job ID: {job['id']}")
     while True:
@@ -145,6 +160,7 @@ async def main():
     run_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format', required=False)
     run_parser.add_argument("-f", "--file", help="YAML file with module parameters")
     run_parser.add_argument("-l", "--local", help="Run locally", action="store_true")
+    run_parser.add_argument("-d", "--docker", help="Run in docker", action="store_true")
 
     # Credits command
     credits_parser = subparsers.add_parser("credits", help="Show available credits.")
@@ -187,7 +203,7 @@ async def main():
                 parsed_params[key] = value
         else:
             parsed_params = None
-        await run(hub, services, args.module, parsed_params, args.file, args.local)
+        await run(hub, services, args.module, parsed_params, args.file, args.local, args.docker)
     elif args.command == "read_storage":
         await read_storage(services, args.job_id, args.output_dir, args.local, args.ipfs)
     elif args.command == "write_storage":
