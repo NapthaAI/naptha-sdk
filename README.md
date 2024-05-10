@@ -152,6 +152,11 @@ You can write to the node using:
 naptha write_storage -i files/<filename>.jpg
 ```
 
+### Interact with IPFS thorugh Node
+```bash
+naptha write_storage -i files/<filename>.jpg --ipfs
+```
+
 ### Get Credits
 
 We've been interacting with a local node, so how can we interact with other nodes on the Naptha network? Log in and subscribe to Naptha's [Free Subscription](https://testing.nevermined.app/en/subscription/did:nv:bcc485bc7155a50d13ba425a3b8bbd30eea8e4c90ecfeadfedf5cdd702e3c793) tier on the Nevermined app. Select the Profile button in the top right-hand corner, and copy the address beside My Wallet. Paste this value to ```WALLET_ADDRESS``` in the ```.env``` file. You can now check your credits using:
