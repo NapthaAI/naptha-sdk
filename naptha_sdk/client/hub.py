@@ -17,7 +17,7 @@ class Hub:
         self.async_initialized = False
         
     async def __ainit__(self, username, password, *args, **kwargs):
-        """Async constructor, you should implement this"""
+        """Async constructor"""
         success, token, user_id = await self._authenticated_db()
         self.user_id = user_id
         self.token = token
@@ -75,7 +75,8 @@ class Hub:
         return await self.surrealdb.select(node_id)
 
     async def list_nodes(self) -> List:
-        return await self.surrealdb.select("node")
+        nodes = await self.surrealdb.query("SELECT * FROM node;")
+        return nodes[0]['result']
 
     async def list_modules(self, module_id=None) -> List:
         if not module_id:

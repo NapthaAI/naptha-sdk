@@ -1,8 +1,9 @@
 import argparse
 import asyncio
 from dotenv import load_dotenv
-from naptha_sdk.hub import Hub
-from naptha_sdk.services import Services
+from naptha_sdk.client.hub import Hub
+from naptha_sdk.client.services import Services
+from naptha_sdk.user import get_public_key
 import os
 import shlex
 import time
@@ -44,7 +45,7 @@ async def list_rfps(hub):
     for rfp in rfps:
         print(rfp) 
 
-async def run(hub, services, module_id, parameters=None, yaml_file=None, local=False):   
+async def run(user, services, module_id, parameters=None, yaml_file=None, local=False):   
     if yaml_file:
         module_params = load_yaml_to_dict(yaml_file)
         print(f"Running module {module_id} with parameters: {module_params}")
@@ -71,10 +72,20 @@ async def run(hub, services, module_id, parameters=None, yaml_file=None, local=F
     else:
         confirm = True
 
+    print("Checking user...")
+    user = await services.check_user(user_input=user)
+
+    if user["is_registered"] == True:
+        print("Found user...", user)
+    elif user["is_registered"] == False:
+        print("No user found. Registering user...")
+        user = await services.register_user(user_input=user)
+        print(f"User registered: {user}.")
+
     print("Running...")
 
     job = await services.run_task(task_input={
-        'user_id': hub.user_id,
+        'user_id': user["id"],
         "module_id": module_id,
         "module_params": module_params
     }, local=local)
@@ -117,12 +128,15 @@ async def write_storage(services, storage_input):
 
 
 async def main():
+    public_key = get_public_key(os.getenv("PRIVATE_KEY"))
+    user = {"public_key": public_key}
     hub_endpoint = os.getenv("HUB_ENDPOINT")
-    username = os.getenv("HUB_USER")
-    password = os.getenv("HUB_PASS")
+    hub_username = os.getenv("HUB_USER")
+    hub_password = os.getenv("HUB_PASS")
+    node_endpoint = os.getenv("NODE_ENDPOINT")
 
-    hub = await Hub(username, password, hub_endpoint)
-    services = Services()
+    hub = await Hub(hub_username, hub_password, hub_endpoint)
+    services = Services(node_endpoint)
 
     parser = argparse.ArgumentParser(description="CLI with for Naptha")
     subparsers = parser.add_subparsers(title="commands", dest="command")
@@ -185,7 +199,7 @@ async def main():
                 parsed_params[key] = value
         else:
             parsed_params = None
-        await run(hub, services, args.module, parsed_params, args.file, args.local)
+        await run(user, services, args.module, parsed_params, args.file, args.local)
     elif args.command == "read_storage":
         await read_storage(services, args.job_id, args.output_dir, args.local)
     elif args.command == "write_storage":
