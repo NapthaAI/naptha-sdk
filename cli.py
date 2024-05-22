@@ -1,8 +1,7 @@
 import argparse
 import asyncio
 from dotenv import load_dotenv
-from naptha_sdk.client.hub import Hub
-from naptha_sdk.client.services import Services
+from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.user import get_public_key
 import os
 import shlex
@@ -17,11 +16,11 @@ def load_yaml_to_dict(file_path):
         yaml_content = yaml.safe_load(file)
     return yaml_content
 
-def creds(services):
-    return services.show_credits()
+def creds(naptha):
+    return naptha.services.show_credits()
 
-def list_services(services):
-    services = services.list_services()
+def list_services(naptha):
+    services = naptha.services.list_services()
     for service in services:
         print(service) 
 
@@ -46,8 +45,7 @@ async def list_rfps(hub):
         print(rfp) 
 
 async def run(
-    user, 
-    services, 
+    naptha, 
     module_id, 
     parameters=None, 
     yaml_file=None, 
@@ -60,11 +58,11 @@ async def run(
     if yaml_file:
         parameters = load_yaml_to_dict(yaml_file)
 
-    task_input = {
-        "user_id": hub.user_id,
+    task_input={
+        'user_id': naptha.user["id"],
         "module_id": module_id,
     }
-    
+
     if docker:
         task_input["docker_params"] = parameters
     else:
@@ -83,7 +81,7 @@ async def run(
                 print("Invalid input. Please enter 'y' or 'n'.")
 
     if local == False:
-        creds = services.show_credits()
+        creds = naptha.services.show_credits()
         price = 0
         confirm = confirm()
         if not confirm:
@@ -93,25 +91,21 @@ async def run(
         confirm = True
 
     print("Checking user...")
-    user = await services.check_user(user_input=user)
+    user = await naptha.check_user(user_input=naptha.user)
 
     if user["is_registered"] == True:
         print("Found user...", user)
     elif user["is_registered"] == False:
         print("No user found. Registering user...")
-        user = await services.register_user(user_input=user)
+        user = await naptha.register_user(user_input=user)
         print(f"User registered: {user}.")
 
     print("Running...")
-    job = await services.run_task(task_input={
-        'user_id': user["id"],
-        "module_id": module_id,
-        "module_params": module_params
-    }, local=local)
+    job = await naptha.run_task(task_input, local=local)
 
     print(f"Job ID: {job['id']}")
     while True:
-        j = await services.check_task({"id": job['id']})
+        j = await naptha.check_task({"id": job['id']})
 
         status = j['status']
         print(status)   
@@ -129,18 +123,18 @@ async def run(
         print(j['error_message'])
 
 
-async def read_storage(services, job_id, output_dir='files', local=False, ipfs=False):
+async def read_storage(naptha, job_id, output_dir='files', local=False, ipfs=False):
     """Read from storage."""
     try:
-        await services.read_storage(job_id.strip(), output_dir, local=local, ipfs=ipfs)
+        await naptha.read_storage(job_id.strip(), output_dir, local=local, ipfs=ipfs)
     except Exception as err:
         print(f"Error: {err}")
 
 
-async def write_storage(services, storage_input, ipfs=False):
+async def write_storage(naptha, storage_input, ipfs=False):
     """Write to storage."""
     try:
-        response = await services.write_storage(storage_input, ipfs=ipfs)
+        response = await naptha.write_storage(storage_input, ipfs=ipfs)
         print(response)
     except Exception as err:
         print(f"Error: {err}")
@@ -148,14 +142,19 @@ async def write_storage(services, storage_input, ipfs=False):
 
 async def main():
     public_key = get_public_key(os.getenv("PRIVATE_KEY"))
-    user = {"public_key": public_key}
+    user = {"public_key": public_key, "id": f"user:{public_key}"}
     hub_endpoint = os.getenv("HUB_ENDPOINT")
     hub_username = os.getenv("HUB_USER")
     hub_password = os.getenv("HUB_PASS")
-    node_endpoint = os.getenv("NODE_ENDPOINT")
+    node_url = os.getenv("NODE_URL")
 
-    hub = await Hub(hub_username, hub_password, hub_endpoint)
-    services = Services(node_endpoint)
+    naptha = await Naptha(
+        user,
+        hub_username, 
+        hub_password, 
+        hub_endpoint,
+        node_url,
+    )
 
     parser = argparse.ArgumentParser(description="CLI with for Naptha")
     subparsers = parser.add_subparsers(title="commands", dest="command")
@@ -200,9 +199,9 @@ async def main():
     args = parser.parse_args()
 
     if args.command == "credits":
-        creds(services)  
+        creds(naptha)  
     elif args.command == "services":
-        list_services(services)  
+        list_services(naptha)  
     elif args.command == "nodes":
         await list_nodes(hub)   
     elif args.command == "modules":
@@ -221,11 +220,11 @@ async def main():
                 parsed_params[key] = value
         else:
             parsed_params = None
-        await run(user, services, args.module, parsed_params, args.file, args.local, args.docker)
+        await run(naptha, args.module, parsed_params, args.file, args.local, args.docker)
     elif args.command == "read_storage":
-        await read_storage(services, args.job_id, args.output_dir, args.local, args.ipfs)
+        await read_storage(naptha, args.job_id, args.output_dir, args.local, args.ipfs)
     elif args.command == "write_storage":
-        await write_storage(services, args.storage_input, args.ipfs)
+        await write_storage(naptha, args.storage_input, args.ipfs)
     else:
         parser.print_help()
 
