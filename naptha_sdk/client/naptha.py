@@ -1,65 +1,94 @@
-import asyncio
-from dotenv import load_dotenv
-import os
-import tempfile
-import tarfile
-import json
-from pathlib import Path
-from payments_py import Payments, Environment
-from typing import Dict, List, Tuple, Optional
 import httpx
-import zipfile
+import json
+from naptha_sdk.client.hub import Hub
+from naptha_sdk.client.services import Services
+import os
+from pathlib import Path
 import shutil
+import tempfile
+from typing import Dict, List, Tuple
+import zipfile
 
-load_dotenv()
+class Naptha:
+    """The entry point into Naptha."""
 
-class Services:
-    def __init__(self):
-        self.node_address = os.getenv("NODE_ENDPOINT")
-        self.payments = Payments(session_key=os.getenv("SESSION_KEY"), environment=Environment.appTesting, version="0.1.0", marketplace_auth_token=os.getenv("MARKETPLACE_AUTH_TOKEN"))
-        self.naptha_plan_did = os.getenv("NAPTHA_PLAN_DID")
-        self.wallet_address = os.getenv("WALLET_ADDRESS") 
+    def __init__(self,
+            user,
+            hub_username, 
+            hub_password, 
+            hub_endpoint,
+            node_url,
+            *args, 
+            **kwargs):
+        
+        self.user = user
+        self.hub_endpoint = hub_endpoint
+        self.node_url = node_url
+        self.services = Services()
+        self.__storedargs = user, hub_username, hub_password, hub_endpoint, node_url, args, kwargs
+        self.async_initialized = False
 
-    def show_credits(self):
-        response = self.payments.get_subscription_balance(self.naptha_plan_did, self.wallet_address)
-        creds = json.loads(response.content.decode())["balance"]
-        print('Credits: ', creds)
-        return creds
+    async def __ainit__(self,
+            user,
+            hub_username, 
+            hub_password, 
+            hub_endpoint,
+            node_url,
+            *args, 
+            **kwargs):
+        """Async constructor"""
+        self.hub = await Hub(hub_username, hub_password, hub_endpoint)
 
-    def get_service_url(self, service_did):
-        response = self.payments.get_service_details(service_did)
-        print('Service URL: ', response)
-        return response
+    async def __initobj(self):
+        """Crutch used for __await__ after spawning"""
+        assert not self.async_initialized
+        self.async_initialized = True
+        # pass the parameters to __ainit__ that passed to __init__
+        await self.__ainit__(self.__storedargs[0], self.__storedargs[1], self.__storedargs[2], self.__storedargs[3], self.__storedargs[4], *self.__storedargs[5], **self.__storedargs[6])
+        return self
 
-    def get_service_details(self, service_did):
-        response = self.payments.get_service_token(service_did)
-        result = json.loads(response.content.decode())
-        access_token = result['token']['accessToken']
-        proxy_address = result['token']['neverminedProxyUri']
-        return access_token, proxy_address
+    def __await__(self):
+        return self.__initobj().__await__()
 
-    def get_asset_ddo(self, service_did):
-        response = self.payments.get_asset_ddo(service_did)
-        result = json.loads(response.content.decode())
-        service_name = result['service'][0]['attributes']['main']['name']
-        return service_name
+    async def check_user(self, user_input):
+        print(f"Checking user: {user_input}")
+        endpoint = self.node_url + "/CheckUser"
+        async with httpx.AsyncClient() as client:
+            headers = {
+                'Content-Type': 'application/json', 
+            }
+            response = await client.post(
+                endpoint, 
+                json=user_input,
+                headers=headers
+            )
+            if response.status_code != 200:
+                print(f"Failed to check user: {response.text}")
+        return json.loads(response.text)
 
-    def list_services(self):
-        response = self.payments.get_subscription_associated_services(self.naptha_plan_did)
-        service_dids = json.loads(response.content.decode())
-        service_names = []
-        for did in service_dids:
-            service_names.append(self.get_asset_ddo(did))
-        print('Services: ', service_names)
-        return service_names
+    async def register_user(self, user_input):
+        print(f"Registering user: {user_input}")
+        endpoint = self.node_url + "/RegisterUser"
+        async with httpx.AsyncClient() as client:
+            headers = {
+                'Content-Type': 'application/json', 
+            }
+            response = await client.post(
+                endpoint, 
+                json=user_input,
+                headers=headers
+            )
+            if response.status_code != 200:
+                print(f"Failed to register user: {response.text}")
+        return json.loads(response.text)
 
     async def run_task(self, task_input, local):
         if local:
-            self.access_token, self.proxy_address = None, self.node_address
+            self.access_token, self.proxy_address = None, self.node_url
         else:
             self.access_token, self.proxy_address = self.get_service_details(service_did)
         print("Running module...")
-        print(f"Node address: {self.node_address}")
+        print(f"Node URL: {self.node_url}")
         endpoint = self.proxy_address + "/CreateTask"
         try:
             async with httpx.AsyncClient() as client:
@@ -94,7 +123,7 @@ class Services:
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    f"{self.node_address}/CheckTask", json=job
+                    f"{self.node_url}/CheckTask", json=job
                 )
                 if response.status_code != 200:
                     print(f"Failed to check task: {response.text}")
@@ -105,19 +134,19 @@ class Services:
     async def read_storage(self, job_id, output_dir, local, ipfs=False):
         """Read from storage."""
         if local:
-            self.access_token, self.node_address = None, self.node_address
+            self.access_token, self.node_url = None, self.node_url
         else:
-            self.access_token, self.node_address = self.get_service_details(service_did)
+            self.access_token, self.node_url = self.get_service_details(service_did)
         print("Reading from storage...")
         try:
-            endpoint = f"{self.node_address}/{'read_ipfs' if ipfs else 'read_storage'}/{job_id}"
+            endpoint = f"{self.node_url}/{'read_ipfs' if ipfs else 'read_storage'}/{job_id}"
 
             async with httpx.AsyncClient(timeout=30.0) as client:  # Increased timeout to 30 seconds
                 response = await client.get(endpoint)
                 if response.status_code == 200:
                     storage = response.content  
                     print("Retrieved storage.")
-
+                
                     # Temporary file handling
                     temp_file_name = None
                     with tempfile.NamedTemporaryFile(delete=False, mode='wb') as tmp_file:
@@ -144,7 +173,7 @@ class Services:
                 else:
                     print("Failed to retrieve storage.")            
         except Exception as err:
-            print(f"Error: {err}")
+            print(f"Error: {err}")  
 
     def zip_directory(self, file_path, zip_path):
         """Utility function to zip the content of a directory while preserving the folder structure."""
@@ -173,10 +202,10 @@ class Services:
         try:
             file = self.prepare_files(storage_input)
             if ipfs:
-                endpoint = f"{self.node_address}/write_ipfs"
+                endpoint = f"{self.node_url}/write_ipfs"
             else:
                 files = self.prepare_files(storage_input)
-                endpoint = f"{self.node_address}/write_storage"
+                endpoint = f"{self.node_url}/write_storage"
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     endpoint, 
