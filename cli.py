@@ -48,6 +48,7 @@ async def run(
     naptha, 
     module_id, 
     parameters=None, 
+    coworkers=None,
     yaml_file=None, 
     local=False, 
     docker=False
@@ -59,8 +60,9 @@ async def run(
         parameters = load_yaml_to_dict(yaml_file)
 
     task_input={
-        'user_id': naptha.user["id"],
+        'consumer_id': naptha.user["id"],
         "module_id": module_id,
+        'coworkers': coworkers,
     }
 
     if docker:
@@ -143,7 +145,7 @@ async def write_storage(naptha, storage_input, ipfs=False):
 async def main():
     public_key = get_public_key(os.getenv("PRIVATE_KEY"))
     user = {"public_key": public_key, "id": f"user:{public_key}"}
-    hub_endpoint = os.getenv("HUB_ENDPOINT")
+    hub_url = os.getenv("HUB_URL")
     hub_username = os.getenv("HUB_USER")
     hub_password = os.getenv("HUB_PASS")
     node_url = os.getenv("NODE_URL")
@@ -152,7 +154,7 @@ async def main():
         user,
         hub_username, 
         hub_password, 
-        hub_endpoint,
+        hub_url,
         node_url,
     )
 
@@ -174,7 +176,8 @@ async def main():
     # Run command
     run_parser = subparsers.add_parser("run", help="Execute run command.")
     run_parser.add_argument("module", help="Select the module to run")
-    run_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format', required=False)
+    run_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
+    run_parser.add_argument("-c", "--coworkers", help="Worker nodes to take part in workflows.")
     run_parser.add_argument("-f", "--file", help="YAML file with module parameters")
     run_parser.add_argument("-l", "--local", help="Run locally", action="store_true")
     run_parser.add_argument("-d", "--docker", help="Run in docker", action="store_true")
@@ -220,7 +223,11 @@ async def main():
                 parsed_params[key] = value
         else:
             parsed_params = None
-        await run(naptha, args.module, parsed_params, args.file, args.local, args.docker)
+        if hasattr(args, 'coworkers') and args.coworkers is not None:
+            coworkers = args.coworkers.split(',')
+        else:
+            coworkers = None
+        await run(naptha, args.module, parsed_params, coworkers, args.file, args.local, args.docker)
     elif args.command == "read_storage":
         await read_storage(naptha, args.job_id, args.output_dir, args.local, args.ipfs)
     elif args.command == "write_storage":

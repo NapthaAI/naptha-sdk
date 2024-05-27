@@ -16,28 +16,28 @@ class Naptha:
             user,
             hub_username, 
             hub_password, 
-            hub_endpoint,
+            hub_url,
             node_url,
             *args, 
             **kwargs):
         
         self.user = user
-        self.hub_endpoint = hub_endpoint
+        self.hub_url = hub_url
         self.node_url = node_url
         self.services = Services()
-        self.__storedargs = user, hub_username, hub_password, hub_endpoint, node_url, args, kwargs
+        self.__storedargs = user, hub_username, hub_password, hub_url, node_url, args, kwargs
         self.async_initialized = False
 
     async def __ainit__(self,
             user,
             hub_username, 
             hub_password, 
-            hub_endpoint,
+            hub_url,
             node_url,
             *args, 
             **kwargs):
         """Async constructor"""
-        self.hub = await Hub(hub_username, hub_password, hub_endpoint)
+        self.hub = await Hub(hub_username, hub_password, hub_url)
 
     async def __initobj(self):
         """Crutch used for __await__ after spawning"""

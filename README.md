@@ -95,7 +95,7 @@ For each module, you will see a url where you can check out the code.
 
 ### Run a Module
 
-Now you've found a node and a workflow you'd like to run, so let's run it locally! You can use the commandline tool to connect with the node and run the workflow. 
+Now you've found a node and a module you'd like to run, so let's run it locally! You can use the commandline tool to connect with the node and run the workflow. 
 
 ```bash
 # usage: naptha run <module_id> <module args>
@@ -155,6 +155,12 @@ naptha write_storage -i files/<filename>.jpg
 ### Interact with IPFS thorugh Node
 ```bash
 naptha write_storage -i files/<filename>.jpg --ipfs
+```
+
+### Run a Workflow
+
+```bash
+naptha run multiplayer_chat -p "prompt='hello, how are you doing?'" --coworkers "http://node.naptha.ai:7001,http://node1.naptha.ai:7001" --local
 ```
 
 ### Get Credits
