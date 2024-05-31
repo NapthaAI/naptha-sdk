@@ -8,8 +8,8 @@ import traceback
 
 logger = get_logger(__name__)
 
-async def run_task(task, task_run, parameters) -> None:
-    task_engine = TaskEngine(task, task_run, parameters)
+async def run_task(task, flow_run, parameters) -> None:
+    task_engine = TaskEngine(task, flow_run, parameters)
     await task_engine.init_run()
     try:
         await task_engine.start_run()
@@ -27,15 +27,15 @@ async def run_task(task, task_run, parameters) -> None:
         await task_engine.fail()
 
 class TaskEngine:
-    def __init__(self, task, task_run, parameters):
+    def __init__(self, task, flow_run, parameters):
         self.task = task
-        self.task_run = task_run
+        self.flow_run = flow_run
         self.parameters = parameters
         self.task_result = None
 
         self.consumer = {
-            "public_key": task_run["consumer_id"].split(':')[1],
-            'id': task_run["consumer_id"],
+            "public_key": flow_run["consumer_id"].split(':')[1],
+            'id': flow_run["consumer_id"],
         }
 
     async def init_run(self):
@@ -59,19 +59,26 @@ class TaskEngine:
             consumer = await self.task.worker_node.register_user(user_input=consumer)
             logger.info(f"User registered: {consumer}.")
 
-        task_input = {
+        task_run_input = {
             'consumer_id': consumer["id"],
-            "module_id": self.task.fn,
+            "module_name": self.task.fn,
             "module_params": self.parameters,
+            "parent_runs": self.flow_run,
         }
 
-        logger.info(f"Running task: {task_input}")
-        task_run = await self.task.worker_node.run_task(task_input=task_input, local=True)
+        logger.info(f"Running task: {task_run_input}")
+        task_run = await self.task.worker_node.run_task(task_input=task_run_input, local=True)
         logger.info(f"Task run: {task_run}")
 
+        # Relate new task run with parent flow run
+        if self.flow_run["child_runs"] is None:
+            self.flow_run["child_runs"] = task_run
+        else:
+            self.flow_run["child_runs"].append(task_run)
+
         while True:
-            j = await self.task.worker_node.check_task({"id": task_run['id']})
-            status = j['status']
+            task_run = await self.task.worker_node.check_task({"id": task_run['id']})
+            status = task_run['status']
             task_run["status"] = status
             logger.info(status)  
             await self.task.orchestrator_node.update_task_run(task_run=task_run)
@@ -80,17 +87,17 @@ class TaskEngine:
                 break
             time.sleep(3)
 
-        if j['status'] == 'completed':
-            logger.info(j['reply'])
-            self.task_result = j['reply']['output']
-            return j['reply']['output']
+        if task_run['status'] == 'completed':
+            logger.info(task_run['results'])
+            self.task_result = task_run['results']['output']
+            return task_run['results']['output']
         else:
-            logger.info(j['error_message'])
-            return j['error_message']
+            logger.info(task_run['error_message'])
+            return task_run['error_message']
 
     async def complete(self):
         self.task_run["status"] = "completed"
-        self.task_run["reply"] = {"results": json.dumps(self.task_result)}
+        self.task_run["results"] = {"results": json.dumps(self.task_result)}
         self.task_run["error"] = False
         self.task_run["error_message"] = ""
         self.task_run["completed_time"] = datetime.now(pytz.timezone("UTC")).isoformat()
