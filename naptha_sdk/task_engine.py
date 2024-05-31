@@ -21,6 +21,7 @@ async def run_task(task, task_run, parameters) -> None:
                 await task_engine.complete()
                 break
             time.sleep(3)
+        return task_engine.task_result
     except Exception as e:
         logger.error(f"An error occurred: {str(e)}")
         await task_engine.fail()
@@ -46,7 +47,7 @@ class TaskEngine:
 
     async def start_run(self):
         logger.info(f"Starting task run: {self.task_run}")
-        self.state = "running"
+        self.task_run["status"] = "running"
         await self.task.orchestrator_node.update_task_run(task_run=self.task_run)
 
         logger.info(f"Checking user: {self.consumer}")
@@ -71,6 +72,7 @@ class TaskEngine:
         while True:
             j = await self.task.worker_node.check_task({"id": task_run['id']})
             status = j['status']
+            task_run["status"] = status
             logger.info(status)  
             await self.task.orchestrator_node.update_task_run(task_run=task_run)
 
