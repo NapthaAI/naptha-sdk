@@ -30,6 +30,7 @@ class TaskEngine:
         self.task = task
         self.task_run = task_run
         self.parameters = parameters
+        self.task_result = None
 
         self.consumer = {
             "public_key": task_run["consumer_id"].split(':')[1],
@@ -71,7 +72,7 @@ class TaskEngine:
             j = await self.task.worker_node.check_task({"id": task_run['id']})
             status = j['status']
             logger.info(status)  
-            await self.task.orchestrator_node.update_task_run(task_run=self.task_run)
+            await self.task.orchestrator_node.update_task_run(task_run=task_run)
 
             if status in ["completed", "error"]:
                 break
@@ -79,7 +80,7 @@ class TaskEngine:
 
         if j['status'] == 'completed':
             logger.info(j['reply'])
-            task_result = j['reply']
+            self.task_result = j['reply']['output']
             return j['reply']['output']
         else:
             logger.info(j['error_message'])
@@ -87,7 +88,7 @@ class TaskEngine:
 
     async def complete(self):
         self.task_run["status"] = "completed"
-        self.task_run["reply"] = {"results": json.dumps(self.task_results)}
+        self.task_run["reply"] = {"results": json.dumps(self.task_result)}
         self.task_run["error"] = False
         self.task_run["error_message"] = ""
         self.task_run["completed_time"] = datetime.now(pytz.timezone("UTC")).isoformat()
