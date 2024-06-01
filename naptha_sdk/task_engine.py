@@ -21,7 +21,7 @@ async def run_task(task, flow_run, parameters) -> None:
                 await task_engine.complete()
                 break
             time.sleep(3)
-        return task_engine.task_result
+        return task_engine.task_result[-1]
     except Exception as e:
         logger.error(f"An error occurred: {str(e)}")
         await task_engine.fail()
@@ -88,15 +88,15 @@ class TaskEngine:
 
         if task_run.status == 'completed':
             logger.info(task_run.results)
-            self.task_result = task_run.results['output']
-            return task_run.results['output']
+            self.task_result = task_run.results
+            return task_run.results
         else:
             logger.info(task_run.error_message)
             return task_run.error_message
 
     async def complete(self):
         self.task_run.status = "completed"
-        self.task_run.results = {"results": json.dumps(self.task_result)}
+        self.task_run.results.extend(self.task_result)
         self.task_run.error = False
         self.task_run.error_message = ""
         self.task_run.completed_time = datetime.now(pytz.timezone("UTC")).isoformat()
