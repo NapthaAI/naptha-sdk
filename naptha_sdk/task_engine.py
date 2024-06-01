@@ -42,11 +42,13 @@ class TaskEngine:
         self.task_run_input = {
             'consumer_id': self.consumer["id"],
             "module_name": self.task.fn,
+            "module_type": "template",
             "module_params": self.parameters,
-            "parent_runs": self.flow_run,
+            "parent_runs": [self.flow_run.dict()],
         }
         logger.info(f"Initializing task run: {self.task_run_input}")
-        self.task_run = await self.task.orchestrator_node.create_task_run(task_run=self.task_run_input)
+        self.task_run = await self.task.orchestrator_node.create_task_run(module_run_input=self.task_run_input)
+        logger.info(f"Created task run: {self.task_run}")
         self.task_run.start_processing_time = datetime.now(pytz.utc).isoformat()
 
     async def start_run(self):
@@ -63,7 +65,7 @@ class TaskEngine:
             consumer = await self.task.worker_node.register_user(user_input=consumer)
             logger.info(f"User registered: {consumer}.")
 
-        logger.info(f"Running task: {self.task_run_input}")
+        logger.info(f"Running task: {self.task_run_input} on worker node {self.task.worker_node.node_url}")
         task_run = await self.task.worker_node.run_task(task_input=self.task_run_input, local=True)
         logger.info(f"Task run: {task_run}")
 

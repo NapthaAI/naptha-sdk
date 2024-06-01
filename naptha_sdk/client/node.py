@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import shutil
 import tempfile
+import traceback
 from typing import Dict, List, Tuple
 import zipfile
 
@@ -66,6 +67,8 @@ class Node:
                     print(f"Failed to create task: {response.text}")
         except Exception as e:
             print(f"Exception occurred: {e}")
+            error_details = traceback.format_exc()
+            print(f"Full traceback: {error_details}")
         return json.loads(response.text)
 
     async def check_tasks(self):
@@ -80,11 +83,11 @@ class Node:
             print(f"Exception occurred: {e}")
         return json.loads(response.text)
 
-    async def check_task(self, job):
+    async def check_task(self, module_run):
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    f"{self.node_url}/CheckTask", json=job
+                    f"{self.node_url}/CheckTask", json=module_run
                 )
                 if response.status_code != 200:
                     print(f"Failed to check task: {response.text}")
@@ -92,11 +95,11 @@ class Node:
         except Exception as e:
             print(f"Exception occurred: {e}")
 
-    async def create_task_run(self, task_run):
+    async def create_task_run(self, module_run_input):
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    f"{self.node_url}/CreateTaskRun", json=task_run
+                    f"{self.node_url}/CreateTaskRun", json=module_run_input
                 )
                 if response.status_code != 200:
                     print(f"Failed to create task run: {response.text}")
@@ -116,7 +119,7 @@ class Node:
         except Exception as e:
             print(f"Exception occurred: {e}")
 
-    async def read_storage(self, job_id, output_dir, local, ipfs=False):
+    async def read_storage(self, module_run_id, output_dir, local, ipfs=False):
         """Read from storage."""
         if local:
             self.access_token, self.node_url = None, self.node_url
@@ -124,7 +127,7 @@ class Node:
             self.access_token, self.node_url = self.get_service_details(service_did)
         print("Reading from storage...")
         try:
-            endpoint = f"{self.node_url}/{'read_ipfs' if ipfs else 'read_storage'}/{job_id}"
+            endpoint = f"{self.node_url}/{'read_ipfs' if ipfs else 'read_storage'}/{module_run_id}"
 
             async with httpx.AsyncClient(timeout=30.0) as client:  # Increased timeout to 30 seconds
                 response = await client.get(endpoint)
