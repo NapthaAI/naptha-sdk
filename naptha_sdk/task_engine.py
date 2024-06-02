@@ -54,7 +54,7 @@ class TaskEngine:
     async def start_run(self):
         logger.info(f"Starting task run: {self.task_run}")
         self.task_run.status = "running"
-        await self.task.orchestrator_node.update_task_run(task_run=self.task_run)
+        await self.task.orchestrator_node.update_task_run(module_run=self.task_run)
 
         logger.info(f"Checking user: {self.consumer}")
         consumer = await self.task.worker_node.check_user(user_input=self.consumer)
@@ -69,15 +69,13 @@ class TaskEngine:
         task_run = await self.task.worker_node.run_task(task_input=self.task_run_input, local=True)
         logger.info(f"Created task run: {task_run} on worker node {self.task.worker_node.node_url}")
 
-        logger.info(f"AAAAAAAAAAA{task_run.model_dict()}")
-
         # Relate new task run with parent flow run
         self.flow_run.child_runs.append(task_run)
 
         while True:
             task_run = await self.task.worker_node.check_task(task_run)
             logger.info(task_run.status)  
-            await self.task.orchestrator_node.update_task_run(task_run=task_run)
+            await self.task.orchestrator_node.update_task_run(module_run=task_run)
 
             if task_run.status in ["completed", "error"]:
                 break
@@ -97,8 +95,8 @@ class TaskEngine:
         self.task_run.error = False
         self.task_run.error_message = ""
         self.task_run.completed_time = datetime.now(pytz.timezone("UTC")).isoformat()
-        self.task_run.duration = f"{(datetime.fromisoformat(self.task_run.completed_time) - datetime.fromisoformat(self.task_run.start_processing_time)).total_seconds()} seconds"
-        await self.task.orchestrator_node.update_task_run(task_run=self.task_run)
+        self.task_run.duration = (datetime.fromisoformat(self.task_run.completed_time) - datetime.fromisoformat(self.task_run.start_processing_time)).total_seconds()
+        await self.task.orchestrator_node.update_task_run(module_run=self.task_run)
         logger.info(f"Task run completed: {self.task_run}")
 
     async def fail(self):
@@ -110,5 +108,5 @@ class TaskEngine:
         self.task_run.error = True
         self.task_run.error_message = error_details
         self.task_run.completed_time = datetime.now(pytz.timezone("UTC")).isoformat()
-        self.task_run.duration = f"{(datetime.fromisoformat(self.task_run.completed_time) - datetime.fromisoformat(self.task_run.start_processing_time)).total_seconds()} seconds"
-        await self.task.orchestrator_node.update_task_run(task_run=self.task_run)
+        self.task_run.duration = (datetime.fromisoformat(self.task_run.completed_time) - datetime.fromisoformat(self.task_run.start_processing_time)).total_seconds()
+        await self.task.orchestrator_node.update_task_run(module_run=self.task_run)

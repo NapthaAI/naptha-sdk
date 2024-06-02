@@ -108,17 +108,19 @@ class Node:
         except Exception as e:
             print(f"Exception occurred: {e}")
 
-    async def update_task_run(self, task_run):
+    async def update_task_run(self, module_run: ModuleRun):
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    f"{self.node_url}/UpdateTaskRun", json=task_run
+                    f"{self.node_url}/UpdateTaskRun", json=module_run.model_dict()
                 )
                 if response.status_code != 200:
                     print(f"Failed to update task run: {response.text}")
-            return json.loads(response.text)
+            return ModuleRun(**json.loads(response.text))
         except Exception as e:
             print(f"Exception occurred: {e}")
+            error_details = traceback.format_exc()
+            print(f"Full traceback: {error_details}")
 
     async def read_storage(self, module_run_id, output_dir, local, ipfs=False):
         """Read from storage."""
