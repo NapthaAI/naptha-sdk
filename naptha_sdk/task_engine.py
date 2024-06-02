@@ -92,6 +92,7 @@ class TaskEngine:
     async def complete(self):
         self.task_run.status = "completed"
         self.task_run.results.extend(self.task_result)
+        self.flow_run.results.extend(self.task_result)
         self.task_run.error = False
         self.task_run.error_message = ""
         self.task_run.completed_time = datetime.now(pytz.timezone("UTC")).isoformat()
