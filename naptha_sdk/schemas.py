@@ -23,8 +23,8 @@ class ModuleRun(BaseModel):
     completed_time: Optional[datetime] = None
     duration: Optional[datetime] = None
     module_params: Optional[dict] = None
-    child_runs: Optional[List['ModuleRun']] = None
-    parent_runs: Optional[List['ModuleRun']] = None
+    child_runs: List['ModuleRun'] = []
+    parent_runs: List['ModuleRun'] = []
 
     class Config:
         allow_mutation = True
@@ -39,7 +39,7 @@ class ModuleRun(BaseModel):
                 model_dict[key] = value.isoformat()
             elif isinstance(value, ModuleType):
                 model_dict[key] = value.value
-        model_dict['parent_runs'][0]['module_type'] = model_dict['parent_runs'][0]['module_type'].value
+        # model_dict['parent_runs'][0]['module_type'] = model_dict['parent_runs'][0]['module_type'].value
         return model_dict
 
 class ModuleRunInput(BaseModel):
@@ -48,4 +48,4 @@ class ModuleRunInput(BaseModel):
     worker_nodes: Optional[list[str]] = None
     module_params: Optional[Dict] = None
     module_type: Optional[ModuleType] = None
-    parent_runs: Optional[List['ModuleRun']] = None
+    parent_runs: List['ModuleRun'] = []

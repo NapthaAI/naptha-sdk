@@ -72,10 +72,7 @@ class TaskEngine:
         logger.info(f"AAAAAAAAAAA{task_run.model_dict()}")
 
         # Relate new task run with parent flow run
-        if self.flow_run.child_runs is None:
-            self.flow_run.child_runs = task_run
-        else:
-            self.flow_run.child_runs.append(task_run)
+        self.flow_run.child_runs.append(task_run)
 
         while True:
             task_run = await self.task.worker_node.check_task(task_run)
