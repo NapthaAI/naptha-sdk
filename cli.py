@@ -46,9 +46,9 @@ async def list_rfps(hub):
 
 async def run(
     naptha, 
-    module_id, 
+    module_name, 
     parameters=None, 
-    coworkers=None,
+    worker_nodes=None,
     yaml_file=None, 
     local=False, 
     docker=False
@@ -59,22 +59,22 @@ async def run(
     if yaml_file:
         parameters = load_yaml_to_dict(yaml_file)
 
-    task_input={
+    module_run_input = {
         'consumer_id': naptha.user["id"],
-        "module_id": module_id,
-        'coworkers': coworkers,
+        "module_name": module_name,
+        'worker_nodes': worker_nodes,
     }
 
     if docker:
-        task_input["docker_params"] = parameters
+        module_run_input["docker_params"] = parameters
     else:
-        task_input["module_params"] = parameters
+        module_run_input["module_params"] = parameters
     
-    print(f"Running module {module_id} with parameters: {task_input}")
+    print(f"Running module {module_name} with parameters: {module_run_input}")
 
     def confirm():
         while True:
-            response = input(f"You have {creds} credits. Running this workflow will cost {price} credits. Would you like to proceed? (y/n): ").strip().lower()
+            response = input(f"You have {creds} credits. Running this module will cost {price} credits. Would you like to proceed? (y/n): ").strip().lower()
             if response == 'y':
                 return True
             elif response == 'n':
@@ -103,32 +103,39 @@ async def run(
         print(f"User registered: {user}.")
 
     print("Running...")
-    job = await naptha.run_task(task_input, local=local)
+    module_run = await naptha.run_task(module_run_input, local=local)
 
-    print(f"Job ID: {job['id']}")
+    print(f"Module Run ID: {module_run['id']}")
+    current_results_len = 0
     while True:
-        j = await naptha.check_task({"id": job['id']})
+        module_run = await naptha.check_task(module_run)
 
-        status = j['status']
-        print(status)   
+        output = f"{module_run['status']} {module_run['module_type']} {module_run['module_name']}"
+        if len(module_run["child_runs"]) > 0:
+            output += f", task {len(module_run['child_runs'])} {module_run['child_runs'][-1]['module_name']} (node: {module_run['child_runs'][-1]['worker_nodes'][0]})"
+        print(output)
 
-        if status == 'completed':
+        if len(module_run['results']) > current_results_len:
+            print("Output: ", module_run['results'][-1])
+            current_results_len += 1
+
+        if module_run['status'] == 'completed':
             break
-        if status == 'error':
+        if module_run['status'] == 'error':
             break
 
         time.sleep(3)
 
-    if j['status'] == 'completed':
-        print(j['reply'])
+    if module_run['status'] == 'completed':
+        print(module_run['results'])
     else:
-        print(j['error_message'])
+        print(module_run['error_message'])
 
 
-async def read_storage(naptha, job_id, output_dir='files', local=False, ipfs=False):
+async def read_storage(naptha, module_run_id, output_dir='files', local=False, ipfs=False):
     """Read from storage."""
     try:
-        await naptha.read_storage(job_id.strip(), output_dir, local=local, ipfs=ipfs)
+        await naptha.read_storage(module_run_id.strip(), output_dir, local=local, ipfs=ipfs)
     except Exception as err:
         print(f"Error: {err}")
 
@@ -177,7 +184,7 @@ async def main():
     run_parser = subparsers.add_parser("run", help="Execute run command.")
     run_parser.add_argument("module", help="Select the module to run")
     run_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
-    run_parser.add_argument("-c", "--coworkers", help="Worker nodes to take part in workflows.")
+    run_parser.add_argument("-n", "--worker_nodes", help="Worker nodes to take part in module runs.")
     run_parser.add_argument("-f", "--file", help="YAML file with module parameters")
     run_parser.add_argument("-l", "--local", help="Run locally", action="store_true")
     run_parser.add_argument("-d", "--docker", help="Run in docker", action="store_true")
@@ -188,7 +195,7 @@ async def main():
 
     # Read storage commands
     read_storage_parser = subparsers.add_parser("read_storage", help="Read from storage.")
-    read_storage_parser.add_argument("-id", "--job_id", help="Job ID to read from")
+    read_storage_parser.add_argument("-id", "--module_run_id", help="Module run ID to read from")
     read_storage_parser.add_argument("-o", "--output_dir", default="files", help="Output directory to write to")
     read_storage_parser.add_argument("-l", "--local", help="Run locally", action="store_true")
     read_storage_parser.add_argument("--ipfs", help="Read from IPFS", action="store_true")
@@ -223,13 +230,13 @@ async def main():
                 parsed_params[key] = value
         else:
             parsed_params = None
-        if hasattr(args, 'coworkers') and args.coworkers is not None:
-            coworkers = args.coworkers.split(',')
+        if hasattr(args, 'worker_nodes') and args.worker_nodes is not None:
+            worker_nodes = args.worker_nodes.split(',')
         else:
-            coworkers = None
-        await run(naptha, args.module, parsed_params, coworkers, args.file, args.local, args.docker)
+            worker_nodes = None
+        await run(naptha, args.module, parsed_params, worker_nodes, args.file, args.local, args.docker)
     elif args.command == "read_storage":
-        await read_storage(naptha, args.job_id, args.output_dir, args.local, args.ipfs)
+        await read_storage(naptha, args.module_run_id, args.output_dir, args.local, args.ipfs)
     elif args.command == "write_storage":
         await write_storage(naptha, args.storage_input, args.ipfs)
     else:
