@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime
 import json
+from naptha_sdk.schemas import ModuleRun
 from naptha_sdk.utils import get_logger
 import pytz
 import time
@@ -41,15 +42,22 @@ class TaskEngine:
     async def init_run(self):
         self.task_run_input = {
             'consumer_id': self.consumer["id"],
+            "worker_nodes": [self.task.worker_node.node_url],
             "module_name": self.task.fn,
             "module_type": "template",
             "module_params": self.parameters,
-            "parent_runs": [self.flow_run.dict()],
+            "parent_runs": [{k: v for k, v in self.flow_run.dict().items() if k not in ["child_runs", "parent_runs"]}],
         }
-        logger.info(f"Initializing task run: {self.task_run_input}")
+        logger.info(f"Initializing task run.")
+        logger.info(f"Creating task run for worker node on orchestrator node: {self.task_run_input}")
         self.task_run = await self.task.orchestrator_node.create_task_run(module_run_input=self.task_run_input)
-        logger.info(f"Created task run on orchestrator node: {self.task_run}")
+        logger.info(f"Created task run for worker node on orchestrator node: {self.task_run}")
         self.task_run.start_processing_time = datetime.now(pytz.utc).isoformat()
+
+        # Relate new task run with parent flow run
+        self.flow_run.child_runs.append(ModuleRun(**{k: v for k, v in self.task_run.dict().items() if k not in ["child_runs", "parent_runs"]}))
+        logger.info(f"Adding task run to parent flow run: {self.flow_run}")
+        _ = await self.task.orchestrator_node.update_task_run(module_run=self.flow_run)
 
     async def start_run(self):
         logger.info(f"Starting task run: {self.task_run}")
@@ -65,12 +73,9 @@ class TaskEngine:
             consumer = await self.task.worker_node.register_user(user_input=consumer)
             logger.info(f"User registered: {consumer}.")
 
-        logger.info(f"Running task: {self.task_run_input} on worker node {self.task.worker_node.node_url}")
+        logger.info(f"Running task on worker node {self.task.worker_node.node_url}: {self.task_run_input}")
         task_run = await self.task.worker_node.run_task(task_input=self.task_run_input, local=True)
-        logger.info(f"Created task run: {task_run} on worker node {self.task.worker_node.node_url}")
-
-        # Relate new task run with parent flow run
-        self.flow_run.child_runs.append(task_run)
+        logger.info(f"Created task run on worker node {self.task.worker_node.node_url}: {task_run}")
 
         while True:
             task_run = await self.task.worker_node.check_task(task_run)

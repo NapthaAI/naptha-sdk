@@ -39,6 +39,14 @@ class ModuleRun(BaseModel):
                 model_dict[key] = value.isoformat()
             elif isinstance(value, ModuleType):
                 model_dict[key] = value.value
+        for i, parent_run in enumerate(model_dict['parent_runs']):
+            for key, value in parent_run.items():
+                if isinstance(value, datetime):
+                    model_dict['parent_runs'][i][key] = value.isoformat()
+        for i, child_run in enumerate(model_dict['child_runs']):
+            for key, value in child_run.items():
+                if isinstance(value, datetime):
+                    model_dict['child_runs'][i][key] = value.isoformat()
         return model_dict
 
 class ModuleRunInput(BaseModel):
