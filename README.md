@@ -98,7 +98,7 @@ For each module, you will see a url where you can check out the code.
 Now you've found a node and a module you'd like to run, so let's run it locally! You can use the commandline tool to connect with the node and run the workflow. 
 
 ```bash
-# usage: naptha run <module_id> <module args>
+# usage: naptha run <module_name> <module args>
 naptha run hello_world -p "param1=world param2=naptha" --local
 ```
 
@@ -123,7 +123,7 @@ naptha run generate_image -p "prompt='Beautiful green mountains and clear blue s
 Now let's run an image-to-image model on this image:
 
 ```bash
-naptha run image_to_image -p "prompt='Cyberpunk with a wolf' input_dir=<job_id_1>" --local
+naptha run image_to_image -p "prompt='Cyberpunk with a wolf' input_dir=<module_run_id_1>" --local
 ```
 
 You can also run modules from yaml files using: 
@@ -140,10 +140,10 @@ naptha run docker_hello_world -f ./example_yamls/docker_hello_world.yml --local
 
 ### Interact with Node Storage
 
-After the jobs run, you can download the file from the node using:
+After the module runs finish, you can download the file from the node using:
 
 ```bash
-naptha read_storage -id <job_id> --local
+naptha read_storage -id <module_run_id> --local
 ```
 
 You can write to the node using:
@@ -157,10 +157,10 @@ naptha write_storage -i files/<filename>.jpg
 naptha write_storage -i files/<filename>.jpg --ipfs
 ```
 
-### Run a Workflow
+### Run a Multi-Node Workflow
 
 ```bash
-naptha run multiplayer_chat -p "prompt='hello, how are you doing?'" --coworkers "http://node.naptha.ai:7001,http://node1.naptha.ai:7001" --local
+naptha run multiplayer_chat -p "prompt='lets count up one number at a time. ill start. one.'" --worker_nodes "http://node.naptha.ai:7001,http://node1.naptha.ai:7001" --local
 ```
 
 ### Get Credits
