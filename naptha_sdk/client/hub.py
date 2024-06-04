@@ -10,8 +10,8 @@ class Hub:
     def __init__(self, username, password, endpoint, *args, **kwargs):
         self.username = username
         self.password = password
-        self.ns = "algovera"
-        self.db = "algovera"
+        self.ns = "naptha"
+        self.db = "naptha"
         self.surrealdb = Surreal(endpoint)
         self.__storedargs = username, password, args, kwargs
         self.async_initialized = False

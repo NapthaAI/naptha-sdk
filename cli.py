@@ -24,23 +24,23 @@ def list_services(naptha):
     for service in services:
         print(service) 
 
-async def list_nodes(hub):
-    nodes = await hub.list_nodes()
+async def list_nodes(naptha):
+    nodes = await naptha.hub.list_nodes()
     for node in nodes:
         print(node) 
 
-async def list_modules(hub):
-    modules = await hub.list_modules()
+async def list_modules(naptha):
+    modules = await naptha.hub.list_modules()
     for module in modules:
         print(module) 
 
-async def list_tasks(hub):
-    tasks = await hub.list_tasks()
+async def list_tasks(naptha):
+    tasks = await naptha.hub.list_tasks()
     for task in tasks:
         print(task) 
 
-async def list_rfps(hub):
-    rfps = await hub.list_rfps()
+async def list_rfps(naptha):
+    rfps = await naptha.hub.list_rfps()
     for rfp in rfps:
         print(rfp) 
 
@@ -207,13 +207,13 @@ async def main():
     elif args.command == "services":
         list_services(naptha)  
     elif args.command == "nodes":
-        await list_nodes(hub)   
+        await list_nodes(naptha)   
     elif args.command == "modules":
-        await list_modules(hub)  
+        await list_modules(naptha)  
     elif args.command == "tasks":
-        await list_tasks(hub)  
+        await list_tasks(naptha)  
     elif args.command == "rfps":
-        await list_rfps(hub)  
+        await list_rfps(naptha)  
     elif args.command == "run":
         if hasattr(args, 'parameters') and args.parameters is not None:
             # Split the parameters string into key-value pairs
