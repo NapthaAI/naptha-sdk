@@ -78,12 +78,12 @@ class Hub:
         nodes = await self.surrealdb.query("SELECT * FROM node;")
         return nodes[0]['result']
 
-    async def list_modules(self, module_id=None) -> List:
-        if not module_id:
+    async def list_modules(self, module_name=None) -> List:
+        if not module_name:
             modules = await self.surrealdb.query("SELECT * FROM module;")
             return modules[0]['result']
         else:
-            module = await self.surrealdb.query("SELECT * FROM module WHERE id=$module_id;", {"module_id": module_id})
+            module = await self.surrealdb.query("SELECT * FROM module WHERE id=$module_name;", {"module_name": module_name})
             return module[0]['result'][0]
 
     async def list_tasks(self) -> List:

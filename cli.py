@@ -93,49 +93,49 @@ async def run(
         confirm = True
 
     print("Checking user...")
-    user = await naptha.check_user(user_input=naptha.user)
+    user = await naptha.node.check_user(user_input=naptha.user)
 
     if user["is_registered"] == True:
         print("Found user...", user)
     elif user["is_registered"] == False:
         print("No user found. Registering user...")
-        user = await naptha.register_user(user_input=user)
+        user = await naptha.node.register_user(user_input=user)
         print(f"User registered: {user}.")
 
     print("Running...")
-    module_run = await naptha.run_task(module_run_input, local=local)
+    module_run = await naptha.node.run_task(module_run_input, local=local)
 
-    print(f"Module Run ID: {module_run['id']}")
+    print(f"Module Run ID: {module_run.id}")
     current_results_len = 0
     while True:
-        module_run = await naptha.check_task(module_run)
+        module_run = await naptha.node.check_task(module_run)
 
-        output = f"{module_run['status']} {module_run['module_type']} {module_run['module_name']}"
-        if len(module_run["child_runs"]) > 0:
-            output += f", task {len(module_run['child_runs'])} {module_run['child_runs'][-1]['module_name']} (node: {module_run['child_runs'][-1]['worker_nodes'][0]})"
+        output = f"{module_run.status} {module_run.module_type} {module_run.module_name}"
+        if len(module_run.child_runs) > 0:
+            output += f", task {len(module_run.child_runs)} {module_run.child_runs[-1].module_name} (node: {module_run.child_runs[-1].worker_nodes[0]})"
         print(output)
 
-        if len(module_run['results']) > current_results_len:
-            print("Output: ", module_run['results'][-1])
+        if len(module_run.results) > current_results_len:
+            print("Output: ", module_run.results[-1])
             current_results_len += 1
 
-        if module_run['status'] == 'completed':
+        if module_run.status == 'completed':
             break
-        if module_run['status'] == 'error':
+        if module_run.status == 'error':
             break
 
         time.sleep(3)
 
-    if module_run['status'] == 'completed':
-        print(module_run['results'])
+    if module_run.status == 'completed':
+        print(module_run.results)
     else:
-        print(module_run['error_message'])
+        print(module_run.error_message)
 
 
 async def read_storage(naptha, module_run_id, output_dir='files', local=False, ipfs=False):
     """Read from storage."""
     try:
-        await naptha.read_storage(module_run_id.strip(), output_dir, local=local, ipfs=ipfs)
+        await naptha.node.read_storage(module_run_id.strip(), output_dir, local=local, ipfs=ipfs)
     except Exception as err:
         print(f"Error: {err}")
 
@@ -143,7 +143,7 @@ async def read_storage(naptha, module_run_id, output_dir='files', local=False, i
 async def write_storage(naptha, storage_input, ipfs=False):
     """Write to storage."""
     try:
-        response = await naptha.write_storage(storage_input, ipfs=ipfs)
+        response = await naptha.node.write_storage(storage_input, ipfs=ipfs)
         print(response)
     except Exception as err:
         print(f"Error: {err}")
