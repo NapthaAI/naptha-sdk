@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 from datetime import datetime
 from pydantic import BaseModel
 
@@ -8,7 +8,7 @@ class ModuleType(str, Enum):
     template = "template"
     flow = "flow"
 
-class DockerJob(BaseModel):
+class DockerParams(BaseModel):
     docker_image: str
     docker_command: Optional[str] = ""
     docker_num_gpus: Optional[int] = 0
@@ -17,7 +17,7 @@ class DockerJob(BaseModel):
     input_ipfs_hash: Optional[str] = None
     docker_input_dir: Optional[str] = None
     docker_output_dir: Optional[str] = None
-    save_location: Optional[str] = None
+    save_location: str = "node"
 
     class Config:
         allow_mutation = True
@@ -49,7 +49,7 @@ class ModuleRun(BaseModel):
     start_processing_time: Optional[datetime] = None
     completed_time: Optional[datetime] = None
     duration: Optional[float] = None
-    module_params: Optional[dict] = None
+    module_params: Optional[Union[Dict, DockerParams]] = None
     child_runs: List['ModuleRun'] = []
     parent_runs: List['ModuleRun'] = []
 
@@ -80,8 +80,7 @@ class ModuleRunInput(BaseModel):
     module_name: str
     consumer_id: str
     worker_nodes: Optional[list[str]] = None
-    module_params: Optional[Dict] = None
-    docker_params: Optional[DockerJob] = None
+    module_params: Optional[Union[Dict, DockerParams]] = None
     module_type: Optional[ModuleType] = None
     parent_runs: List['ModuleRun'] = []
 

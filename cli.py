@@ -51,7 +51,6 @@ async def run(
     worker_nodes=None,
     yaml_file=None, 
     local=False, 
-    docker=False
 ):   
     if yaml_file and parameters:
         raise ValueError("Cannot pass both yaml_file and parameters")
@@ -63,12 +62,8 @@ async def run(
         'consumer_id': naptha.user["id"],
         "module_name": module_name,
         'worker_nodes': worker_nodes,
+        "module_params": parameters,
     }
-
-    if docker:
-        module_run_input["docker_params"] = parameters
-    else:
-        module_run_input["module_params"] = parameters
     
     print(f"Running module {module_name} with parameters: {module_run_input}")
 
@@ -187,7 +182,6 @@ async def main():
     run_parser.add_argument("-n", "--worker_nodes", help="Worker nodes to take part in module runs.")
     run_parser.add_argument("-f", "--file", help="YAML file with module parameters")
     run_parser.add_argument("-l", "--local", help="Run locally", action="store_true")
-    run_parser.add_argument("-d", "--docker", help="Run in docker", action="store_true")
 
     # Credits command
     credits_parser = subparsers.add_parser("credits", help="Show available credits.")
@@ -234,7 +228,7 @@ async def main():
             worker_nodes = args.worker_nodes.split(',')
         else:
             worker_nodes = None
-        await run(naptha, args.module, parsed_params, worker_nodes, args.file, args.local, args.docker)
+        await run(naptha, args.module, parsed_params, worker_nodes, args.file, args.local)
     elif args.command == "read_storage":
         await read_storage(naptha, args.module_run_id, args.output_dir, args.local, args.ipfs)
     elif args.command == "write_storage":
