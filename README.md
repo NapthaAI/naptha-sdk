@@ -51,6 +51,8 @@ Create a copy of the .env file:
 cp .env.example .env
 ```
 
+You will need to add a value to PRIVATE_KEY in .env. You can generate and output one to the commandline using ```naptha user``` (just copy and paste the value into the .env file).
+
 ## Get Started
 
 ## Task Marketplace
@@ -160,7 +162,7 @@ naptha write_storage -i files/<filename>.jpg --ipfs
 ### Run a Multi-Node Workflow
 
 ```bash
-naptha run multiplayer_chat -p "prompt='lets count up one number at a time. ill start. one.'" --worker_nodes "http://node.naptha.ai:7001,http://node1.naptha.ai:7001" --local
+naptha run multiplayer_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --worker_nodes "http://node.naptha.ai:7001,http://node1.naptha.ai:7001" --local
 ```
 
 ### Get Credits

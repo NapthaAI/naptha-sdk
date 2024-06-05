@@ -2,7 +2,7 @@ import argparse
 import asyncio
 from dotenv import load_dotenv
 from naptha_sdk.client.naptha import Naptha
-from naptha_sdk.user import get_public_key
+from naptha_sdk.user import get_public_key, generate_user
 import os
 import shlex
 import time
@@ -43,6 +43,10 @@ async def list_rfps(naptha):
     rfps = await naptha.hub.list_rfps()
     for rfp in rfps:
         print(rfp) 
+
+def generate_new_user():
+    public_key, private_key = generate_user()
+    print("PRIVATE_KEY: ", private_key)
 
 async def run(
     naptha, 
@@ -183,6 +187,8 @@ async def main():
     run_parser.add_argument("-f", "--file", help="YAML file with module parameters")
     run_parser.add_argument("-l", "--local", help="Run locally", action="store_true")
 
+    user_parser = subparsers.add_parser("user", help="Generate user.")
+
     # Credits command
     credits_parser = subparsers.add_parser("credits", help="Show available credits.")
     services_parser = subparsers.add_parser("services", help="Show available services.")
@@ -214,6 +220,8 @@ async def main():
         await list_tasks(naptha)  
     elif args.command == "rfps":
         await list_rfps(naptha)  
+    elif args.command == "user":
+        generate_new_user()  
     elif args.command == "run":
         if hasattr(args, 'parameters') and args.parameters is not None:
             # Split the parameters string into key-value pairs
