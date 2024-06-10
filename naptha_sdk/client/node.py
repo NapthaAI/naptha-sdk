@@ -1,6 +1,6 @@
 import httpx
 import json
-from naptha_sdk.schemas import ModuleRun
+from naptha_sdk.schemas import ModuleRun, ModuleRunInput
 import os
 from pathlib import Path
 import shutil
@@ -12,6 +12,7 @@ import zipfile
 class Node:
     def __init__(self, node_url):
         self.node_url = node_url
+        self.access_token = None
 
     async def check_user(self, user_input):
         print(f"Checking user: {user_input}")
@@ -45,14 +46,10 @@ class Node:
                 print(f"Failed to register user: {response.text}")
         return json.loads(response.text)
 
-    async def run_task(self, task_input, local) -> ModuleRun:
-        if local:
-            self.access_token, self.proxy_address = None, self.node_url
-        else:
-            self.access_token, self.proxy_address = self.get_service_details(service_did)
+    async def run_task(self, module_run_input: ModuleRunInput) -> ModuleRun:
         print("Running module...")
         print(f"Node URL: {self.node_url}")
-        endpoint = self.proxy_address + "/CreateTask"
+        endpoint = self.node_url + "/CreateTask"
         try:
             async with httpx.AsyncClient() as client:
                 headers = {
@@ -61,7 +58,7 @@ class Node:
                 }
                 response = await client.post(
                     endpoint, 
-                    json=task_input,
+                    json=module_run_input.model_dict(),
                     headers=headers
                 )
                 if response.status_code != 200:
@@ -76,7 +73,7 @@ class Node:
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    f"{self.proxy_address}/CheckTasks"
+                    f"{self.node_url}/CheckTasks"
                 )
                 if response.status_code != 200:
                     print(f"Failed to check task: {response.text}")
@@ -96,11 +93,11 @@ class Node:
         except Exception as e:
             print(f"Exception occurred: {e}")
 
-    async def create_task_run(self, module_run_input) -> ModuleRun:
+    async def create_task_run(self, module_run_input: ModuleRunInput) -> ModuleRun:
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    f"{self.node_url}/CreateTaskRun", json=module_run_input
+                    f"{self.node_url}/CreateTaskRun", json=module_run_input.model_dict()
                 )
                 if response.status_code != 200:
                     print(f"Failed to create task run: {response.text}")
@@ -122,12 +119,7 @@ class Node:
             error_details = traceback.format_exc()
             print(f"Full traceback: {error_details}")
 
-    async def read_storage(self, module_run_id, output_dir, local, ipfs=False):
-        """Read from storage."""
-        if local:
-            self.access_token, self.node_url = None, self.node_url
-        else:
-            self.access_token, self.node_url = self.get_service_details(service_did)
+    async def read_storage(self, module_run_id, output_dir, ipfs=False):
         print("Reading from storage...")
         try:
             endpoint = f"{self.node_url}/{'read_ipfs' if ipfs else 'read_storage'}/{module_run_id}"

@@ -74,7 +74,7 @@ class TaskEngine:
             logger.info(f"User registered: {consumer}.")
 
         logger.info(f"Running task on worker node {self.task.worker_node.node_url}: {self.task_run_input}")
-        task_run = await self.task.worker_node.run_task(task_input=self.task_run_input, local=True)
+        task_run = await self.task.worker_node.run_task(module_run_input=self.task_run_input)
         logger.info(f"Created task run on worker node {self.task.worker_node.node_url}: {task_run}")
 
         while True:
