@@ -54,7 +54,6 @@ async def run(
     parameters=None, 
     worker_nodes=None,
     yaml_file=None, 
-    local=False, 
 ):   
     if yaml_file and parameters:
         raise ValueError("Cannot pass both yaml_file and parameters")
@@ -71,26 +70,6 @@ async def run(
     
     print(f"Running module {module_name} with parameters: {module_run_input}")
 
-    def confirm():
-        while True:
-            response = input(f"You have {creds} credits. Running this module will cost {price} credits. Would you like to proceed? (y/n): ").strip().lower()
-            if response == 'y':
-                return True
-            elif response == 'n':
-                return False
-            else:
-                print("Invalid input. Please enter 'y' or 'n'.")
-
-    if local == False:
-        creds = naptha.services.show_credits()
-        price = 0
-        confirm = confirm()
-        if not confirm:
-            print("Exiting...")
-            return None
-    else:
-        confirm = True
-
     print("Checking user...")
     user = await naptha.node.check_user(user_input=naptha.user)
 
@@ -102,7 +81,7 @@ async def run(
         print(f"User registered: {user}.")
 
     print("Running...")
-    module_run = await naptha.node.run_task(module_run_input, local=local)
+    module_run = await naptha.node.run_task(module_run_input)
 
     print(f"Module Run ID: {module_run.id}")
     current_results_len = 0
@@ -131,10 +110,10 @@ async def run(
         print(module_run.error_message)
 
 
-async def read_storage(naptha, module_run_id, output_dir='files', local=False, ipfs=False):
+async def read_storage(naptha, module_run_id, output_dir='files', ipfs=False):
     """Read from storage."""
     try:
-        await naptha.node.read_storage(module_run_id.strip(), output_dir, local=local, ipfs=ipfs)
+        await naptha.node.read_storage(module_run_id.strip(), output_dir, ipfs=ipfs)
     except Exception as err:
         print(f"Error: {err}")
 
@@ -185,7 +164,6 @@ async def main():
     run_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
     run_parser.add_argument("-n", "--worker_nodes", help="Worker nodes to take part in module runs.")
     run_parser.add_argument("-f", "--file", help="YAML file with module parameters")
-    run_parser.add_argument("-l", "--local", help="Run locally", action="store_true")
 
     user_parser = subparsers.add_parser("user", help="Generate user.")
 
@@ -197,7 +175,6 @@ async def main():
     read_storage_parser = subparsers.add_parser("read_storage", help="Read from storage.")
     read_storage_parser.add_argument("-id", "--module_run_id", help="Module run ID to read from")
     read_storage_parser.add_argument("-o", "--output_dir", default="files", help="Output directory to write to")
-    read_storage_parser.add_argument("-l", "--local", help="Run locally", action="store_true")
     read_storage_parser.add_argument("--ipfs", help="Read from IPFS", action="store_true")
 
     # Write storage commands
@@ -236,9 +213,9 @@ async def main():
             worker_nodes = args.worker_nodes.split(',')
         else:
             worker_nodes = None
-        await run(naptha, args.module, parsed_params, worker_nodes, args.file, args.local)
+        await run(naptha, args.module, parsed_params, worker_nodes, args.file)
     elif args.command == "read_storage":
-        await read_storage(naptha, args.module_run_id, args.output_dir, args.local, args.ipfs)
+        await read_storage(naptha, args.module_run_id, args.output_dir, args.ipfs)
     elif args.command == "write_storage":
         await write_storage(naptha, args.storage_input, args.ipfs)
     else:

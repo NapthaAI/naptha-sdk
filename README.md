@@ -101,43 +101,43 @@ Now you've found a node and a module you'd like to run, so let's run it locally!
 
 ```bash
 # usage: naptha run <module_name> <module args>
-naptha run hello_world -p "param1=world param2=naptha" --local
+naptha run hello_world -p "param1=world param2=naptha"
 ```
 
 Try a module that uses the local LLM running on your node:
 
 ```bash
-naptha run chat -p "prompt='tell me a joke'" --local
+naptha run chat -p "prompt='tell me a joke'"
 ```
 
 Try a module that makes predictions about future events using:
 
 ```bash
-naptha run olas_prediction -p "prompt='Will there be an initial public offering on either the Shanghai Stock Exchange or the Shenzhen Stock Exchange before 1 January 2016?'" --local
+naptha run olas_prediction -p "prompt='Will there be an initial public offering on either the Shanghai Stock Exchange or the Shenzhen Stock Exchange before 1 January 2016?'"
 ```
 
 You can also try a module that generates images (make sure that the .env file in node has a valid Stability platform API key):
 
 ```bash
-naptha run generate_image -p "prompt='Beautiful green mountains and clear blue skies. Sun shining and birds chirping. A perfect day for a hike. You are walking through the forest, enjoying the scenery, when you come across a fork in the road. Do you go left or right?'" --local
+naptha run generate_image -p "prompt='Beautiful green mountains and clear blue skies. Sun shining and birds chirping. A perfect day for a hike. You are walking through the forest, enjoying the scenery, when you come across a fork in the road. Do you go left or right?'"
 ```
 
 Now let's run an image-to-image model on this image:
 
 ```bash
-naptha run image_to_image -p "prompt='Cyberpunk with a wolf' input_dir=<module_run_id_1>" --local
+naptha run image_to_image -p "prompt='Cyberpunk with a wolf' input_dir=<module_run_id_1>"
 ```
 
 You can also run modules from yaml files using: 
 
 ```bash
-naptha run create_profile_description -f ./example_yamls/create_profile_description.yml --local
+naptha run create_profile_description -f ./example_yamls/create_profile_description.yml
 ```
 
 Or docker images:
 
 ```bash
-naptha run docker_hello_world -f ./example_yamls/docker_hello_world.yml --local
+naptha run docker_hello_world -f ./example_yamls/docker_hello_world.yml
 ```
 
 ### Interact with Node Storage
@@ -145,7 +145,7 @@ naptha run docker_hello_world -f ./example_yamls/docker_hello_world.yml --local
 After the module runs finish, you can download the file from the node using:
 
 ```bash
-naptha read_storage -id <module_run_id> --local
+naptha read_storage -id <module_run_id>
 ```
 
 You can write to the node using:
@@ -159,25 +159,16 @@ naptha write_storage -i files/<filename>.jpg
 naptha write_storage -i files/<filename>.jpg --ipfs
 ```
 
-### Run a Multi-Node Workflow
+### Run Multi-Node Workflows
 
 ```bash
-naptha run multiplayer_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --worker_nodes "http://node.naptha.ai:7001,http://node1.naptha.ai:7001" --local
+naptha run multiplayer_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --worker_nodes "http://node.naptha.ai:7001,http://node1.naptha.ai:7001"
 ```
-
-### Get Credits
-
-We've been interacting with a local node, so how can we interact with other nodes on the Naptha network? Log in and subscribe to Naptha's [Free Subscription](https://testing.nevermined.app/en/subscription/did:nv:bcc485bc7155a50d13ba425a3b8bbd30eea8e4c90ecfeadfedf5cdd702e3c793) tier on the Nevermined app. Select the Profile button in the top right-hand corner, and copy the address beside My Wallet. Paste this value to ```WALLET_ADDRESS``` in the ```.env``` file. You can now check your credits using:
 
 ```bash
-naptha credits
+naptha run babyagi -p "objective='Research the history of football'" --worker_nodes "http://node.naptha.ai:7001,http://node1.naptha.ai:7001"
 ```
 
-You can list available compute node services using:
-
-```bash
-naptha services
-```
 
 ## Using the SDK non-interactively
 To use the SDK as part of a script, start with importing the hub and service subcomponents.
