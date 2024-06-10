@@ -49,6 +49,10 @@ class Node:
     async def run_task(self, module_run_input: ModuleRunInput) -> ModuleRun:
         print("Running module...")
         print(f"Node URL: {self.node_url}")
+
+        if isinstance(module_run_input, dict):
+            module_run_input = ModuleRunInput(**module_run_input)
+
         endpoint = self.node_url + "/CreateTask"
         try:
             async with httpx.AsyncClient() as client:

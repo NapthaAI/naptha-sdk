@@ -1,7 +1,7 @@
 import asyncio
 from datetime import datetime
 import json
-from naptha_sdk.schemas import ModuleRun
+from naptha_sdk.schemas import ModuleRun, ModuleRunInput
 from naptha_sdk.utils import get_logger
 import pytz
 import time
@@ -40,7 +40,12 @@ class TaskEngine:
         }
 
     async def init_run(self):
-        self.task_run_input = {
+        if isinstance(self.flow_run, ModuleRunInput):
+            logger.info(f"Creating flow run on orchestrator node: {self.flow_run}")
+            self.flow_run = await self.task.orchestrator_node.create_task_run(module_run_input=self.flow_run)
+            logger.info(f"flow_run: {self.flow_run}")
+
+        task_run_input = {
             'consumer_id': self.consumer["id"],
             "worker_nodes": [self.task.worker_node.node_url],
             "module_name": self.task.fn,
@@ -48,6 +53,7 @@ class TaskEngine:
             "module_params": self.parameters,
             "parent_runs": [{k: v for k, v in self.flow_run.dict().items() if k not in ["child_runs", "parent_runs"]}],
         }
+        self.task_run_input = ModuleRunInput(**task_run_input)
         logger.info(f"Initializing task run.")
         logger.info(f"Creating task run for worker node on orchestrator node: {self.task_run_input}")
         self.task_run = await self.task.orchestrator_node.create_task_run(module_run_input=self.task_run_input)

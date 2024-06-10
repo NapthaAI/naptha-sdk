@@ -45,7 +45,7 @@ async def list_rfps(naptha):
         print(rfp) 
 
 def generate_new_user():
-    public_key, private_key = generate_user()
+    _, private_key = generate_user()
     print("PRIVATE_KEY: ", private_key)
 
 async def run(
@@ -128,12 +128,13 @@ async def write_storage(naptha, storage_input, ipfs=False):
 
 
 async def main():
-    public_key = get_public_key(os.getenv("PRIVATE_KEY"))
-    user = {"public_key": public_key, "id": f"user:{public_key}"}
+    user, _ = generate_user(os.getenv("PRIVATE_KEY"))
     hub_url = os.getenv("HUB_URL")
     hub_username = os.getenv("HUB_USER")
     hub_password = os.getenv("HUB_PASS")
     node_url = os.getenv("NODE_URL")
+
+    print(f"Running on Node: {node_url}")
 
     naptha = await Naptha(
         user,
