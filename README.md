@@ -1,30 +1,24 @@
-                    ▄█▀█                  
-                █▀█▄▀██▀   ▄█▀█         
-            ▄▄▄ █▄█▀ ██    ▀█▄█▀        
-        ▄▄▄ █▄█  ██  ██ ▄▄▄ ██  ▄▄     
-       ▐█ █▌ ██  ██  ██ █▄█ ██ █▄▐█       
-     ▄▄  ██  ██  ██  ██ ▐█  ██  ██  ▄▄      ███╗   ██╗ █████╗ ██████╗ ████████╗██╗  ██╗ █████╗ 
-    █▌ █ ██  ██  ██  ██ ▐█  ██  ██ █▌▐█     ████╗  ██║██╔══██╗██╔══██╗╚══██╔══╝██║  ██║██╔══██╗
-     ██  ██  ██  ██  ██▄█▀  ██  ██  ██      ██╔██╗ ██║███████║██████╔╝   ██║   ███████║███████║
-     ██  ██  ▀██  ▀  ██▀▀  ▄██ ▐██  ██      ██║╚██╗██║██╔══██║██╔═══╝    ██║   ██╔══██║██╔══██║
-     ██  ▀██▄  ▀██▄  ██  ▄█▀▀ ▄██▀  ██      ██║ ╚████║██║  ██║██║        ██║   ██║  ██║██║  ██║
-      ▀██▄ ▀███  ██  ██ ██  ▄██▀ ▄██▀       ╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝        ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝
-        ▀██▄ ██  ██  ██ ██  ██  ▄█▀                           Decentralized Multi-Agent Systems
-           ▀ ██  ██  ██ ██  █▌ ▀                                                  www.naptha.ai
-              ▀▀▀██  ██ ███▀▀                                                    
+                 █▀█                  
+              ▄▄▄▀█▀            
+              █▄█ █    █▀█        
+           █▀█ █  █ ▄▄▄▀█▀      
+        ▄▄▄▀█▀ █  █ █▄█ █ ▄▄▄       
+        █▄█ █  █  █  █  █ █▄█        ███╗   ██╗ █████╗ ██████╗ ████████╗██╗  ██╗ █████╗ 
+     ▄▄▄ █  █  █  █  █  █  █ ▄▄▄     ████╗  ██║██╔══██╗██╔══██╗╚══██╔══╝██║  ██║██╔══██╗
+     █▄█ █  █  █  █▄█▀  █  █ █▄█     ██╔██╗ ██║███████║██████╔╝   ██║   ███████║███████║
+      █  █   ▀█▀  █▀▀  ▄█  █  █      ██║╚██╗██║██╔══██║██╔═══╝    ██║   ██╔══██║██╔══██║
+      █  ▀█▄  ▀█▄ █ ▄█▀▀ ▄█▀  █      ██║ ╚████║██║  ██║██║        ██║   ██║  ██║██║  ██║
+       ▀█▄ ▀▀█  █ █ █ ▄██▀ ▄█▀       ╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝        ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝
+         ▀█▄ █  █ █ █ █  ▄█▀                         Decentralized Multi-Agent Workflows
+            ▀█  █ █ █ █ ▌▀                                                 www.naptha.ai
+              ▀▀█ █ ██▀▀                                                    
 
  
 # Naptha Python SDK
 
-Naptha helps users to solve real-world problems using AI workflows and agents. There are 3 different types of users:
+Naptha enables users to build decentralized multi-agent workflows. Decentralized workflows can run on one or more nodes (rather than on one central server), with different LLMs, and with many local data sources, opening up new use cases for AI devs. 
 
-1. AI Consumers define tasks related to real-world problems via the Task Marketplace.
-2. Workflow Planners (likely AI developers) manage workflows and agents for rewards.
-3. Platform Operators use our AI nodes to deploy and operate workflows and agents as AI services.
-
-Decentralized workflows can run on one or more nodes (rather than on one central server) with many local data sources, opening up new use cases. 
-
-<img src="images/autonomous-pipeline.png" width="100%">
+<img src="images/multi-node-flow.png" width="100%">
 
 ## Install
 
@@ -46,24 +40,6 @@ cp .env.example .env
 You will need to add a value to PRIVATE_KEY in .env. You can generate and output one to the commandline using ```naptha user``` (just copy and paste the value into the .env file).
 
 ## Get Started
-
-## Task Marketplace
-
-### Browse existing Tasks
-
-You can browse all tasks using:
-
-```bash
-naptha tasks
-```
-
-### Browse existing RFPs
-
-You can browse all RFPs using:
-
-```bash
-naptha rfps
-```
 
 ## Nodes
 
