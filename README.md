@@ -18,6 +18,8 @@
 
 Naptha enables users to build decentralized multi-agent workflows. Decentralized workflows can run on one or more nodes (rather than on one central server), with different LLMs, and with many local data sources, opening up new use cases for AI devs. 
 
+Here's Yohei (creator of BabyAGI) admitting that [BabyAGI isn't a true multi-agent system](https://x.com/yoheinakajima/status/1781183534998380576) since the agents use the same LLM and code base. You can watch a demo video where we run BabyAGI as a true multi-agent system [here](https://www.youtube.com/watch?v=nzV04zOA0f0).
+
 <img src="images/multi-node-flow.png" width="100%">
 
 ## Install
@@ -184,8 +186,25 @@ asyncio.run(await main())
 
 ### Create your own Module
 
-(Coming Soon)
+Clone the [base template](https://huggingface.co/NapthaAI/template) for creating task and flow modules, and follow the instructions in the readme for prototyping the module. You can check out other examples of task and flow modules at https://huggingface.co/NapthaAI.
+
+Register your module on the Naptha Hub (Coming Soon).
 
 # Run a Node
 
 You can run your own Naptha node, and earn rewards for running workflows. Follow the instructions at https://github.com/NapthaAI/node
+
+
+# Community
+
+### Links
+
+* Check out our [Website](https://www.naptha.ai/)  
+* Contribute to our [GitHub](https://github.com/NapthaAI)
+* Request to join the Naptha community on [HuggingFace](https://huggingface.co/NapthaAI)
+* Follow us on [Twitter](https://twitter.com/NapthaAI) and [Farcaster](https://warpcast.com/naptha)  
+* Subscribe to our [YouTube](https://www.youtube.com/channel/UCoDwQ3DZa1bRJPrIz_4_02w)
+
+### Bounties and Microgrants
+
+Have an idea for a cool use case to build with our SDK? Get in touch at team@naptha.ai.
