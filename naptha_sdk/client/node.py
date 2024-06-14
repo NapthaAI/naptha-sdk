@@ -8,6 +8,10 @@ from naptha_sdk.client.comms.ws_client import (
     check_user_ws, register_user_ws, run_task_ws, check_task_ws, 
     create_task_run_ws, update_task_run_ws, read_storage_ws, write_storage_ws
 )
+from naptha_sdk.utils import get_logger
+
+
+logger = get_logger(__name__)
 
 class Node:
     def __init__(self, node_url: Optional[str] = None, indirect_node_id: Optional[str] = None, routing_url: Optional[str] = None):
@@ -71,6 +75,8 @@ class Node:
 
     async def create_task_run(self, module_run_input: ModuleRunInput) -> ModuleRun:
         if self.client == 'http':
+            logger.info(f"Creating task run with input: {module_run_input}")
+            logger.info(f"Node URL: {self.node_url}")
             return await create_task_run_http(self.node_url, module_run_input)
         else:
             return await create_task_run_ws(self.routing_url, self.indirect_node_id, module_run_input)
