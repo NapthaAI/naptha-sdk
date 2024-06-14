@@ -132,16 +132,20 @@ async def main():
     hub_url = os.getenv("HUB_URL")
     hub_username = os.getenv("HUB_USER")
     hub_password = os.getenv("HUB_PASS")
-    node_url = os.getenv("NODE_URL")
+    node_url = os.getenv("NODE_URL", None)
+    routing_url = os.getenv("ROUTING_URL", None)
+    indirect_node_id = os.getenv("INDIRECT_NODE_ID", None)
 
     print(f"Running on Node: {node_url}")
 
     naptha = await Naptha(
-        user,
-        hub_username, 
-        hub_password, 
-        hub_url,
-        node_url,
+        user=user,
+        hub_username=hub_username,
+        hub_password=hub_password,
+        hub_url=hub_url,
+        node_url=node_url,
+        routing_url=routing_url,
+        indirect_node_id=indirect_node_id,
     )
 
     parser = argparse.ArgumentParser(description="CLI with for Naptha")
