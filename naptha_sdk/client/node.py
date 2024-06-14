@@ -43,9 +43,9 @@ class Node:
 
     async def register_user(self, user_input):
         if self.client == 'http':
-            return await register_user_http(user_input)
+            return await register_user_http(self.node_url, user_input)
         else:
-            return await register_user_ws(user_input)
+            return await register_user_ws(self.routing_url, self.indirect_node_id, user_input)
 
     async def run_task(self, module_run_input: ModuleRunInput) -> ModuleRun:
         if self.client == 'http':
