@@ -57,13 +57,13 @@ async def run_task_http(node_url: str, module_run_input: Dict[str, Any], access_
     """
     print("Running module...")
     print(f"Node URL: {node_url}")
-    print(f"Module run input: {module_run_input}")
-    print(f"Type of module run input: {type(module_run_input)}")
 
     endpoint = node_url + "/CreateTask"
     
     if isinstance(module_run_input, dict):
         task_input = ModuleRunInput(**module_run_input)
+    else:
+        task_input = module_run_input
 
     try:
         async with httpx.AsyncClient() as client:
