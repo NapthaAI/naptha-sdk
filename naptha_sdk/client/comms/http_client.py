@@ -8,6 +8,9 @@ import zipfile
 from pathlib import Path
 from typing import Dict, Any, List, Tuple
 from naptha_sdk.schemas import ModuleRun, ModuleRunInput
+from naptha_sdk.utils import get_logger
+
+logger = get_logger(__name__)
 
 
 async def check_user_http(node_url: str, user_input: Dict[str, Any]) -> Dict[str, Any]:
@@ -111,10 +114,14 @@ async def check_task_http(node_url: str, module_run: ModuleRun) -> ModuleRun:
 
 async def create_task_run_http(node_url: str, module_run_input: ModuleRunInput) -> ModuleRun:
     try:
+        logger.info(f"Creating task run with input: {module_run_input}")
+        logger.info(f"Node URL: {node_url}")
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{node_url}/CreateTaskRun", json=module_run_input.model_dict()
             )
+            logger.info(f"Response: {response.text}")
+            logger.info(f"Status code: {response.status_code}")
             if response.status_code != 200:
                 print(f"Failed to create task run: {response.text}")
         return ModuleRun(**json.loads(response.text))
