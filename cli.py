@@ -3,6 +3,7 @@ import asyncio
 from dotenv import load_dotenv
 from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.user import get_public_key, generate_user
+from naptha_sdk.schemas import ModuleRun
 import os
 import shlex
 import time
@@ -83,10 +84,17 @@ async def run(
     print("Running...")
     module_run = await naptha.node.run_task(module_run_input)
 
+
+    if isinstance(module_run, dict):
+        module_run = ModuleRun(**module_run)
+
     print(f"Module Run ID: {module_run.id}")
     current_results_len = 0
     while True:
         module_run = await naptha.node.check_task(module_run)
+
+        if isinstance(module_run, dict):
+            module_run = ModuleRun(**module_run)
 
         output = f"{module_run.status} {module_run.module_type} {module_run.module_name}"
         if len(module_run.child_runs) > 0:
@@ -110,7 +118,7 @@ async def run(
         print(module_run.error_message)
 
 
-async def read_storage(naptha, module_run_id, output_dir='files', ipfs=False):
+async def read_storage(naptha, module_run_id, output_dir='./files', ipfs=False):
     """Read from storage."""
     try:
         await naptha.node.read_storage(module_run_id.strip(), output_dir, ipfs=ipfs)
@@ -136,7 +144,6 @@ async def main():
     routing_url = os.getenv("ROUTING_URL", None)
     indirect_node_id = os.getenv("INDIRECT_NODE_ID", None)
 
-    print(f"Running on Node: {node_url}")
 
     naptha = await Naptha(
         user=user,

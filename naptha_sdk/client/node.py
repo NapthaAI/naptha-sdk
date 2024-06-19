@@ -29,10 +29,16 @@ class Node:
         
         if self.node_url:
             self.client = 'http'
+            logger.info("Using http client")
+            logger.info(f"Node URL: {self.node_url}")
         else:
             self.client = 'ws'
+            logger.info("Using ws client")
+            logger.info(f"Routing URL: {self.routing_url}")
+            logger.info(f"Indirect Node ID: {self.indirect_node_id}")
         
         self.access_token = None
+
 
     async def check_user(self, user_input):
         if self.client == 'http':

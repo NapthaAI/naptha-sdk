@@ -24,7 +24,11 @@ class Naptha:
         self.node_url = node_url
         self.routing_url = routing_url
         self.indirect_node_id = indirect_node_id
-        self.node = Node(node_url, routing_url, indirect_node_id)
+        self.node = Node(
+            node_url=node_url,
+            routing_url=routing_url,
+            indirect_node_id=indirect_node_id
+        )
         self.services = Services()
         self.__storedargs = user, hub_username, hub_password, hub_url, node_url, args, kwargs
         self.async_initialized = False
