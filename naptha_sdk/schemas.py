@@ -52,6 +52,7 @@ class ModuleRun(BaseModel):
     module_params: Optional[Union[Dict, DockerParams]] = None
     child_runs: List['ModuleRun'] = []
     parent_runs: List['ModuleRun'] = []
+    input_schema_ipfs_hash: Optional[str] = None
 
     class Config:
         allow_mutation = True
