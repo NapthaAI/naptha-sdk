@@ -161,11 +161,11 @@ class TasksParallelEngine:
             self.task_inputs[i] = ModuleRunInput(**task_run_input)
 
             logger.info(f"Initializing task run. Task {i + 1} of {len(self.tasks)}")
-            logger.info(f"Creating task run for worker node on orchestrator node: {task.task_run_input}")
+            logger.info(f"Creating task run for worker node on orchestrator node: {self.task_inputs[i]}")
             task_run = await task.orchestrator_node.create_task_run(module_run_input=self.task_inputs[i])
             task_run.start_processing_time = datetime.now(pytz.utc).isoformat()
             self.task_runs[i] = task_run
-            logger.info(f"Created task run for worker node on orchestrator node: {task.task_run}")
+            logger.info(f"Created task run for worker node on orchestrator node: {task_run}")
             
             # Relate new task run with parent flow run
             self.flow_run.child_runs.append(ModuleRun(**{k: v for k, v in task_run.dict().items() if k not in ["child_runs", "parent_runs"]}))
