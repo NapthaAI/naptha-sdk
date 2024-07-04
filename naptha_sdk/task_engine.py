@@ -27,6 +27,13 @@ async def run_task(task, flow_run, parameters) -> None:
         logger.error(f"An error occurred: {str(e)}")
         await task_engine.fail()
 
+async def run_parallel_tasks(tasks, flow_run, parameters):
+    task_engines = [TaskEngine(task, flow_run, parameters) for task in tasks]
+    await asyncio.gather(*[task_engine.init_run() for task_engine in task_engines])
+    await asyncio.gather(*[task_engine.start_run() for task_engine in task_engines])
+    await asyncio.gather(*[task_engine.complete() for task_engine in task_engines])
+    return [task_engine.task_result[-1] for task_engine in task_engines]
+
 class TaskEngine:
     def __init__(self, task, flow_run, parameters):
         self.task = task
