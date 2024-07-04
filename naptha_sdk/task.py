@@ -10,3 +10,5 @@ class Task:
 
     async def __call__(self, *args, **kwargs):
         return await run_task(task=self, flow_run=self.flow_run, parameters=kwargs)
+    
+
