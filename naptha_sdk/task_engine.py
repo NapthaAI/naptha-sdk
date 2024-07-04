@@ -1,11 +1,12 @@
 import asyncio
-from datetime import datetime
-import json
-from naptha_sdk.schemas import ModuleRun, ModuleRunInput
-from naptha_sdk.utils import get_logger
 import pytz
 import time
 import traceback
+from datetime import datetime
+from typing import Dict, List
+from naptha_sdk.schemas import ModuleRun, ModuleRunInput
+from naptha_sdk.utils import get_logger
+from naptha_sdk.task import Task
 
 logger = get_logger(__name__)
 
@@ -27,12 +28,43 @@ async def run_task(task, flow_run, parameters) -> None:
         logger.error(f"An error occurred: {str(e)}")
         await task_engine.fail()
 
-async def run_parallel_tasks(tasks, flow_run, parameters):
+async def run_parallel_tasks(tasks: List[Task], flow_run: Dict, parameters: Dict, max_retries: int = 3, timeout: int = 60, max_concurrent: int = 10):
     task_engines = [TaskEngine(task, flow_run, parameters) for task in tasks]
-    await asyncio.gather(*[task_engine.init_run() for task_engine in task_engines])
-    await asyncio.gather(*[task_engine.start_run() for task_engine in task_engines])
-    await asyncio.gather(*[task_engine.complete() for task_engine in task_engines])
-    return [task_engine.task_result[-1] for task_engine in task_engines]
+    
+    semaphore = asyncio.Semaphore(max_concurrent)
+    
+    async def run_task_with_retries(task_engine):
+        for attempt in range(max_retries):
+            try:
+                async with semaphore:
+                    await asyncio.wait_for(task_engine.init_run(), timeout=timeout)
+                    await asyncio.wait_for(task_engine.start_run(), timeout=timeout)
+                    await asyncio.wait_for(task_engine.complete(), timeout=timeout)
+                return task_engine.task_result[-1]
+            except Exception as e:
+                logger.error(f"Task failed on attempt {attempt + 1}: {e}")
+                if attempt == max_retries - 1:
+                    raise
+    
+    results = await asyncio.gather(
+        *[run_task_with_retries(task_engine) for task_engine in task_engines],
+        return_exceptions=True 
+    )
+    
+    # Retry only failed tasks
+    failed_tasks = [i for i, result in enumerate(results) if isinstance(result, Exception)]
+    if failed_tasks:
+        logger.warning(f"Retrying {len(failed_tasks)} failed tasks")
+        retry_results = await asyncio.gather(
+            *[run_task_with_retries(task_engines[i]) for i in failed_tasks],
+            return_exceptions=True
+        )
+        
+        # Update results with retry results
+        for i, result in zip(failed_tasks, retry_results):
+            results[i] = result
+    
+    return results
 
 class TaskEngine:
     def __init__(self, task, flow_run, parameters):
