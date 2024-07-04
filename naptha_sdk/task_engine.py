@@ -6,9 +6,10 @@ from datetime import datetime
 from typing import Dict, List
 from naptha_sdk.schemas import ModuleRun, ModuleRunInput
 from naptha_sdk.utils import get_logger
-from naptha_sdk.task import Task
+
 
 logger = get_logger(__name__)
+
 
 async def run_task(task, flow_run, parameters) -> None:
     task_engine = TaskEngine(task, flow_run, parameters)
@@ -28,7 +29,7 @@ async def run_task(task, flow_run, parameters) -> None:
         logger.error(f"An error occurred: {str(e)}")
         await task_engine.fail()
 
-async def run_parallel_tasks(tasks: List[Task], flow_run: Dict, parameters: Dict, max_retries: int = 3, timeout: int = 60, max_concurrent: int = 10):
+async def run_parallel_tasks(tasks, flow_run: Dict, parameters: Dict, max_retries: int = 3, timeout: int = 60, max_concurrent: int = 10):
     task_engines = [TaskEngine(task, flow_run, parameters) for task in tasks]
     
     semaphore = asyncio.Semaphore(max_concurrent)
