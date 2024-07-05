@@ -218,8 +218,8 @@ class TasksParallelEngine:
     async def complete_task(self, task_index: int, task):
         task_run = self.task_runs[task_index]
         task_run.status = "completed"
-        task_run.completion_time = datetime.now(pytz.utc).isoformat()
-        task_run.duration = (datetime.fromisoformat(task_run.completion_time) - datetime.fromisoformat(task_run.start_processing_time)).total_seconds()
+        task_run.completed_time = datetime.now(pytz.utc).isoformat()
+        task_run.duration = (datetime.fromisoformat(task_run.completed_time) - datetime.fromisoformat(task_run.start_processing_time)).total_seconds()
         await task.orchestrator_node.update_task_run(module_run=task_run)
         logger.info(f"Task run completed: {task_run}")
 
@@ -228,8 +228,8 @@ class TasksParallelEngine:
         task_run.status = "error"
         task_run.error = True
         task_run.error_message = error_message
-        task_run.completion_time = datetime.now(pytz.utc).isoformat()
-        task_run.duration = (datetime.fromisoformat(task_run.completion_time) - datetime.fromisoformat(task_run.start_processing_time)).total_seconds()
+        task_run.completed_time = datetime.now(pytz.utc).isoformat()
+        task_run.duration = (datetime.fromisoformat(task_run.completed_time) - datetime.fromisoformat(task_run.start_processing_time)).total_seconds()
         await task.orchestrator_node.update_task_run(module_run=task_run)
         logger.info(f"Task run failed: {task_run}")
 
