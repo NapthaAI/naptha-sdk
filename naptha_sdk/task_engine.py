@@ -193,9 +193,14 @@ class TasksParallelEngine:
 
                 if task_run.status == "completed":
                     await self.complete_task(task_index, task)
-                    return task_run
                 elif task_run.status == "error":
-                    raise Exception(task_run.error_message)
+                    await self.fail_task(task_index, task, task_run.error_message)
+
+                # Update flow_run with the latest task information
+                self.flow_run.child_runs[task_index] = ModuleRun(**{k: v for k, v in task_run.dict().items() if k not in ["child_runs", "parent_runs"]})
+                await self.update_flow_run()
+
+                return task_run.results
             
             except asyncio.TimeoutError:
                 logger.warning(f"Task {task_index} timed out. Retrying... ({retries + 1}/{self.max_retries})")
@@ -205,23 +210,26 @@ class TasksParallelEngine:
                 retries += 1
                 if retries > self.max_retries:
                     await self.fail_task(task_index, task, str(e))
+                    # Update flow_run with the failed task information
+                    self.flow_run.child_runs[task_index] = ModuleRun(**{k: v for k, v in self.task_runs[task_index].dict().items() if k not in ["child_runs", "parent_runs"]})
+                    await self.update_flow_run()
                     return self.task_runs[task_index]
 
         return self.task_runs[task_index].results
 
-    async def start_run(self):
-        logger.info("Starting task runs.")
-        tasks = [self.run_single_task(i, task) for i, task in enumerate(self.tasks)]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        return results
+    async def update_flow_run(self):
+        logger.info(f"Updating flow run on orchestrator node: {self.flow_run}")
+        updated_flow_run = await self.tasks[0].orchestrator_node.update_task_run(module_run=self.flow_run)
+        logger.info(f"Updated flow run: {updated_flow_run}")
+        return updated_flow_run
 
     async def complete_task(self, task_index: int, task):
         task_run = self.task_runs[task_index]
         task_run.status = "completed"
         task_run.completed_time = datetime.now(pytz.utc).isoformat()
         task_run.duration = (datetime.fromisoformat(task_run.completed_time) - datetime.fromisoformat(task_run.start_processing_time)).total_seconds()
-        await task.orchestrator_node.update_task_run(module_run=task_run)
-        logger.info(f"Task run completed: {task_run}")
+        updated_task_run = await task.orchestrator_node.update_task_run(module_run=task_run)
+        logger.info(f"Task run completed: {updated_task_run}")
 
     async def fail_task(self, task_index: int, task, error_message: str):
         task_run = self.task_runs[task_index]
@@ -230,8 +238,14 @@ class TasksParallelEngine:
         task_run.error_message = error_message
         task_run.completed_time = datetime.now(pytz.utc).isoformat()
         task_run.duration = (datetime.fromisoformat(task_run.completed_time) - datetime.fromisoformat(task_run.start_processing_time)).total_seconds()
-        await task.orchestrator_node.update_task_run(module_run=task_run)
-        logger.info(f"Task run failed: {task_run}")
+        updated_task_run = await task.orchestrator_node.update_task_run(module_run=task_run)
+        logger.info(f"Task run failed: {updated_task_run}")
+
+    async def start_run(self):
+        logger.info("Starting task runs.")
+        tasks = [self.run_single_task(i, task) for i, task in enumerate(self.tasks)]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        return results
 
 async def run_parallel_tasks(tasks, flow_run, parameters) -> List:
     task_engine = TasksParallelEngine(tasks, flow_run, parameters)
