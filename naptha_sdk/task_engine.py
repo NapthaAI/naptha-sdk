@@ -207,7 +207,7 @@ class TasksParallelEngine:
                     await self.fail_task(task_index, task, str(e))
                     return self.task_runs[task_index]
 
-        return self.task_runs[task_index]
+        return self.task_runs[task_index].results
 
     async def start_run(self):
         logger.info("Starting task runs.")
