@@ -118,18 +118,18 @@ async def run(
         print(module_run.error_message)
 
 
-async def read_storage(naptha, module_run_id, output_dir='./files', ipfs=False):
-    """Read from storage."""
+async def read_storage(naptha, hash_or_name, output_dir='./files', ipfs=False):
+    """Read from storage, IPFS, or IPNS."""
     try:
-        await naptha.node.read_storage(module_run_id.strip(), output_dir, ipfs=ipfs)
+        await naptha.node.read_storage(hash_or_name.strip(), output_dir, ipfs=ipfs)
     except Exception as err:
         print(f"Error: {err}")
 
 
-async def write_storage(naptha, storage_input, ipfs=False):
-    """Write to storage."""
+async def write_storage(naptha, storage_input, ipfs=False, publish_to_ipns=False, update_ipns_name=None):
+    """Write to storage, optionally to IPFS and/or IPNS."""
     try:
-        response = await naptha.node.write_storage(storage_input, ipfs=ipfs)
+        response = await naptha.node.write_storage(storage_input, ipfs=ipfs, publish_to_ipns=publish_to_ipns, update_ipns_name=update_ipns_name)
         print(response)
     except Exception as err:
         print(f"Error: {err}")
@@ -193,6 +193,8 @@ async def main():
     write_storage_parser = subparsers.add_parser("write_storage", help="Write to storage.")
     write_storage_parser.add_argument("-i", "--storage_input", help="Path to file or directory to write to storage")
     write_storage_parser.add_argument("--ipfs", help="Write to IPFS", action="store_true")
+    write_storage_parser.add_argument("--publish_to_ipns", help="Publish to IPNS", action="store_true")
+    write_storage_parser.add_argument("--update_ipns_name", help="Update IPNS name")
 
     # Parse arguments
     args = parser.parse_args()
@@ -229,7 +231,7 @@ async def main():
     elif args.command == "read_storage":
         await read_storage(naptha, args.module_run_id, args.output_dir, args.ipfs)
     elif args.command == "write_storage":
-        await write_storage(naptha, args.storage_input, args.ipfs)
+        await write_storage(naptha, args.storage_input, args.ipfs, args.publish_to_ipns, args.update_ipns_name)
     else:
         parser.print_help()
 
