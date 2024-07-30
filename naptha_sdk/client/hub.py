@@ -78,6 +78,9 @@ class Hub:
         nodes = await self.surrealdb.query("SELECT * FROM node;")
         return nodes[0]['result']
 
+    async def create_module(self, module_config: Dict) -> Tuple[bool, Optional[Dict]]:
+        return await self.surrealdb.create("module", module_config)
+
     async def list_modules(self, module_name=None) -> List:
         if not module_name:
             modules = await self.surrealdb.query("SELECT * FROM module;")
