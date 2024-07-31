@@ -8,6 +8,7 @@ import os
 import shlex
 import time
 import yaml
+import json
 
 load_dotenv()
 
@@ -215,18 +216,24 @@ async def main():
         generate_new_user()  
     elif args.command == "run":
         if hasattr(args, 'parameters') and args.parameters is not None:
-            # Split the parameters string into key-value pairs
-            params = shlex.split(args.parameters)
-            parsed_params = {}
-            for param in params:
-                key, value = param.split('=')
-                parsed_params[key] = value
+            try:
+                # First, try to parse as JSON
+                parsed_params = json.loads(args.parameters)
+            except json.JSONDecodeError:
+                # If JSON parsing fails, fall back to the original method
+                params = shlex.split(args.parameters)
+                parsed_params = {}
+                for param in params:
+                    key, value = param.split('=')
+                    parsed_params[key] = value
         else:
             parsed_params = None
+        
         if hasattr(args, 'worker_nodes') and args.worker_nodes is not None:
             worker_nodes = args.worker_nodes.split(',')
         else:
             worker_nodes = None
+        
         await run(naptha, args.module, parsed_params, worker_nodes, args.file)
     elif args.command == "read_storage":
         await read_storage(naptha, args.module_run_id, args.output_dir, args.ipfs)
