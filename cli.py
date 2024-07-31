@@ -8,6 +8,7 @@ import os
 import shlex
 import time
 import yaml
+import json
 
 load_dotenv()
 
@@ -118,18 +119,18 @@ async def run(
         print(module_run.error_message)
 
 
-async def read_storage(naptha, module_run_id, output_dir='./files', ipfs=False):
-    """Read from storage."""
+async def read_storage(naptha, hash_or_name, output_dir='./files', ipfs=False):
+    """Read from storage, IPFS, or IPNS."""
     try:
-        await naptha.node.read_storage(module_run_id.strip(), output_dir, ipfs=ipfs)
+        await naptha.node.read_storage(hash_or_name.strip(), output_dir, ipfs=ipfs)
     except Exception as err:
         print(f"Error: {err}")
 
 
-async def write_storage(naptha, storage_input, ipfs=False):
-    """Write to storage."""
+async def write_storage(naptha, storage_input, ipfs=False, publish_to_ipns=False, update_ipns_name=None):
+    """Write to storage, optionally to IPFS and/or IPNS."""
     try:
-        response = await naptha.node.write_storage(storage_input, ipfs=ipfs)
+        response = await naptha.node.write_storage(storage_input, ipfs=ipfs, publish_to_ipns=publish_to_ipns, update_ipns_name=update_ipns_name)
         print(response)
     except Exception as err:
         print(f"Error: {err}")
@@ -193,6 +194,8 @@ async def main():
     write_storage_parser = subparsers.add_parser("write_storage", help="Write to storage.")
     write_storage_parser.add_argument("-i", "--storage_input", help="Path to file or directory to write to storage")
     write_storage_parser.add_argument("--ipfs", help="Write to IPFS", action="store_true")
+    write_storage_parser.add_argument("--publish_to_ipns", help="Publish to IPNS", action="store_true")
+    write_storage_parser.add_argument("--update_ipns_name", help="Update IPNS name")
 
     # Parse arguments
     args = parser.parse_args()
@@ -213,23 +216,29 @@ async def main():
         generate_new_user()  
     elif args.command == "run":
         if hasattr(args, 'parameters') and args.parameters is not None:
-            # Split the parameters string into key-value pairs
-            params = shlex.split(args.parameters)
-            parsed_params = {}
-            for param in params:
-                key, value = param.split('=')
-                parsed_params[key] = value
+            try:
+                # First, try to parse as JSON
+                parsed_params = json.loads(args.parameters)
+            except json.JSONDecodeError:
+                # If JSON parsing fails, fall back to the original method
+                params = shlex.split(args.parameters)
+                parsed_params = {}
+                for param in params:
+                    key, value = param.split('=')
+                    parsed_params[key] = value
         else:
             parsed_params = None
+        
         if hasattr(args, 'worker_nodes') and args.worker_nodes is not None:
             worker_nodes = args.worker_nodes.split(',')
         else:
             worker_nodes = None
+        
         await run(naptha, args.module, parsed_params, worker_nodes, args.file)
     elif args.command == "read_storage":
         await read_storage(naptha, args.module_run_id, args.output_dir, args.ipfs)
     elif args.command == "write_storage":
-        await write_storage(naptha, args.storage_input, args.ipfs)
+        await write_storage(naptha, args.storage_input, args.ipfs, args.publish_to_ipns, args.update_ipns_name)
     else:
         parser.print_help()
 

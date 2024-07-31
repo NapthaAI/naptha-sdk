@@ -60,8 +60,11 @@ async def relay_message(routing_url: str, params: Dict[str, Any]) -> Dict[str, A
         logger.error(f"Failed to relay message: {e}")
         return {"error": str(e)}
 
-async def send_file(websocket, file_path: str, filename: str, target_node: str, ipfs: bool = False):
+async def send_file(websocket, file_path: str, filename: str, target_node: str, ipfs: bool = False, publish_to_ipns: bool = False, update_ipns_name: str = None):
     """Send a file via websocket."""
+    if update_ipns_name:
+        publish_to_ipns = True
+
     file_size = os.path.getsize(file_path)
     chunk_index = 0
 
@@ -71,12 +74,14 @@ async def send_file(websocket, file_path: str, filename: str, target_node: str, 
             params = {
                 'source_node': LOCAL_ID,
                 'target_node': target_node,
-                'path': 'write_storage' if not ipfs else 'write_to_ipfs',
+                'path': 'write_to_ipfs' if ipfs else 'write_storage',
                 'params': {
                     'filename': filename,
                     'file_data': encoded_chunk,
                     'chunk_index': chunk_index,
-                    'chunk_total': (file_size // CHUNK_SIZE) + 1
+                    'chunk_total': (file_size // CHUNK_SIZE) + 1,
+                    'publish_to_ipns': publish_to_ipns,
+                    'update_ipns_name': update_ipns_name
                 }
             }
             await websocket.send(json.dumps(params))
@@ -86,12 +91,14 @@ async def send_file(websocket, file_path: str, filename: str, target_node: str, 
     eof_params = {
         'source_node': LOCAL_ID,
         'target_node': target_node,
-        'path': 'write_storage' if not ipfs else 'write_to_ipfs',
+        'path': 'write_to_ipfs' if ipfs else 'write_storage',
         'params': {
             'filename': filename,
             'file_data': 'EOF',
             'chunk_index': chunk_index,
-            'chunk_total': (file_size // CHUNK_SIZE) + 1
+            'chunk_total': (file_size // CHUNK_SIZE) + 1,
+            'publish_to_ipns': publish_to_ipns,
+            'update_ipns_name': update_ipns_name
         }
     }
     await websocket.send(json.dumps(eof_params))
@@ -227,7 +234,7 @@ async def read_storage_ws(routing_url: str, indirect_node_id: str, folder_id: st
 
     return output_dir
 
-async def write_storage_ws(routing_url: str, indirect_node_id: str, storage_input: str, ipfs: bool = False) -> Dict[str, Any]:
+async def write_storage_ws(routing_url: str, indirect_node_id: str, storage_input: str, ipfs: bool = False, publish_to_ipns: bool = False, update_ipns_name: str = None) -> Dict[str, Any]:
     """Write storage via websocket."""
     if os.path.isdir(storage_input):
         with tempfile.NamedTemporaryFile(delete=False, suffix='.zip') as tmpfile:
@@ -240,7 +247,7 @@ async def write_storage_ws(routing_url: str, indirect_node_id: str, storage_inpu
         filename = os.path.basename(file_path)
 
     async with websockets.connect(f"{routing_url}/ws/{LOCAL_ID}", ping_interval=None) as websocket:
-        await send_file(websocket, file_path, filename, indirect_node_id, ipfs)
+        await send_file(websocket, file_path, filename, indirect_node_id, ipfs, publish_to_ipns, update_ipns_name)
         while True:
             try:
                 response = await websocket.recv()
@@ -251,3 +258,5 @@ async def write_storage_ws(routing_url: str, indirect_node_id: str, storage_inpu
             except websockets.ConnectionClosed:
                 logger.info("WebSocket connection closed")
                 break
+    
+    return response_data

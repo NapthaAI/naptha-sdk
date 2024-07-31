@@ -99,8 +99,8 @@ class Node:
         else:
             return await read_storage_ws(self.routing_url, self.indirect_node_id, module_run_id, output_dir, ipfs)
     
-    async def write_storage(self, storage_input: str, ipfs: bool = False) -> Dict[str, str]:
+    async def write_storage(self, storage_input: str, ipfs: bool = False, publish_to_ipns: bool = False, update_ipns_name: Optional[str] = None):
         if self.client == 'http':
-            return await write_storage_http(self.node_url, storage_input, ipfs)
+            return await write_storage_http(self.node_url, storage_input, ipfs, publish_to_ipns, update_ipns_name)
         else:
-            return await write_storage_ws(self.routing_url, self.indirect_node_id, storage_input, ipfs)
+            return await write_storage_ws(self.routing_url, self.indirect_node_id, storage_input, ipfs, publish_to_ipns, update_ipns_name)

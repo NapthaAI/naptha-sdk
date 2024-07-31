@@ -165,7 +165,7 @@ def prepare_files(file_path: str) -> List[Tuple[str, str]]:
     return file
 
 
-async def read_storage_http(node_url: str, module_run_id: str, output_dir: str, ipfs: bool = False):
+async def read_storage_http(node_url: str, module_run_id: str, output_dir: str, ipfs: bool = False) -> str:
     print("Reading from storage...")
     try:
         endpoint = f"{node_url}/{'read_ipfs' if ipfs else 'read_storage'}/{module_run_id}"
@@ -205,23 +205,31 @@ async def read_storage_http(node_url: str, module_run_id: str, output_dir: str, 
         print(f"Error: {err}")  
 
 
-async def write_storage_http(node_url: str, storage_input: str, ipfs: bool = False) -> Dict[str, str]:
+async def write_storage_http(node_url: str, storage_input: str, ipfs: bool = False, publish_to_ipns: bool = False, update_ipns_name: str = None) -> Dict[str, Any]:
     """Write storage to the node."""
     print("Writing storage")
     try:
         file = prepare_files(storage_input)
-        if ipfs:
-            endpoint = f"{node_url}/write_ipfs"
-        else:
-            files = prepare_files(storage_input)
-            endpoint = f"{node_url}/write_storage"
+        endpoint = f"{node_url}/write_ipfs" if ipfs else f"{node_url}/write_storage"
+        
+        if update_ipns_name:
+            publish_to_ipns = True
+
+        data = {
+            "publish_to_ipns": publish_to_ipns,
+            "update_ipns_name": update_ipns_name
+        }
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 endpoint, 
-                files=file
+                files=file,
+                data=data,
+                timeout=600
             )
             if response.status_code != 201:
                 print(f"Failed to write storage: {response.text}")
+                return {}
+            return response.json()
     except Exception as e:
         print(f"Exception occurred: {e}")
-    return json.loads(response.text)
+        return {}
