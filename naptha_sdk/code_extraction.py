@@ -1,7 +1,7 @@
 import subprocess
 
 def create_poetry_package(package_name):
-    subprocess.run(["poetry", "new", package_name])
+    subprocess.run(["poetry", "new", f"tmp/{package_name}"])
 
 
 def transform_code(input_code):

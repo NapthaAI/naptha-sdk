@@ -5,40 +5,50 @@ from naptha_sdk.utils import AsyncMixin, check_hf_repo_exists
 
 
 class AgentService(AsyncMixin):
-    def __init__(self, naptha, name, fn, worker_node, orchestrator_node):
+    def __init__(self, naptha, name, fn, worker_node_url):
         self.name = name
         self.fn = fn
-        self.worker_node = worker_node
-        self.orchestrator_node = orchestrator_node
+        self.worker_node_url = worker_node_url
         self.naptha = naptha
         super().__init__()
 
     async def __ainit__(self):
-        await self.register_module()
+        module_name = await self.register_module()
+        await self.register_service(module_name)
 
     async def register_module(self):
+        module_name = self.fn.__name__
+        module_code = inspect.getsource(self.fn)
+        module_code = transform_code(module_code)
+        create_poetry_package(module_name)
+        with open(f'tmp/{module_name}/{module_name}/run.py', 'w') as file:
+            file.write(module_code)
 
-        agent_service_name = self.fn.__name__
-        agent_service_code = inspect.getsource(self.fn)
-        agent_service_code = transform_code(agent_service_code)
-        create_poetry_package(agent_service_name)
-        with open(f'{agent_service_name}/{agent_service_name}/run.py', 'w') as file:
-            file.write(agent_service_code)
-
-        repo_id = f"as_{agent_service_name}"
-        if not check_hf_repo_exists(self.naptha.hf, repo_id):
+        repo_id = f"as_{module_name}"
+        if not check_hf_repo_exists(self.naptha.hf, f"{self.naptha.hf_username}/{repo_id}"):
             self.naptha.hf.create_repo(repo_id=repo_id)
             self.naptha.hf.upload_folder(
-                folder_path=agent_service_name,
+                folder_path=f'tmp/{module_name}',
                 repo_id=f"{self.naptha.hf_username}/{repo_id}",
                 repo_type="model",
             )
-        agent_service_config = {
-            "name": agent_service_name,
-            "description": agent_service_name,
+        module_config = {
+            "name": module_name,
+            "description": module_name,
             "author": f"user:{self.naptha.hf_username}",
             "url": f"https://huggingface.co/{self.naptha.hf_username}/{repo_id}",
             "type": "template"
         }
-        module = await self.naptha.hub.create_module(agent_service_config)
+        module = await self.naptha.hub.create_module(module_config)
+        return module_name
 
+    async def register_service(self, module_name):
+        agent_service_name = self.name
+
+        agent_service_config = {
+            "name": agent_service_name,
+            "description": agent_service_name,
+            "module_name": module_name,
+            "worker_node_url": self.worker_node_url,
+        }
+        service = await self.naptha.hub.create_service(agent_service_config)
