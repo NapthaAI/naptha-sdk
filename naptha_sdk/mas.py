@@ -33,12 +33,12 @@ class MultiAgentService(AsyncMixin):
         if not check_hf_repo_exists(self.naptha.hf, f"{self.naptha.hf_username}/{repo_id}"):
             logger.info(f"Creating HF repo {repo_id}")
             self.naptha.hf.create_repo(repo_id=repo_id)
-            logger.info(f"Uploading folder to HF {f'tmp/{module_name}'}")
-            self.naptha.hf.upload_folder(
-                folder_path=f'tmp/{module_name}',
-                repo_id=f"{self.naptha.hf_username}/{repo_id}",
-                repo_type="model",
-            )
+        logger.info(f"Uploading folder to HF {f'tmp/{module_name}'}")
+        self.naptha.hf.upload_folder(
+            folder_path=f'tmp/{module_name}',
+            repo_id=f"{self.naptha.hf_username}/{repo_id}",
+            repo_type="model",
+        )
         module_config = {
             "name": module_name,
             "description": module_name,
