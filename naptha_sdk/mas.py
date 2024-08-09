@@ -5,26 +5,30 @@ import os
 import time
 import traceback
 import inspect
-from naptha_sdk.code_extraction import create_poetry_package, transform_code
+from naptha_sdk.code_extraction import create_poetry_package, transform_code_mas
 from naptha_sdk.utils import get_logger, AsyncMixin, check_hf_repo_exists
+from naptha_sdk.mas_engine import run_mas
+from naptha_sdk.schemas import ModuleRunInput
 
 logger = get_logger(__name__)
 
 class MultiAgentService(AsyncMixin):
     def __init__(self, naptha, name, fn):
         self.naptha = naptha
+        self.orchestrator_node = naptha.node.node_url
         self.name = name
         self.fn = fn
         super().__init__()
 
     async def __ainit__(self):
-        module_name = await self.register_module()
-        await self.register_service(module_name)
+        logger.info(f"Registering multi-agent service...")
+        self.module_name = await self.register_module()
+        await self.register_service(self.module_name)
 
     async def register_module(self):
         module_name = self.fn.__name__
         mas_code = inspect.getsource(self.fn)
-        mas_code = transform_code(mas_code)
+        mas_code = transform_code_mas(mas_code)
         create_poetry_package(module_name)
         with open(f'tmp/{module_name}/{module_name}/run.py', 'w') as file:
             file.write(mas_code)
@@ -62,4 +66,15 @@ class MultiAgentService(AsyncMixin):
         logger.info(f"Registering Service {mas_config}")
         service = await self.naptha.hub.create_service(mas_config)
 
-
+    async def __call__(self, run_params, worker_node_urls, *args, **kwargs):
+        mas_run_input = {
+            "name": self.name,
+            "type": "template",
+            "consumer_id": self.naptha.user["id"],
+            "orchestrator_node": self.orchestrator_node,
+            "worker_nodes": worker_node_urls,
+            "module_name": self.module_name,
+            "module_params": run_params,
+        }
+        mas_run_input = ModuleRunInput(**mas_run_input)
+        return await run_mas(multi_agent_service=self, mas_run=mas_run_input)

@@ -1,6 +1,6 @@
 import inspect
 import os
-from naptha_sdk.code_extraction import create_poetry_package, transform_code
+from naptha_sdk.code_extraction import create_poetry_package, transform_code_as
 from naptha_sdk.utils import get_logger, AsyncMixin, check_hf_repo_exists
 
 logger = get_logger(__name__)
@@ -14,13 +14,14 @@ class AgentService(AsyncMixin):
         super().__init__()
 
     async def __ainit__(self):
+        logger.info(f"Registering agent service...")
         module_name = await self.register_module()
         await self.register_service(module_name)
 
     async def register_module(self):
         module_name = self.fn.__name__
         module_code = inspect.getsource(self.fn)
-        module_code = transform_code(module_code)
+        module_code = transform_code_as(module_code)
         create_poetry_package(module_name)
         with open(f'tmp/{module_name}/{module_name}/run.py', 'w') as file:
             file.write(module_code)

@@ -26,9 +26,8 @@ class App:
 
     async def register_multi_agent_services(self):
         for multi_agent_service in self.multi_agent_services:
-            await MultiAgentService(self.naptha, name=multi_agent_service["name"], fn=multi_agent_service["func"])
+            self.multiplayer_chat = await MultiAgentService(self.naptha, name=multi_agent_service["name"], fn=multi_agent_service["func"])
 
-    def run(self):
-        print(self.names)
-        print(self.funcs)        
-        print(self.worker_node_urls)
+    async def run(self, run_params):
+        worker_node_urls = [agent_service["worker_node_url"] for agent_service in self.agent_services]
+        return await self.multiplayer_chat(run_params, worker_node_urls=worker_node_urls)
