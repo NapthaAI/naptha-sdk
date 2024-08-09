@@ -43,6 +43,7 @@ class ModuleRun(BaseModel):
     error: bool = False
     id: Optional[str] = None
     results: list[str] = []
+    orchestrator_node: str
     worker_nodes: Optional[list[str]] = None
     error_message: Optional[str] = None
     created_time: Optional[str] = None
@@ -80,6 +81,7 @@ class ModuleRun(BaseModel):
 class ModuleRunInput(BaseModel):
     module_name: str
     consumer_id: str
+    orchestrator_node: str
     worker_nodes: Optional[list[str]] = None
     module_params: Optional[Union[Dict, DockerParams]] = None
     module_type: Optional[ModuleType] = None
