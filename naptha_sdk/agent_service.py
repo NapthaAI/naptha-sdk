@@ -36,6 +36,7 @@ class AgentService(AsyncMixin):
             repo_id=f"{self.naptha.hf_username}/{repo_id}",
             repo_type="model",
         )
+        self.naptha.hf.create_tag(f"{self.naptha.hf_username}/{repo_id}", repo_type="model", tag="v0.1", exist_ok=True)
         module_config = {
             "name": module_name,
             "description": module_name,
