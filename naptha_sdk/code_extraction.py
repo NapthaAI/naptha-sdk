@@ -135,7 +135,6 @@ def publish_hf_package(hf_api, module_name, repo_id, code, user_id):
         repo_type="model",
     )
     tags = hf_api.list_repo_refs(repo)
-    print("Existing tags:", tags)
     tags = [tags.tags[0].name]
     hf_api.delete_tag(repo, tag=tags[-1])
     hf_api.create_tag(repo, repo_type="model", tag="v0.1")

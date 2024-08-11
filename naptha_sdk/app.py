@@ -10,24 +10,40 @@ class App:
 
     def agent_service(self, name, worker_node_url):
         def decorator(func):
-            self.agent_services.append({"name": name, "func": func, "worker_node_url": worker_node_url})
+            self.agent_services.append(AgentService(self.naptha, name=name, fn=func, worker_node_url=worker_node_url))
             return func
         return decorator
+
+    def publish_agent_packages(self):
+        for agent_service in self.agent_services:
+            agent_service.publish_package()
+
+    async def register_agent_modules(self):
+        for agent_service in self.agent_services:
+            await agent_service.register_module()
 
     async def register_agent_services(self):
         for agent_service in self.agent_services:
-            await AgentService(self.naptha, name=agent_service["name"], fn=agent_service["func"], worker_node_url=agent_service["worker_node_url"])
+            await agent_service.register_service()
 
     def multi_agent_service(self, name):
         def decorator(func):
-            self.multi_agent_services.append({"name": name, "func": func})
+            self.multi_agent_service = MultiAgentService(self.naptha, name=name, fn=func)
             return func
         return decorator
 
+    def publish_multi_agent_packages(self):
+        for multi_agent_service in self.multi_agent_services:
+            multi_agent_service.publish_package()
+
+    async def register_multi_agent_modules(self):
+        for multi_agent_service in self.multi_agent_services:
+            await multi_agent_service.register_module()
+
     async def register_multi_agent_services(self):
         for multi_agent_service in self.multi_agent_services:
-            self.multiplayer_chat = await MultiAgentService(self.naptha, name=multi_agent_service["name"], fn=multi_agent_service["func"])
+            await multi_agent_service.register_service()
 
     async def run(self, run_params):
-        worker_node_urls = [agent_service["worker_node_url"] for agent_service in self.agent_services]
-        return await self.multiplayer_chat(run_params, worker_node_urls=worker_node_urls)
+        worker_node_urls = [agent_service.worker_node_url for agent_service in self.agent_services]
+        return await self.multi_agent_service(run_params, worker_node_urls=worker_node_urls)
