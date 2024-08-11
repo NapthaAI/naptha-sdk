@@ -108,11 +108,16 @@ def publish_hf_package(hf_api, module_name, repo_id, code, user_id):
         file.write(code)
     generate_schema(module_name)
     generate_component_yaml(module_name, user_id)
-    if not check_hf_repo_exists(hf_api, f"{user_id}/{repo_id}"):
+    repo = f"{user_id}/{repo_id}"
+    if not check_hf_repo_exists(hf_api, repo):
         hf_api.create_repo(repo_id=repo_id)
     hf_api.upload_folder(
         folder_path=f'tmp/{module_name}',
-        repo_id=f"{user_id}/{repo_id}",
+        repo_id=repo,
         repo_type="model",
     )
-    hf_api.create_tag(f"{user_id}/{repo_id}", repo_type="model", tag="v0.1", exist_ok=True)
+    tags = hf_api.list_repo_refs(repo)
+    print("Existing tags:", tags)
+    tags = [tags.tags[0].name]
+    hf_api.delete_tag(repo, tag=tags[-1])
+    hf_api.create_tag(repo, repo_type="model", tag="v0.1")
