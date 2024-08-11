@@ -5,8 +5,8 @@ import os
 import time
 import traceback
 import inspect
-from naptha_sdk.code_extraction import create_poetry_package, generate_component_yaml, transform_code_mas
-from naptha_sdk.utils import get_logger, AsyncMixin, check_hf_repo_exists
+from naptha_sdk.code_extraction import create_poetry_package, publish_hf_package, transform_code_mas
+from naptha_sdk.utils import get_logger, AsyncMixin
 from naptha_sdk.mas_engine import run_mas
 from naptha_sdk.schemas import ModuleRunInput
 
@@ -15,56 +15,45 @@ logger = get_logger(__name__)
 class MultiAgentService(AsyncMixin):
     def __init__(self, naptha, name, fn):
         self.naptha = naptha
-        self.orchestrator_node = naptha.node.node_url
         self.name = name
         self.fn = fn
+        self.orchestrator_node = naptha.node.node_url
+        self.module_name = self.fn.__name__
+        self.repo_id = f"mas_{self.module_name}"
         super().__init__()
 
     async def __ainit__(self):
-        logger.info(f"Registering multi-agent service...")
-        self.module_name = await self.register_module()
-        await self.register_service(self.module_name)
+        self.publish_package()
+        await self.register_module()
+        await self.register_service()
 
-    async def register_module(self):
-        module_name = self.fn.__name__
+    def publish_package(self):
+        logger.info(f"Publishing Package...")
         mas_code = inspect.getsource(self.fn)
         mas_code = transform_code_mas(mas_code)
-        create_poetry_package(module_name)
-        with open(f'tmp/{module_name}/{module_name}/run.py', 'w') as file:
-            file.write(mas_code)
-        generate_component_yaml(module_name, self.naptha.hf_username)
-        repo_id = f"mas_{module_name}"
-        if not check_hf_repo_exists(self.naptha.hf, f"{self.naptha.hf_username}/{repo_id}"):
-            logger.info(f"Creating HF repo {repo_id}")
-            self.naptha.hf.create_repo(repo_id=repo_id)
-        logger.info(f"Uploading folder to HF {f'tmp/{module_name}'}")
-        self.naptha.hf.upload_folder(
-            folder_path=f'tmp/{module_name}',
-            repo_id=f"{self.naptha.hf_username}/{repo_id}",
-            repo_type="model",
-        )
-        self.naptha.hf.create_tag(f"{self.naptha.hf_username}/{repo_id}", repo_type="model", tag="v0.1", exist_ok=True)
+        create_poetry_package(self.module_name)
+        publish_hf_package(self.naptha.hf, self.module_name, self.repo_id, mas_code, self.naptha.hf_username)
+
+    async def register_module(self):
         module_config = {
-            "name": module_name,
-            "description": module_name,
+            "name": self.module_name,
+            "description": self.module_name,
             "author": f"user:{self.naptha.hf_username}",
-            "url": f"https://huggingface.co/{self.naptha.hf_username}/{repo_id}",
+            "url": f"https://huggingface.co/{self.naptha.hf_username}/{self.repo_id}",
             "type": "template"
         }
-        logger.info(f"Registering Module {module_config}")
+        logger.info(f"Registering Multi-Agent Module {module_config}")
         module = await self.naptha.hub.create_module(module_config)
-        return module_name
 
-    async def register_service(self, module_name):
+    async def register_service(self):
         mas_name = self.name
-
         mas_config = {
             "name": mas_name,
             "description": mas_name,
-            "module_name": module_name,
+            "module_name": self.module_name,
             "worker_node_url": self.naptha.node.node_url,
         }
-        logger.info(f"Registering Service {mas_config}")
+        logger.info(f"Registering Multi-Agent Service {mas_config}")
         service = await self.naptha.hub.create_service(mas_config)
 
     async def __call__(self, run_params, worker_node_urls, *args, **kwargs):

@@ -41,10 +41,3 @@ class AsyncMixin:
     def __await__(self):
         return self.__initobj().__await__()
 
-def check_hf_repo_exists(hf_api, repo_id: str) -> bool:
-    try:
-        # This will raise an exception if the repo doesn't exist
-        hf_api.repo_info(repo_id)
-        return True
-    except Exception:
-        return False

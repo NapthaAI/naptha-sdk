@@ -68,12 +68,12 @@ def generate_component_yaml(module_name, user_id):
         },
         'inputs': {
             'system_message': 'You are a helpful AI assistant.',
-            'save': 'false',
+            'save': False,
             'location': 'node'
         },
         'outputs': {
             'filename': 'output.txt',
-            'save': 'false',
+            'save': False,
             'location': 'node'
         },
         'implementation': {
@@ -85,3 +85,24 @@ def generate_component_yaml(module_name, user_id):
 
     with open(f'tmp/{module_name}/{module_name}/component.yaml', 'w') as file:
         yaml.dump(component, file, default_flow_style=False)
+
+def check_hf_repo_exists(hf_api, repo_id: str) -> bool:
+    try:
+        # This will raise an exception if the repo doesn't exist
+        hf_api.repo_info(repo_id)
+        return True
+    except Exception:
+        return False
+
+def publish_hf_package(hf_api, module_name, repo_id, code, user_id):
+    with open(f'tmp/{module_name}/{module_name}/run.py', 'w') as file:
+        file.write(code)
+    generate_component_yaml(module_name, user_id)
+    if not check_hf_repo_exists(hf_api, f"{user_id}/{repo_id}"):
+        hf_api.create_repo(repo_id=repo_id)
+    hf_api.upload_folder(
+        folder_path=f'tmp/{module_name}',
+        repo_id=f"{user_id}/{repo_id}",
+        repo_type="model",
+    )
+    hf_api.create_tag(f"{user_id}/{repo_id}", repo_type="model", tag="v0.1", exist_ok=True)
