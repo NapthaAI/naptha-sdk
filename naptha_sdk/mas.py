@@ -5,7 +5,7 @@ import os
 import time
 import traceback
 import inspect
-from naptha_sdk.code_extraction import create_poetry_package, transform_code_mas
+from naptha_sdk.code_extraction import create_poetry_package, generate_component_yaml, transform_code_mas
 from naptha_sdk.utils import get_logger, AsyncMixin, check_hf_repo_exists
 from naptha_sdk.mas_engine import run_mas
 from naptha_sdk.schemas import ModuleRunInput
@@ -32,7 +32,7 @@ class MultiAgentService(AsyncMixin):
         create_poetry_package(module_name)
         with open(f'tmp/{module_name}/{module_name}/run.py', 'w') as file:
             file.write(mas_code)
-
+        generate_component_yaml(module_name, self.naptha.hf_username)
         repo_id = f"mas_{module_name}"
         if not check_hf_repo_exists(self.naptha.hf, f"{self.naptha.hf_username}/{repo_id}"):
             logger.info(f"Creating HF repo {repo_id}")

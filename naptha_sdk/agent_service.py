@@ -1,6 +1,6 @@
 import inspect
 import os
-from naptha_sdk.code_extraction import create_poetry_package, transform_code_as
+from naptha_sdk.code_extraction import create_poetry_package, generate_component_yaml, transform_code_as
 from naptha_sdk.utils import get_logger, AsyncMixin, check_hf_repo_exists
 
 logger = get_logger(__name__)
@@ -25,6 +25,7 @@ class AgentService(AsyncMixin):
         create_poetry_package(module_name)
         with open(f'tmp/{module_name}/{module_name}/run.py', 'w') as file:
             file.write(module_code)
+        generate_component_yaml(module_name, self.naptha.hf_username)
 
         repo_id = f"as_{module_name}"
         if not check_hf_repo_exists(self.naptha.hf, f"{self.naptha.hf_username}/{repo_id}"):
