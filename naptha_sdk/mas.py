@@ -7,7 +7,7 @@ import traceback
 import inspect
 from naptha_sdk.code_extraction import create_poetry_package, publish_hf_package, transform_code_mas
 from naptha_sdk.utils import get_logger, AsyncMixin
-from naptha_sdk.mas_engine import run_mas
+# from naptha_sdk.mas_engine import run_mas
 from naptha_sdk.schemas import ModuleRunInput
 
 logger = get_logger(__name__)
@@ -56,15 +56,15 @@ class MultiAgentService(AsyncMixin):
         logger.info(f"Registering Multi-Agent Service {mas_config}")
         service = await self.naptha.hub.create_service(mas_config)
 
-    async def __call__(self, run_params, worker_node_urls, *args, **kwargs):
-        mas_run_input = {
-            "name": self.name,
-            "type": "template",
-            "consumer_id": self.naptha.user["id"],
-            "orchestrator_node": self.orchestrator_node,
-            "worker_nodes": worker_node_urls,
-            "module_name": self.module_name,
-            "module_params": run_params,
-        }
-        mas_run_input = ModuleRunInput(**mas_run_input)
-        return await run_mas(multi_agent_service=self, mas_run=mas_run_input)
+    # async def __call__(self, run_params, worker_node_urls, *args, **kwargs):
+    #     mas_run_input = {
+    #         "name": self.name,
+    #         "type": "template",
+    #         "consumer_id": self.naptha.user["id"],
+    #         "orchestrator_node": self.orchestrator_node,
+    #         "worker_nodes": worker_node_urls,
+    #         "module_name": self.module_name,
+    #         "module_params": run_params,
+    #     }
+    #     mas_run_input = ModuleRunInput(**mas_run_input)
+    #     return await run_mas(multi_agent_service=self, mas_run=mas_run_input)

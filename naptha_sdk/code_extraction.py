@@ -42,7 +42,7 @@ def transform_code_mas(input_code):
 
 logger = get_logger(__name__)
 
-def run(inputs, worker_nodes = None, orchestrator_node = None, flow_run = None, cfg: dict = None):'''
+async def run(inputs, worker_nodes = None, orchestrator_node = None, flow_run = None, cfg: dict = None):'''
     
     # Split the input code into lines
     lines = input_code.strip().split('\n')
@@ -134,7 +134,11 @@ def publish_hf_package(hf_api, module_name, repo_id, code, user_id):
         repo_id=repo,
         repo_type="model",
     )
-    tags = hf_api.list_repo_refs(repo)
-    tags = [tags.tags[0].name]
-    hf_api.delete_tag(repo, tag=tags[-1])
-    hf_api.create_tag(repo, repo_type="model", tag="v0.1")
+    tags_info = hf_api.list_repo_refs(repo)
+    desired_tag = "v0.1"
+    existing_tags = {tag_info.name for tag_info in tags_info.tags} if tags_info.tags else set()
+    if desired_tag not in existing_tags:
+        hf_api.create_tag(repo, repo_type="model", tag=desired_tag)
+    else:
+        hf_api.delete_tag(repo, tag=desired_tag)
+        hf_api.create_tag(repo, repo_type="model", tag=desired_tag)
