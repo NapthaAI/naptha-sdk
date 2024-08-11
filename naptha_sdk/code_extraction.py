@@ -86,6 +86,15 @@ def generate_component_yaml(module_name, user_id):
     with open(f'tmp/{module_name}/{module_name}/component.yaml', 'w') as file:
         yaml.dump(component, file, default_flow_style=False)
 
+def generate_schema(module_name):
+    schema_code = '''from pydantic import BaseModel
+
+class InputSchema(BaseModel):
+    prompt: str
+'''
+    with open(f'tmp/{module_name}/{module_name}/schemas.py', 'w') as file:
+        file.write(schema_code)
+
 def check_hf_repo_exists(hf_api, repo_id: str) -> bool:
     try:
         # This will raise an exception if the repo doesn't exist
@@ -97,6 +106,7 @@ def check_hf_repo_exists(hf_api, repo_id: str) -> bool:
 def publish_hf_package(hf_api, module_name, repo_id, code, user_id):
     with open(f'tmp/{module_name}/{module_name}/run.py', 'w') as file:
         file.write(code)
+    generate_schema(module_name)
     generate_component_yaml(module_name, user_id)
     if not check_hf_repo_exists(hf_api, f"{user_id}/{repo_id}"):
         hf_api.create_repo(repo_id=repo_id)
