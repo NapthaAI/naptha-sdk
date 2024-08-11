@@ -16,8 +16,17 @@ def run(inputs, worker_nodes = None, orchestrator_node = None, flow_run = None, 
     # Split the input code into lines
     lines = input_code.strip().split('\n')
     
-    # Remove the old function signature
-    lines = lines[1:]
+    def_line_index = 0  # Initialize the index to find where the function definition starts
+
+    # Find the index of the line that starts with 'def' or 'async def'
+    for i, line in enumerate(lines):
+        stripped_line = line.strip()
+        if stripped_line.startswith('def ') or stripped_line.startswith('async def'):
+            def_line_index = i
+            break
+    
+    # Remove all lines up to and including the line that contains the 'def'
+    lines = lines[def_line_index + 1:]
     
     # Remove one tab space from each line
     transformed_lines = [line[4:] if line.startswith('    ') else line for line in lines]
@@ -38,8 +47,17 @@ def run(inputs, worker_nodes = None, orchestrator_node = None, flow_run = None, 
     # Split the input code into lines
     lines = input_code.strip().split('\n')
     
-    # Remove the old function signature
-    lines = lines[1:]
+    def_line_index = 0  # Initialize the index to find where the function definition starts
+
+    # Find the index of the line that starts with 'def' or 'async def'
+    for i, line in enumerate(lines):
+        stripped_line = line.strip()
+        if stripped_line.startswith('def ') or stripped_line.startswith('async def'):
+            def_line_index = i
+            break
+    
+    # Remove all lines up to and including the line that contains the 'def'
+    lines = lines[def_line_index + 1:]
     
     # Remove one tab space from each line
     transformed_lines = [line[4:] if line.startswith('    ') else line for line in lines]
