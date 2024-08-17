@@ -15,7 +15,8 @@ class App:
 
     def agent_service(self, name, worker_node_url):
         def decorator(func):
-            self.agent_services.append(AgentService(name=name, fn=func, worker_node_url=worker_node_url, orchestrator_node=self.naptha.node))
+            worker_node = Node(worker_node_url)
+            self.agent_services.append(AgentService(name=name, fn=func, worker_node=worker_node, orchestrator_node=self.naptha.node))
             return func
         return decorator
 
@@ -30,7 +31,7 @@ class App:
     async def register_agent_services(self):
         for agent_service in self.agent_services:
             await agent_service.register_service(self.naptha)
-        self.worker_node_urls = [agent_service.worker_node_url for agent_service in self.agent_services]
+        self.worker_node_urls = [agent_service.worker_node.node_url for agent_service in self.agent_services]
         self.worker_nodes = [Node(worker_node_url) for worker_node_url in self.worker_node_urls]
         logger.info(f"Worker Nodes: {self.worker_nodes}")
 

@@ -1,7 +1,7 @@
 import inspect
 import os
 from naptha_sdk.agent_service_engine import run_agent_service
-from naptha_sdk.code_extraction import create_poetry_package, publish_hf_package, transform_code_as
+from naptha_sdk.code_extraction import create_poetry_package, extract_packages, add_dependency_to_pyproject, publish_hf_package, transform_code_as
 from naptha_sdk.schemas import ModuleRunInput
 from naptha_sdk.utils import get_logger, AsyncMixin
 
@@ -30,7 +30,10 @@ class AgentService(AsyncMixin):
         logger.info(f"Publishing Package...")
         as_code = inspect.getsource(self.fn)
         as_code = transform_code_as(as_code)
+        packages = extract_packages(as_code)
+        logger.info(f"PACKAGES: {packages}")
         create_poetry_package(self.module_name)
+        add_dependency_to_pyproject(self.module_name, packages)
         publish_hf_package(naptha.hf, self.module_name, self.repo_id, as_code, naptha.hf_username)
 
     async def register_module(self, naptha):

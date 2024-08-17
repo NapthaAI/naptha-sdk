@@ -5,7 +5,7 @@ import os
 import time
 import traceback
 import inspect
-from naptha_sdk.code_extraction import create_poetry_package, publish_hf_package, transform_code_mas
+from naptha_sdk.code_extraction import create_poetry_package, extract_packages, add_dependency_to_pyproject, publish_hf_package, transform_code_mas
 from naptha_sdk.utils import get_logger, AsyncMixin
 # from naptha_sdk.mas_engine import run_mas
 from naptha_sdk.schemas import ModuleRunInput
@@ -31,7 +31,10 @@ class MultiAgentService(AsyncMixin):
         logger.info(f"Publishing Package...")
         mas_code = inspect.getsource(self.fn)
         mas_code = transform_code_mas(mas_code)
+        packages = extract_packages(mas_code)
+        logger.info(f"PACKAGES: {packages}")
         create_poetry_package(self.module_name)
+        add_dependency_to_pyproject(self.module_name, packages)
         publish_hf_package(self.naptha.hf, self.module_name, self.repo_id, mas_code, self.naptha.hf_username)
 
     async def register_module(self):

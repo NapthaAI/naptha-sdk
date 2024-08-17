@@ -22,7 +22,7 @@ async def run_agent_service(agent_service, flow_run, parameters) -> None:
                 await agent_service_engine.complete()
                 break
             time.sleep(3)
-        return agent_service_engine.agent_serviceresult[-1]
+        return agent_service_engine.agent_service_result[-1]
     except Exception as e:
         logger.error(f"An error occurred: {str(e)}")
         await agent_service_engine.fail()
