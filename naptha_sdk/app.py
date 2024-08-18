@@ -2,7 +2,7 @@ import functools
 from naptha_sdk.agent_service import AgentService
 from naptha_sdk.client.node import Node
 from naptha_sdk.mas import MultiAgentService
-from naptha_sdk.schemas import ModuleRunInput
+from naptha_sdk.schemas import ModuleRun, ModuleRunInput
 from naptha_sdk.utils import get_logger
 import time
 
@@ -84,18 +84,32 @@ class App:
         flow_run = await self.orchestrator_node.run_task(module_run_input=flow_run_input)
         logger.info(f"Created multi agent service run on orchestrator node {self.orchestrator_node.node_url}: {flow_run}")
 
+        current_results_len = 0
         while True:
-            flow_run = await self.orchestrator_node.check_task(flow_run)
+            module_run = await self.orchestrator_node.check_task(flow_run)
+            
+            if isinstance(module_run, dict):
+                module_run = ModuleRun(**module_run)
+
+            output = f"{module_run.status} {module_run.module_type} {module_run.module_name}"
+            if len(module_run.child_runs) > 0:
+                output += f", task {len(module_run.child_runs)} {module_run.child_runs[-1].module_name} (node: {module_run.child_runs[-1].worker_nodes[0]})"
+            print(output)
+
+            if len(module_run.results) > current_results_len:
+                print("Output: ", module_run.results[-1])
+                current_results_len += 1
+
             logger.info(flow_run.status)  
 
-            if flow_run.status in ["completed", "error"]:
+            if module_run.status in ["completed", "error"]:
                 break
             time.sleep(3)
 
-        if flow_run.status == 'completed':
-            logger.info(flow_run.results)
-            self.agent_service_result = flow_run.results
-            return flow_run.results
+        if module_run.status == 'completed':
+            logger.info(module_run.results)
+            self.agent_service_result = module_run.results
+            return module_run.results
         else:
-            logger.info(flow_run.error_message)
-            return flow_run.error_message
+            logger.info(module_run.error_message)
+            return module_run.error_message

@@ -115,7 +115,7 @@ def generate_component_yaml(module_name, user_id):
         'models': {
             'default_model_provider': 'ollama',
             'ollama': {
-                'model': 'ollama/phi',
+                'model': 'ollama/llama3.1:70b',
                 'max_tokens': 1000,
                 'temperature': 0,
                 'api_base': 'http://localhost:11434'
