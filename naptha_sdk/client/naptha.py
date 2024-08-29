@@ -137,6 +137,15 @@ class Naptha(AsyncMixin):
         self.orchestrator_node = self.node
         logger.info(f"Orchestrator node: {self.orchestrator_node.node_url}")
 
+    async def deploy(self):
+        self.publish_agent_packages()
+        await self.register_agent_modules()
+        await self.register_agent_services()
+
+        self.publish_multi_agent_packages()
+        await self.register_multi_agent_modules()
+        await self.register_multi_agent_services()
+
     async def run(self, run_params):
         consumer_id = self.user["id"]
         flow_run_input = {
