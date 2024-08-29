@@ -2,7 +2,7 @@ import os
 import re
 import subprocess
 import tomlkit
-import naptha_sdk.config import generate_component_yaml, generate_schema
+from naptha_sdk.config import generate_component_yaml, generate_schema
 
 def create_poetry_package(package_name):
     subprocess.run(["poetry", "new", f"tmp/{package_name}"])

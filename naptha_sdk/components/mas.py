@@ -1,18 +1,8 @@
-from datetime import datetime
-import functools
-import json
-import os
-import time
-import traceback
-import inspect
-from naptha_sdk.code_extraction import create_poetry_package, extract_packages, add_dependency_to_pyproject, publish_hf_package, transform_code_mas
-from naptha_sdk.utils import get_logger, AsyncMixin
-# from naptha_sdk.mas_engine import run_mas
-from naptha_sdk.schemas import ModuleRunInput
+from naptha_sdk.utils import get_logger
 
 logger = get_logger(__name__)
 
-class MultiAgentService(AsyncMixin):
+class MultiAgentService():
     def __init__(self, naptha, name, fn):
         self.naptha = naptha
         self.name = name
@@ -21,40 +11,3 @@ class MultiAgentService(AsyncMixin):
         self.module_name = self.fn.__name__
         self.repo_id = f"mas_{self.module_name}"
         super().__init__()
-
-    async def __ainit__(self):
-        self.publish_package()
-        await self.register_module()
-        await self.register_service()
-
-    def publish_package(self):
-        logger.info(f"Publishing Package...")
-        mas_code = inspect.getsource(self.fn)
-        mas_code = transform_code_mas(mas_code)
-        packages = extract_packages(mas_code)
-        logger.info(f"PACKAGES: {packages}")
-        create_poetry_package(self.module_name)
-        add_dependency_to_pyproject(self.module_name, packages)
-        publish_hf_package(self.naptha.hf, self.module_name, self.repo_id, mas_code, self.naptha.hf_username)
-
-    async def register_module(self):
-        module_config = {
-            "name": self.module_name,
-            "description": self.module_name,
-            "author": f"user:{self.naptha.hf_username}",
-            "url": f"https://huggingface.co/{self.naptha.hf_username}/{self.repo_id}",
-            "type": "template"
-        }
-        logger.info(f"Registering Multi-Agent Module {module_config}")
-        module = await self.naptha.hub.create_module(module_config)
-
-    async def register_service(self):
-        mas_name = self.name
-        mas_config = {
-            "name": mas_name,
-            "description": mas_name,
-            "module_name": self.module_name,
-            "worker_node_url": self.naptha.node.node_url,
-        }
-        logger.info(f"Registering Multi-Agent Service {mas_config}")
-        service = await self.naptha.hub.create_service(mas_config)
