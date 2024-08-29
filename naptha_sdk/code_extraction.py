@@ -2,7 +2,6 @@ import os
 import re
 import subprocess
 import tomlkit
-from naptha_sdk.config import generate_component_yaml, generate_schema
 
 def create_poetry_package(package_name):
     subprocess.run(["poetry", "new", f"tmp/{package_name}"])
@@ -103,33 +102,3 @@ async def run(inputs, worker_nodes = None, orchestrator_node = None, flow_run = 
     transformed_code = new_header + '\n' + '\n'.join(transformed_lines)
     
     return transformed_code
-
-def check_hf_repo_exists(hf_api, repo_id: str) -> bool:
-    try:
-        # This will raise an exception if the repo doesn't exist
-        hf_api.repo_info(repo_id)
-        return True
-    except Exception:
-        return False
-
-def publish_hf_package(hf_api, module_name, repo_id, code, user_id):
-    with open(f'tmp/{module_name}/{module_name}/run.py', 'w') as file:
-        file.write(code)
-    generate_schema(module_name)
-    generate_component_yaml(module_name, user_id)
-    repo = f"{user_id}/{repo_id}"
-    if not check_hf_repo_exists(hf_api, repo):
-        hf_api.create_repo(repo_id=repo_id)
-    hf_api.upload_folder(
-        folder_path=f'tmp/{module_name}',
-        repo_id=repo,
-        repo_type="model",
-    )
-    tags_info = hf_api.list_repo_refs(repo)
-    desired_tag = "v0.1"
-    existing_tags = {tag_info.name for tag_info in tags_info.tags} if tags_info.tags else set()
-    if desired_tag not in existing_tags:
-        hf_api.create_tag(repo, repo_type="model", tag=desired_tag)
-    else:
-        hf_api.delete_tag(repo, tag=desired_tag)
-        hf_api.create_tag(repo, repo_type="model", tag=desired_tag)
