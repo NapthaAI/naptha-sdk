@@ -22,6 +22,14 @@ Here's Yohei (creator of BabyAGI) admitting that [BabyAGI isn't a true multi-age
 
 <img src="images/multi-node-flow.png" width="100%">
 
+## Pre-requisites
+
+Install Python [Poetry](https://python-poetry.org/docs/):
+
+```bash
+pipx install poetry
+```
+
 ## Install
 
 From source:
