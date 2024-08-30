@@ -165,12 +165,6 @@ async def main():
     # Module commands
     modules_parser = subparsers.add_parser("modules", help="List available modules.")
 
-    # Task commands
-    tasks_parser = subparsers.add_parser("tasks", help="List available tasks.")
-
-    # RFP commands
-    rfps_parser = subparsers.add_parser("rfps", help="List available RFPs.")
-
     # Run command
     run_parser = subparsers.add_parser("run", help="Execute run command.")
     run_parser.add_argument("module", help="Select the module to run")
@@ -179,10 +173,6 @@ async def main():
     run_parser.add_argument("-f", "--file", help="YAML file with module parameters")
 
     user_parser = subparsers.add_parser("user", help="Generate user.")
-
-    # Credits command
-    credits_parser = subparsers.add_parser("credits", help="Show available credits.")
-    services_parser = subparsers.add_parser("services", help="Show available services.")
 
     # Read storage commands
     read_storage_parser = subparsers.add_parser("read_storage", help="Read from storage.")
@@ -200,18 +190,10 @@ async def main():
     # Parse arguments
     args = parser.parse_args()
 
-    if args.command == "credits":
-        creds(naptha)  
-    elif args.command == "services":
-        list_services(naptha)  
-    elif args.command == "nodes":
+    if args.command == "nodes":
         await list_nodes(naptha)   
     elif args.command == "modules":
         await list_modules(naptha)  
-    elif args.command == "tasks":
-        await list_tasks(naptha)  
-    elif args.command == "rfps":
-        await list_rfps(naptha)  
     elif args.command == "user":
         generate_new_user()  
     elif args.command == "run":
