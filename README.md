@@ -88,12 +88,6 @@ Try a module that uses the local LLM running on your node:
 naptha run chat -p "prompt='tell me a joke'"
 ```
 
-Try a module that makes predictions about future events using:
-
-```bash
-naptha run olas_prediction -p "prompt='Will there be an initial public offering on either the Shanghai Stock Exchange or the Shenzhen Stock Exchange before 1 January 2016?'"
-```
-
 You can also try a module that generates images (make sure that the .env file in node has a valid Stability platform API key):
 
 ```bash
@@ -147,6 +141,16 @@ naptha run multiplayer_chat -p "prompt='i would like to count up to ten, one num
 naptha run babyagi -p "objective='Research the history of football'" --worker_nodes "http://node.naptha.ai:7001,http://node1.naptha.ai:7001"
 ```
 
+```bash
+naptha run debate_protocol -p "initial_claim='Teslas price will exceed $250 in 2 weeks.' context='Teslas current price is $207, and recent innovations and strong Q2 results will drive the price up.
+
+News Summary 1:
+Tesla stock was lower to start a new week of trading, falling as investors worry about global growth. Shares of the electric-vehicle giant were down 7.3% in premarket trading Monday at $192.33. Stocks around the world were falling as investors fretted that weak economic data signal a recession ahead. Despite positive comments from CEO Elon Musk about Tesla’s sales, the stock has fallen about 16% this year and is struggling to overcome negative global investor sentiment.
+
+News Summary 2:
+Tesla faces growing competition and softening demand, impacting its stock price which is trading 43% below its all-time high. The company’s profitability is declining, with earnings per share shrinking 46% year-over-year in Q2 2024. Despite recent price cuts and a plan to produce a low-cost EV model, sales growth has decelerated. Tesla is also involved in autonomous self-driving software, humanoid robots, and solar energy, but these segments may take years to significantly impact revenue.
+'" --worker_nodes "http://localhost:7001"
+```
 
 ## Using the SDK non-interactively
 
