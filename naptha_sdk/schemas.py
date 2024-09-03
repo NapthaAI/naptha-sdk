@@ -53,6 +53,8 @@ class ModuleRun(BaseModel):
     child_runs: List['ModuleRun'] = []
     parent_runs: List['ModuleRun'] = []
     input_schema_ipfs_hash: Optional[str] = None
+    module_url: Optional[str] = None
+    module_version: Optional[str] = None
 
     class Config:
         allow_mutation = True
@@ -84,6 +86,8 @@ class ModuleRunInput(BaseModel):
     module_params: Optional[Union[Dict, DockerParams]] = None
     module_type: Optional[ModuleType] = None
     parent_runs: List['ModuleRun'] = []
+    module_url: Optional[str] = None
+    module_version: Optional[str] = None
 
     def model_dict(self):
         model_dict = self.dict()
