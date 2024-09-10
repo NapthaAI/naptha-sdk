@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Dict, List, Optional, Union
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class ModuleType(str, Enum):
     docker = "docker"
@@ -50,8 +50,8 @@ class ModuleRun(BaseModel):
     completed_time: Optional[datetime] = None
     duration: Optional[float] = None
     module_params: Optional[Union[Dict, DockerParams]] = None
-    child_runs: List['ModuleRun'] = []
-    parent_runs: List['ModuleRun'] = []
+    child_runs: List['ModuleRun'] = Field(default_factory=list, max_items=2)
+    parent_runs: List['ModuleRun'] = Field(default_factory=list, max_items=2)
     input_schema_ipfs_hash: Optional[str] = None
     module_url: Optional[str] = None
     module_version: Optional[str] = None
@@ -69,14 +69,21 @@ class ModuleRun(BaseModel):
                 model_dict[key] = value.isoformat()
             elif isinstance(value, ModuleType):
                 model_dict[key] = value.value
+        
+        # Limit parent_runs to 2 items
+        model_dict['parent_runs'] = model_dict['parent_runs'][:2]
         for i, parent_run in enumerate(model_dict['parent_runs']):
             for key, value in parent_run.items():
                 if isinstance(value, datetime):
                     model_dict['parent_runs'][i][key] = value.isoformat()
+        
+        # Limit child_runs to 2 items
+        model_dict['child_runs'] = model_dict['child_runs'][:2]
         for i, child_run in enumerate(model_dict['child_runs']):
             for key, value in child_run.items():
                 if isinstance(value, datetime):
                     model_dict['child_runs'][i][key] = value.isoformat()
+        
         return model_dict
 
 class ModuleRunInput(BaseModel):
@@ -85,12 +92,14 @@ class ModuleRunInput(BaseModel):
     worker_nodes: Optional[list[str]] = None
     module_params: Optional[Union[Dict, DockerParams]] = None
     module_type: Optional[ModuleType] = None
-    parent_runs: List['ModuleRun'] = []
+    parent_runs: List['ModuleRun'] = Field(default_factory=list, max_items=2)
     module_url: Optional[str] = None
     module_version: Optional[str] = None
 
     def model_dict(self):
         model_dict = self.dict()
+        # Limit parent_runs to 2 items
+        model_dict['parent_runs'] = model_dict['parent_runs'][:2]
         for i, parent_run in enumerate(model_dict['parent_runs']):
             for key, value in parent_run.items():
                 if isinstance(value, datetime):
