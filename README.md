@@ -49,6 +49,8 @@ cp .env.example .env
 
 You will need to add a value to PRIVATE_KEY in .env. You can generate and output one to the commandline using ```naptha user``` (just copy and paste the value into the .env file).
 
+Choose whether you want to interact with a local Naptha node or a hosted Naptha node. For a local node, set ```NODE_URL=http://localhost:7001``` in the .env file. To use a hosted node, set ```NODE_URL=http://node.naptha.ai:7001``` or ```NODE_URL=http://node1.naptha.ai:7001```.
+
 ## Get Started
 
 ## Nodes
