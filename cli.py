@@ -36,6 +36,11 @@ async def list_modules(naptha):
     for module in modules:
         print(module) 
 
+async def create_module(naptha, module_config):
+    print(f"Module Config: {module_config}")
+    module = await naptha.hub.create_module(module_config)
+    print(module[0]) 
+
 async def list_tasks(naptha):
     tasks = await naptha.hub.list_tasks()
     for task in tasks:
@@ -164,6 +169,8 @@ async def main():
 
     # Module commands
     modules_parser = subparsers.add_parser("modules", help="List available modules.")
+    modules_parser.add_argument('module_name', nargs='?', help='Optional module name')
+    modules_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
 
     # Run command
     run_parser = subparsers.add_parser("run", help="Execute run command.")
@@ -193,16 +200,39 @@ async def main():
     if args.command == "nodes":
         await list_nodes(naptha)   
     elif args.command == "modules":
-        await list_modules(naptha)  
+        if not args.module_name:
+            await list_modules(naptha)  
+        elif len(args.module_name.split()) == 1:
+            if hasattr(args, 'parameters') and args.parameters is not None:
+                params = shlex.split(args.parameters)
+                parsed_params = {}
+                for param in params:
+                    key, value = param.split('=')
+                    parsed_params[key] = value
+
+                required_parameters = ['description', 'url', 'type', 'version']
+                if not all(param in parsed_params for param in required_parameters):
+                    print(f"Missing one or more of the following required parameters: {required_parameters}")
+                    return
+                    
+                module_config = {
+                    "name": args.module_name,
+                    "description": parsed_params['description'],
+                    "author": naptha.user["id"],
+                    "url": parsed_params['url'],
+                    "type": parsed_params['type'],
+                    "version": parsed_params['version'],
+                }
+                await create_module(naptha, module_config)
+        else:
+            print("Invalid command.")
     elif args.command == "user":
         generate_new_user()  
     elif args.command == "run":
         if hasattr(args, 'parameters') and args.parameters is not None:
             try:
-                # First, try to parse as JSON
                 parsed_params = json.loads(args.parameters)
             except json.JSONDecodeError:
-                # If JSON parsing fails, fall back to the original method
                 params = shlex.split(args.parameters)
                 parsed_params = {}
                 for param in params:

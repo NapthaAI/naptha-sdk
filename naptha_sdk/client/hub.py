@@ -86,6 +86,9 @@ class Hub:
             module = await self.surrealdb.query("SELECT * FROM module WHERE id=$module_name;", {"module_name": module_name})
             return module[0]['result'][0]
 
+    async def create_module(self, module_config: Dict) -> Tuple[bool, Optional[Dict]]:
+        return await self.surrealdb.create("module", module_config)
+
     async def list_tasks(self) -> List:
         tasks = await self.surrealdb.query("SELECT * FROM lot;")
         return tasks[0]['result']
