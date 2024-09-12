@@ -1,4 +1,5 @@
 import logging
+import os
 import yaml
 
 def get_logger(name):
@@ -17,6 +18,36 @@ def load_yaml(cfg_path):
     with open(cfg_path, "r") as file:
         cfg = yaml.load(file, Loader=yaml.FullLoader)
     return cfg
+
+def add_credentials_to_env(username, password):
+    env_file_path = os.path.join(os.getcwd(), '.env')
+    updated_lines = []
+    hub_user_found = False
+    hub_pass_found = False
+
+    # Read the existing .env file
+    with open(env_file_path, 'r') as env_file:
+        for line in env_file:
+            if line.startswith('HUB_USER='):
+                updated_lines.append(f"HUB_USER={username}\n")
+                hub_user_found = True
+            elif line.startswith('HUB_PASS='):
+                updated_lines.append(f"HUB_PASS={password}\n")
+                hub_pass_found = True
+            else:
+                updated_lines.append(line)
+
+    # Append new credentials if not found
+    if not hub_user_found:
+        updated_lines.append(f"HUB_USER={username}\n")
+    if not hub_pass_found:
+        updated_lines.append(f"HUB_PASS={password}\n")
+
+    # Write the updated content back to the .env file
+    with open(env_file_path, 'w') as env_file:
+        env_file.writelines(updated_lines)
+
+    print("Your credentials have been updated in the .env file. You can now use these credentials to authenticate in future sessions.")
 
 class AsyncMixin:
     def __init__(self, *args, **kwargs):

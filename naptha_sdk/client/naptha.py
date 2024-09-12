@@ -9,12 +9,12 @@ class Naptha:
 
     def __init__(self,
             user,
-            hub_username, 
-            hub_password, 
             hub_url,
             node_url,
             routing_url,
             indirect_node_id,
+            hub_username=None, 
+            hub_password=None, 
             *args, 
             **kwargs
     ):
@@ -32,6 +32,7 @@ class Naptha:
         self.services = Services()
         self.__storedargs = user, hub_username, hub_password, hub_url, node_url, args, kwargs
         self.async_initialized = False
+        self.hub = Hub(hub_url)  # Initialize Hub with only the URL
 
     async def __ainit__(self,
             user,
@@ -44,7 +45,8 @@ class Naptha:
             *args, 
             **kwargs):
         """Async constructor"""
-        self.hub = await Hub(hub_username, hub_password, hub_url)
+        if hub_username and hub_password:
+            await self.hub.signin(hub_username, hub_password)
 
     async def __initobj(self):
         """Crutch used for __await__ after spawning"""
