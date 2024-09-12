@@ -53,6 +53,14 @@ Choose whether you want to interact with a local Naptha node or a hosted Naptha 
 
 ## Get Started
 
+## Sign Up
+
+You can sign up for an account on the Naptha Hub using the commandline tool:
+
+```bash
+naptha signup
+```
+
 ## Nodes
 
 ### Explore Nodes on the Network
