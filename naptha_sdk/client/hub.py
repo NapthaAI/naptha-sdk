@@ -44,6 +44,7 @@ class Hub:
             self.user_id = self._decode_token(user)
             self.token = user
             self.is_authenticated = True
+            print("User ID: ", self.user_id)
             return True, user, self.user_id
         except Exception as e:
             print(f"Authentication failed: {e}")
@@ -99,6 +100,15 @@ class Hub:
         else:
             module = await self.surrealdb.query("SELECT * FROM module WHERE id=$module_name;", {"module_name": module_name})
             return module[0]['result'][0]
+
+    async def delete_module(self, module_id: str) -> Tuple[bool, Optional[Dict]]:
+        print(f"Deleting module: {module_id}")
+        success = await self.surrealdb.delete(module_id)
+        if success:
+            print("Deleted module")
+        else:
+            print("Failed to delete module")
+        return success
 
     async def create_module(self, module_config: Dict) -> Tuple[bool, Optional[Dict]]:
         return await self.surrealdb.create("module", module_config)

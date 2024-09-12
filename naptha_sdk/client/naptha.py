@@ -46,6 +46,7 @@ class Naptha:
             **kwargs):
         """Async constructor"""
         if hub_username and hub_password:
+            print("Signing in to hub...")
             await self.hub.signin(hub_username, hub_password)
 
     async def __initobj(self):

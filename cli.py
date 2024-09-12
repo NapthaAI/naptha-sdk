@@ -171,6 +171,7 @@ async def main():
     modules_parser = subparsers.add_parser("modules", help="List available modules.")
     modules_parser.add_argument('module_name', nargs='?', help='Optional module name')
     modules_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
+    modules_parser.add_argument('-d', '--delete', action='store_true', help='Delete a module')
 
     # Run command
     run_parser = subparsers.add_parser("run", help="Execute run command.")
@@ -221,6 +222,8 @@ async def main():
         elif args.command == "modules":
             if not args.module_name:
                 await list_modules(naptha)  
+            elif args.delete and len(args.module_name.split()) == 1:
+                await naptha.hub.delete_module(args.module_name)
             elif len(args.module_name.split()) == 1:
                 if hasattr(args, 'parameters') and args.parameters is not None:
                     params = shlex.split(args.parameters)
@@ -237,7 +240,7 @@ async def main():
                     module_config = {
                         "name": args.module_name,
                         "description": parsed_params['description'],
-                        "author": naptha.user["id"],
+                        "author": naptha.hub.user_id,
                         "url": parsed_params['url'],
                         "type": parsed_params['type'],
                         "version": parsed_params['version'],
