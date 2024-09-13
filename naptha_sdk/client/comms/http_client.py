@@ -121,6 +121,7 @@ async def check_task_http(node_url: str, module_run: ModuleRun) -> ModuleRun:
                 f"{node_url}/CheckTask", json=module_run.model_dict()
             )
             response.raise_for_status()
+            logger.info(f"Response: {response.text}")
         return ModuleRun(**json.loads(response.text))
     except HTTPStatusError as e:
         logger.info(f"HTTP error occurred: {e}")

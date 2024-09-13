@@ -83,7 +83,7 @@ class TaskEngine:
         task_run = await self.task.worker_node.run_task(module_run_input=self.task_run_input)
         logger.info(f"Created task run on worker node {self.task.worker_node.node_url}: {task_run}")
 
-        max_retries = 3
+        max_retries = 5
         retry_count = 0
         while retry_count < max_retries:
             task_run = await self.task.worker_node.check_task(task_run)
