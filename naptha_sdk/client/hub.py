@@ -102,6 +102,8 @@ class Hub:
             return module[0]['result'][0]
 
     async def delete_module(self, module_id: str) -> Tuple[bool, Optional[Dict]]:
+        if ":" not in module_id:
+            module_id = f"module:{module_id}".strip()
         print(f"Deleting module: {module_id}")
         success = await self.surrealdb.delete(module_id)
         if success:
@@ -111,7 +113,10 @@ class Hub:
         return success
 
     async def create_module(self, module_config: Dict) -> Tuple[bool, Optional[Dict]]:
-        return await self.surrealdb.create("module", module_config)
+        if not module_config.get('id'):
+            return await self.surrealdb.create("module", module_config)
+        else:
+            return await self.surrealdb.create(module_config.pop('id'), module_config)
 
     async def list_tasks(self) -> List:
         tasks = await self.surrealdb.query("SELECT * FROM lot;")

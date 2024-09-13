@@ -9,6 +9,8 @@ import shlex
 import time
 import yaml
 import json
+from tabulate import tabulate
+from textwrap import wrap
 
 load_dotenv()
 
@@ -28,18 +30,71 @@ def list_services(naptha):
 
 async def list_nodes(naptha):
     nodes = await naptha.hub.list_nodes()
+    
+    if not nodes:
+        print("No nodes found.")
+        return
+
+    # Print the first node to see its structure
+    print("Sample node structure:")
+    print(json.dumps(nodes[0], indent=2))
+
+    # Determine available keys
+    keys = list(nodes[0].keys())
+
+    # Create headers and table data based on available keys
+    headers = keys
+    table_data = []
+
     for node in nodes:
-        print(node) 
+        row = []
+        for key in keys:
+            value = str(node.get(key, ''))
+            if len(value) > 50:
+                wrapped_value = '\n'.join(wrap(value, width=50))
+                row.append(wrapped_value)
+            else:
+                row.append(value)
+        table_data.append(row)
+
+    print("\nAll Nodes:")
+    print(tabulate(table_data, headers=headers, tablefmt="grid"))
+    print(f"\nTotal nodes: {len(nodes)}")
 
 async def list_modules(naptha):
     modules = await naptha.hub.list_modules()
-    for module in modules:
-        print(module) 
+    
+    if not modules:
+        print("No modules found.")
+        return
+
+    headers = ["Name", "ID", "Type", "Version", "Author", "Description"]
+    table_data = []
+
+    for m in modules:
+        # Wrap the description text
+        wrapped_description = '\n'.join(wrap(m['description'], width=50))
+        
+        row = [
+            m['name'],
+            m['id'],
+            m['type'],
+            m['version'],
+            m['author'],
+            wrapped_description
+        ]
+        table_data.append(row)
+
+    print(tabulate(table_data, headers=headers, tablefmt="grid"))
+    print(f"\nTotal modules: {len(modules)}")
 
 async def create_module(naptha, module_config):
     print(f"Module Config: {module_config}")
     module = await naptha.hub.create_module(module_config)
-    print(module[0]) 
+    if isinstance(module, dict):
+        print(f"Module created: {module}")
+    elif isinstance(module, list):
+        print(f"Module created: {module[0]}")
 
 async def list_tasks(naptha):
     tasks = await naptha.hub.list_tasks()
@@ -221,7 +276,7 @@ async def main():
             await list_nodes(naptha)   
         elif args.command == "modules":
             if not args.module_name:
-                await list_modules(naptha)  
+                await list_modules(naptha)
             elif args.delete and len(args.module_name.split()) == 1:
                 await naptha.hub.delete_module(args.module_name)
             elif len(args.module_name.split()) == 1:
@@ -238,6 +293,7 @@ async def main():
                         return
                         
                     module_config = {
+                        "id": f"module:{args.module_name}",
                         "name": args.module_name,
                         "description": parsed_params['description'],
                         "author": naptha.hub.user_id,
