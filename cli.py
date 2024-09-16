@@ -69,7 +69,7 @@ async def run(
         parameters = load_yaml_to_dict(yaml_file)
 
     module_run_input = {
-        'consumer_id': naptha.user["id"],
+        'consumer_id': naptha.hub.user_id,
         "module_name": module_name,
         'worker_nodes': worker_nodes,
         "module_params": parameters,
@@ -77,12 +77,12 @@ async def run(
     
     print(f"Running module {module_name} with parameters: {module_run_input}")
 
-    print("Checking user...")
-    user = await naptha.node.check_user(user_input=naptha.user)
+    print("Checking user with public key: ", naptha.hub.public_key)
+    user = await naptha.node.check_user(user_input={"public_key": naptha.hub.public_key})
 
-    if user["is_registered"] == True:
+    if user is not None:
         print("Found user...", user)
-    elif user["is_registered"] == False:
+    else:
         print("No user found. Registering user...")
         user = await naptha.node.register_user(user_input=user)
         print(f"User registered: {user}.")
@@ -142,8 +142,8 @@ async def write_storage(naptha, storage_input, ipfs=False, publish_to_ipns=False
 
 
 async def main():
-    user, _ = generate_user(os.getenv("PRIVATE_KEY"))
     hub_url = os.getenv("HUB_URL")
+    public_key = get_public_key(os.getenv("PRIVATE_KEY"))
     hub_username = os.getenv("HUB_USER")
     hub_password = os.getenv("HUB_PASS")
     node_url = os.getenv("NODE_URL", None)
@@ -152,11 +152,13 @@ async def main():
 
 
     naptha = await Naptha(
-        user=user,
         hub_url=hub_url,
         node_url=node_url,
         routing_url=routing_url,
         indirect_node_id=indirect_node_id,
+        public_key=public_key,
+        hub_username=hub_username,
+        hub_password=hub_password,
     )
 
     parser = argparse.ArgumentParser(description="CLI with for Naptha")

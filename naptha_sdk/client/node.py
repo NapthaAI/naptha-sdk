@@ -41,6 +41,7 @@ class Node:
 
 
     async def check_user(self, user_input):
+        print("Checking user... ", user_input)
         if self.client == 'http':
             return await check_user_http(self.node_url, user_input)
         else:

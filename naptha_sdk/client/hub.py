@@ -1,21 +1,29 @@
 import jwt
-from naptha_sdk.utils import add_credentials_to_env
 import os
+from naptha_sdk.utils import add_credentials_to_env, get_logger
 from surrealdb import Surreal
-from typing import Dict, List, Tuple, Optional
+import traceback
+from typing import Dict, List, Optional, Tuple
+
+logger = get_logger(__name__)
 
 
 class Hub:
     """The Hub class is the entry point into Naptha AI Hub."""
 
-    def __init__(self, endpoint, *args, **kwargs):
+    def __init__(self, hub_url, public_key, *args, **kwargs):
+        self.hub_url = hub_url
+        self.public_key = public_key
         self.ns = "naptha"
         self.db = "naptha"
-        self.surrealdb = Surreal(endpoint)
+        self.surrealdb = Surreal(hub_url)
         self.is_authenticated = False
         self.user_id = None
         self.token = None
         
+        logger.info(f"Hub URL: {hub_url}")
+
+
     def _decode_token(self, token: str) -> str:
         return jwt.decode(token, options={"verify_signature": False})["ID"]
 
@@ -23,6 +31,7 @@ class Hub:
         try:
             await self.surrealdb.connect()
             await self.surrealdb.use(namespace=self.ns, database=self.db)
+            print("Signing in to hub with username: ", username)
             user = await self.surrealdb.signin(
                 {
                     "NS": self.ns,
@@ -38,6 +47,7 @@ class Hub:
             return True, user, self.user_id
         except Exception as e:
             print(f"Authentication failed: {e}")
+            print("Full traceback: ", traceback.format_exc())
             return False, None, None
 
     async def loop_signup(self) -> Tuple[bool, Optional[str], Optional[str]]:

@@ -8,18 +8,18 @@ class Naptha:
     """The entry point into Naptha."""
 
     def __init__(self,
-            user,
             hub_url,
             node_url,
             routing_url,
             indirect_node_id,
+            public_key,
             hub_username=None, 
             hub_password=None, 
             *args, 
             **kwargs
     ):
         
-        self.user = user
+        self.public_key = public_key
         self.hub_url = hub_url
         self.node_url = node_url
         self.routing_url = routing_url
@@ -30,9 +30,9 @@ class Naptha:
             indirect_node_id=indirect_node_id
         )
         self.services = Services()
-        self.__storedargs = user, hub_username, hub_password, hub_url, node_url, args, kwargs
+        self.__storedargs = public_key, hub_username, hub_password, hub_url, node_url, args, kwargs
         self.async_initialized = False
-        self.hub = Hub(hub_url)  # Initialize Hub with only the URL
+        self.hub = Hub(hub_url, public_key)  # Initialize Hub with only the URL
 
     async def __ainit__(self,
             user,

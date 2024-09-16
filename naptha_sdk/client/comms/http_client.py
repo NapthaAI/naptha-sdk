@@ -7,6 +7,7 @@ import tempfile
 import shutil
 import zipfile
 from pathlib import Path
+import traceback
 from typing import Dict, Any, List, Tuple
 from naptha_sdk.schemas import ModuleRun, ModuleRunInput
 from naptha_sdk.utils import get_logger
@@ -35,7 +36,9 @@ async def check_user_http(node_url: str, user_input: Dict[str, Any]) -> Dict[str
         logger.info(f"HTTP error occurred: {e}")
         raise  
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+        logger.info(f"An unexpected error occurred: {e}")
+        logger.info(f"Full traceback: {traceback.format_exc()}")
+        
 
 async def register_user_http(node_url: str, user_input: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -58,7 +61,8 @@ async def register_user_http(node_url: str, user_input: Dict[str, Any]) -> Dict[
         logger.info(f"HTTP error occurred: {e}")
         raise  
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+        logger.info(f"An unexpected error occurred: {e}")
+        logger.info(f"Full traceback: {traceback.format_exc()}")
 
 async def run_task_http(node_url: str, module_run_input: Dict[str, Any], access_token: str) -> Dict[str, Any]:
     """
@@ -110,7 +114,8 @@ async def check_tasks_http(node_url: str, ) -> Dict[str, Any]:
         logger.info(f"HTTP error occurred: {e}")
         raise  
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+        logger.info(f"An unexpected error occurred: {e}")
+        logger.info(f"Full traceback: {traceback.format_exc()}")
     return json.loads(response.text)
 
 
@@ -126,7 +131,8 @@ async def check_task_http(node_url: str, module_run: ModuleRun) -> ModuleRun:
         logger.info(f"HTTP error occurred: {e}")
         raise  
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+        logger.info(f"An unexpected error occurred: {e}")
+        logger.info(f"Full traceback: {traceback.format_exc()}")
 
 
 async def create_task_run_http(node_url: str, module_run_input: ModuleRunInput) -> ModuleRun:
@@ -141,8 +147,8 @@ async def create_task_run_http(node_url: str, module_run_input: ModuleRunInput) 
         logger.info(f"HTTP error occurred: {e}")
         raise  
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-
+        logger.info(f"An unexpected error occurred: {e}")
+        logger.info(f"Full traceback: {traceback.format_exc()}")
 
 async def update_task_run_http(node_url: str, module_run: ModuleRun):
     try:
@@ -222,8 +228,8 @@ async def read_storage_http(node_url: str, module_run_id: str, output_dir: str, 
         logger.info(f"HTTP error occurred: {e}")
         raise  
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-
+        logger.info(f"An unexpected error occurred: {e}")
+        logger.info(f"Full traceback: {traceback.format_exc()}")
 
 async def write_storage_http(node_url: str, storage_input: str, ipfs: bool = False, publish_to_ipns: bool = False, update_ipns_name: str = None) -> Dict[str, Any]:
     """Write storage to the node."""
@@ -252,5 +258,6 @@ async def write_storage_http(node_url: str, storage_input: str, ipfs: bool = Fal
         logger.info(f"HTTP error occurred: {e}")
         raise  
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+        logger.info(f"An unexpected error occurred: {e}")
+        logger.info(f"Full traceback: {traceback.format_exc()}")
         return {}
