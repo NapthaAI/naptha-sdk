@@ -120,8 +120,9 @@ async def check_task_http(node_url: str, module_run: ModuleRun) -> ModuleRun:
             response = await client.post(
                 f"{node_url}/CheckTask", json=module_run.model_dict()
             )
-            response.raise_for_status()
+            logger.info(f"Status code: {response.status_code}")
             logger.info(f"Response: {response.text}")
+            response.raise_for_status()
         return ModuleRun(**json.loads(response.text))
     except HTTPStatusError as e:
         logger.info(f"HTTP error occurred: {e}")

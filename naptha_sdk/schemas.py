@@ -50,8 +50,8 @@ class ModuleRun(BaseModel):
     completed_time: Optional[datetime] = None
     duration: Optional[float] = None
     module_params: Optional[Union[Dict, DockerParams]] = None
-    child_runs: List['ModuleRun'] = Field(default_factory=list, max_items=2)
-    parent_runs: List['ModuleRun'] = Field(default_factory=list, max_items=2)
+    child_runs: Optional[List['ModuleRun']] = Field(default_factory=list, max_items=2)
+    parent_runs: Optional[List['ModuleRun']] = Field(default_factory=list, max_items=2)
     input_schema_ipfs_hash: Optional[str] = None
     module_url: Optional[str] = None
     module_version: Optional[str] = None
@@ -71,18 +71,20 @@ class ModuleRun(BaseModel):
                 model_dict[key] = value.value
         
         # Limit parent_runs to 2 items
-        model_dict['parent_runs'] = model_dict['parent_runs'][:2]
-        for i, parent_run in enumerate(model_dict['parent_runs']):
-            for key, value in parent_run.items():
-                if isinstance(value, datetime):
-                    model_dict['parent_runs'][i][key] = value.isoformat()
+        if model_dict['parent_runs']:
+            model_dict['parent_runs'] = model_dict['parent_runs'][:2]
+            for i, parent_run in enumerate(model_dict['parent_runs']):
+                for key, value in parent_run.items():
+                    if isinstance(value, datetime):
+                        model_dict['parent_runs'][i][key] = value.isoformat()
         
         # Limit child_runs to 2 items
-        model_dict['child_runs'] = model_dict['child_runs'][:2]
-        for i, child_run in enumerate(model_dict['child_runs']):
-            for key, value in child_run.items():
-                if isinstance(value, datetime):
-                    model_dict['child_runs'][i][key] = value.isoformat()
+        if model_dict['child_runs']:
+            model_dict['child_runs'] = model_dict['child_runs'][:2]
+            for i, child_run in enumerate(model_dict['child_runs']):
+                for key, value in child_run.items():
+                    if isinstance(value, datetime):
+                        model_dict['child_runs'][i][key] = value.isoformat()
         
         return model_dict
 

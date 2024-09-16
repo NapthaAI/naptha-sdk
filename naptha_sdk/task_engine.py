@@ -51,7 +51,7 @@ class TaskEngine:
             "module_name": self.task.fn,
             "module_type": "template",
             "module_params": self.parameters,
-            "parent_runs": [{k: v for k, v in self.flow_run.dict().items() if k not in ["child_runs", "parent_runs"]}],
+            # "parent_runs": [{k: v for k, v in self.flow_run.dict().items() if k not in ["child_runs", "parent_runs"]}],
         }
         self.task_run_input = ModuleRunInput(**task_run_input)
         logger.info(f"Initializing task run.")
@@ -61,8 +61,8 @@ class TaskEngine:
         self.task_run.start_processing_time = datetime.now(pytz.utc).isoformat()
 
         # Relate new task run with parent flow run
-        self.flow_run.child_runs.append(ModuleRun(**{k: v for k, v in self.task_run.dict().items() if k not in ["child_runs", "parent_runs"]}))
-        logger.info(f"Adding task run to parent flow run: {self.flow_run}")
+        # self.flow_run.child_runs.append(ModuleRun(**{k: v for k, v in self.task_run.dict().items() if k not in ["child_runs", "parent_runs"]}))
+        # logger.info(f"Adding task run to parent flow run: {self.flow_run}")
         _ = await self.task.orchestrator_node.update_task_run(module_run=self.flow_run)
 
     async def start_run(self):
