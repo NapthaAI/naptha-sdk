@@ -67,6 +67,7 @@ class Hub:
                         "username": username,
                         "password": password,
                         "invite": "DZHA4ZTK",
+                        "public_key": self.public_key,
                     }
                 )
                 if user:
