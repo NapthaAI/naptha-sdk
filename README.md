@@ -89,6 +89,12 @@ For each module, you will see a url where you can check out the code.
 naptha modules module_name -p "description='Module description' url='https://github.com/NapthaAI/module_name' type='flow' version='0.1'" 
 ```
 
+### Delete a Module
+
+```bash
+naptha modules -d module_name
+```
+
 ### Run a Module
 
 Now you've found a node and a module you'd like to run, so let's run it locally! You can use the commandline tool to connect with the node and run the workflow. 
