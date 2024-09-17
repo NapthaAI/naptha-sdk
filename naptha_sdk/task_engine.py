@@ -8,6 +8,7 @@ import time
 import traceback
 
 logger = get_logger(__name__)
+MAX_RETRIES = 5
 
 async def run_task(task, flow_run, parameters) -> None:
     task_engine = TaskEngine(task, flow_run, parameters)
@@ -83,14 +84,29 @@ class TaskEngine:
         task_run = await self.task.worker_node.run_task(module_run_input=self.task_run_input)
         logger.info(f"Created task run on worker node {self.task.worker_node.node_url}: {task_run}")
 
-        while True:
+        retry_count = 0
+        while retry_count < MAX_RETRIES:
             task_run = await self.task.worker_node.check_task(task_run)
-            logger.info(task_run.status)  
+            if task_run is None:
+                logger.warning(f"check_task returned None. Retrying... (Attempt {retry_count + 1}/{MAX_RETRIES})")
+                retry_count += 1
+                await asyncio.sleep(3)
+                continue
+
+            logger.info(f"Task status: {task_run.status}")
             await self.task.orchestrator_node.update_task_run(module_run=task_run)
 
             if task_run.status in ["completed", "error"]:
                 break
-            time.sleep(3)
+            await asyncio.sleep(3)
+
+        if task_run is None or retry_count == MAX_RETRIES:
+            logger.error("Failed to retrieve task status after multiple attempts")
+            self.task_run.status = "error"
+            self.task_run.error = True
+            self.task_run.error_message = "Failed to retrieve task status"
+            await self.task.orchestrator_node.update_task_run(module_run=self.task_run)
+            return None
 
         if task_run.status == 'completed':
             logger.info(task_run.results)
