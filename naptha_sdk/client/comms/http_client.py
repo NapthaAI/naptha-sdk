@@ -13,7 +13,7 @@ from naptha_sdk.schemas import ModuleRun, ModuleRunInput
 from naptha_sdk.utils import get_logger
 
 logger = get_logger(__name__)
-
+HTTP_TIMEOUT = 300
 
 async def check_user_http(node_url: str, user_input: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -21,7 +21,7 @@ async def check_user_http(node_url: str, user_input: Dict[str, Any]) -> Dict[str
     """
     endpoint = node_url + "/CheckUser"
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
             headers = {
                 'Content-Type': 'application/json', 
             }
@@ -46,7 +46,7 @@ async def register_user_http(node_url: str, user_input: Dict[str, Any]) -> Dict[
     """
     endpoint = node_url + "/RegisterUser"
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
             headers = {
                 'Content-Type': 'application/json', 
             }
@@ -79,7 +79,7 @@ async def run_task_http(node_url: str, module_run_input: Dict[str, Any], access_
         task_input = module_run_input
 
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
             headers = {
                 'Content-Type': 'application/json', 
                 'Authorization': f'Bearer {access_token}',  
@@ -105,7 +105,7 @@ async def check_tasks_http(node_url: str, ) -> Dict[str, Any]:
     Check the tasks on a node
     """
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
             response = await client.post(
                 f"{node_url}/CheckTasks"
             )
@@ -121,7 +121,7 @@ async def check_tasks_http(node_url: str, ) -> Dict[str, Any]:
 
 async def check_task_http(node_url: str, module_run: ModuleRun) -> ModuleRun:
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
             response = await client.post(
                 f"{node_url}/CheckTask", json=module_run.model_dict()
             )
@@ -137,7 +137,7 @@ async def check_task_http(node_url: str, module_run: ModuleRun) -> ModuleRun:
 
 async def create_task_run_http(node_url: str, module_run_input: ModuleRunInput) -> ModuleRun:
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
             response = await client.post(
                 f"{node_url}/CreateTaskRun", json=module_run_input.model_dict()
             )
@@ -152,7 +152,7 @@ async def create_task_run_http(node_url: str, module_run_input: ModuleRunInput) 
 
 async def update_task_run_http(node_url: str, module_run: ModuleRun):
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
             response = await client.post(
                 f"{node_url}/UpdateTaskRun", json=module_run.model_dict()
             )
@@ -195,7 +195,7 @@ async def read_storage_http(node_url: str, module_run_id: str, output_dir: str, 
     try:
         endpoint = f"{node_url}/{'read_ipfs' if ipfs else 'read_storage'}/{module_run_id}"
 
-        async with httpx.AsyncClient(timeout=30.0) as client:  # Increased timeout to 30 seconds
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
             response = await client.get(endpoint)
             response.raise_for_status()
             storage = response.content  
@@ -245,7 +245,7 @@ async def write_storage_http(node_url: str, storage_input: str, ipfs: bool = Fal
             "publish_to_ipns": publish_to_ipns,
             "update_ipns_name": update_ipns_name
         }
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
             response = await client.post(
                 endpoint, 
                 files=file,
