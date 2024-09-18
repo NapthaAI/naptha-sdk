@@ -97,16 +97,6 @@ async def create_module(naptha, module_config):
     elif isinstance(module, list):
         print(f"Module created: {module[0]}")
 
-async def list_tasks(naptha):
-    tasks = await naptha.hub.list_tasks()
-    for task in tasks:
-        print(task) 
-
-async def list_rfps(naptha):
-    rfps = await naptha.hub.list_rfps()
-    for rfp in rfps:
-        print(rfp) 
-
 async def run(
     naptha, 
     module_name, 
