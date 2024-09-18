@@ -135,34 +135,6 @@ class Hub:
         else:
             return await self.surrealdb.create(module_config.pop('id'), module_config)
 
-    async def list_tasks(self) -> List:
-        tasks = await self.surrealdb.query("SELECT * FROM lot;")
-        return tasks[0]['result']
-
-    async def list_rfps(self) -> List:
-        rfps = await self.surrealdb.query("SELECT * FROM auction;")
-        return rfps[0]['result']
-
-    async def list_rfps_from_consumer(self, consumer: Dict) -> List:
-        proposals = await self.surrealdb.query("SELECT * FROM auction WHERE node=$node;", consumer)
-        proposals = proposals[0]['result']
-        return proposals
-
-    async def submit_proposal(self, proposal: Dict) -> Tuple[bool, Optional[Dict]]:
-        proposal = await self.surrealdb.query("RELATE $me->requests_to_bid_on->$auction SET amount=1.0;", proposal)
-        return proposal[0]['result'][0]
-
-    def list_active_proposals(self):
-        pass
-
-    async def list_accepted_proposals(self, plan_id=None) -> List:
-        if not plan_id:
-            proposals = await self.surrealdb.query("SELECT * FROM wins WHERE in=$user;", {"user": self.user_id})
-            return proposals[0]['result']
-        else:
-            proposals = await self.surrealdb.query("SELECT * FROM wins WHERE in=$user AND out=$plan;", {"user": self.user_id, "plan": plan_id})
-            return proposals[0]['result'][0]
-
     async def close(self):
         """Close the database connection"""
         if self.is_authenticated:
