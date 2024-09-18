@@ -2,6 +2,7 @@ import argparse
 import asyncio
 from dotenv import load_dotenv
 from naptha_sdk.client.naptha import Naptha
+from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.user import get_public_key
 from naptha_sdk.schemas import ModuleRun
 import os
@@ -202,7 +203,7 @@ async def main():
     indirect_node_id = os.getenv("INDIRECT_NODE_ID", None)
 
 
-    naptha = await Naptha(
+    naptha = Naptha(
         hub_url=hub_url,
         node_url=node_url,
         routing_url=routing_url,
@@ -250,11 +251,7 @@ async def main():
     # Parse arguments
     args = parser.parse_args()
     if args.command == "signup":
-        success, token, user_id = await naptha.hub.loop_signup()
-        if success:
-            print(f"Signup successful. User ID: {user_id}")
-        else:
-            print("Signup failed.")
+        _, user_id = await user_setup_flow(hub_url, public_key)
     elif args.command in ["nodes", "modules", "run", "read_storage", "write_storage"]:
         if not naptha.hub.is_authenticated:
             if not hub_username or not hub_password:
@@ -320,12 +317,6 @@ async def main():
             await read_storage(naptha, args.module_run_id, args.output_dir, args.ipfs)
         elif args.command == "write_storage":
             await write_storage(naptha, args.storage_input, args.ipfs, args.publish_to_ipns, args.update_ipns_name)
-        elif args.command == "signup":
-            success, token, user_id = await naptha.hub.loop_signup()
-            if success:
-                print(f"Signup successful. User ID: {user_id}")
-            else:
-                print("Signup failed.")
     else:
         parser.print_help()
 
