@@ -1,6 +1,7 @@
 import jwt
 import os
 from naptha_sdk.utils import add_credentials_to_env, get_logger
+from naptha_sdk.user import generate_keypair
 from surrealdb import Surreal
 import traceback
 from typing import Dict, List, Optional, Tuple
@@ -11,7 +12,7 @@ logger = get_logger(__name__)
 class Hub:
     """The Hub class is the entry point into Naptha AI Hub."""
 
-    def __init__(self, hub_url, public_key, *args, **kwargs):
+    def __init__(self, hub_url, public_key=None, *args, **kwargs):
         self.hub_url = hub_url
         self.public_key = public_key
         self.ns = "naptha"
@@ -55,6 +56,7 @@ class Hub:
         while True:
             username = input("Enter username: ")
             password = input("Enter password: ")
+            self.public_key, private_key = generate_keypair()
             try:
                 await self.surrealdb.connect()
                 await self.surrealdb.use(namespace=self.ns, database=self.db)
@@ -72,7 +74,7 @@ class Hub:
                 )
                 if user:
                     success, user, user_id = await self.signin(username, password)
-                    add_credentials_to_env(username, password)
+                    add_credentials_to_env(username, password, private_key)
                     return success, user, user_id
                 else:
                     print("Failed to create user. Please try again.")

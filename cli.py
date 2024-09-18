@@ -2,7 +2,7 @@ import argparse
 import asyncio
 from dotenv import load_dotenv
 from naptha_sdk.client.naptha import Naptha
-from naptha_sdk.user import get_public_key, generate_user
+from naptha_sdk.user import get_public_key
 from naptha_sdk.schemas import ModuleRun
 import os
 import shlex
@@ -106,10 +106,6 @@ async def list_rfps(naptha):
     for rfp in rfps:
         print(rfp) 
 
-def generate_new_user():
-    _, private_key = generate_user()
-    print("PRIVATE_KEY: ", private_key)
-
 async def run(
     naptha, 
     module_name, 
@@ -198,7 +194,7 @@ async def write_storage(naptha, storage_input, ipfs=False, publish_to_ipns=False
 
 async def main():
     hub_url = os.getenv("HUB_URL")
-    public_key = get_public_key(os.getenv("PRIVATE_KEY"))
+    public_key = get_public_key(os.getenv("PRIVATE_KEY")) if os.getenv("PRIVATE_KEY") else None
     hub_username = os.getenv("HUB_USER")
     hub_password = os.getenv("HUB_PASS")
     node_url = os.getenv("NODE_URL", None)
@@ -234,9 +230,6 @@ async def main():
     run_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
     run_parser.add_argument("-n", "--worker_nodes", help="Worker nodes to take part in module runs.")
     run_parser.add_argument("-f", "--file", help="YAML file with module parameters")
-
-    user_parser = subparsers.add_parser("user", help="Generate user.")
-
     # Read storage commands
     read_storage_parser = subparsers.add_parser("read_storage", help="Read from storage.")
     read_storage_parser.add_argument("-id", "--module_run_id", help="Module run ID to read from")
@@ -304,8 +297,6 @@ async def main():
                     await create_module(naptha, module_config)
             else:
                 print("Invalid command.")
-        elif args.command == "user":
-            generate_new_user()  
         elif args.command == "run":
             if hasattr(args, 'parameters') and args.parameters is not None:
                 try:

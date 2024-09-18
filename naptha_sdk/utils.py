@@ -19,11 +19,12 @@ def load_yaml(cfg_path):
         cfg = yaml.load(file, Loader=yaml.FullLoader)
     return cfg
 
-def add_credentials_to_env(username, password):
+def add_credentials_to_env(username, password, private_key):
     env_file_path = os.path.join(os.getcwd(), '.env')
     updated_lines = []
     hub_user_found = False
     hub_pass_found = False
+    private_key_found = False
 
     # Read the existing .env file
     with open(env_file_path, 'r') as env_file:
@@ -34,6 +35,9 @@ def add_credentials_to_env(username, password):
             elif line.startswith('HUB_PASS='):
                 updated_lines.append(f"HUB_PASS={password}\n")
                 hub_pass_found = True
+            elif line.startswith('PRIVATE_KEY='):
+                updated_lines.append(f"PRIVATE_KEY={private_key}\n")
+                private_key_found = True
             else:
                 updated_lines.append(line)
 
@@ -42,12 +46,14 @@ def add_credentials_to_env(username, password):
         updated_lines.append(f"HUB_USER={username}\n")
     if not hub_pass_found:
         updated_lines.append(f"HUB_PASS={password}\n")
+    if not private_key_found:
+        updated_lines.append(f"PRIVATE_KEY={private_key}\n")
 
     # Write the updated content back to the .env file
     with open(env_file_path, 'w') as env_file:
         env_file.writelines(updated_lines)
 
-    print("Your credentials have been updated in the .env file. You can now use these credentials to authenticate in future sessions.")
+    print("Your credentials and private key have been updated in the .env file. You can now use these credentials to authenticate in future sessions.")
 
 class AsyncMixin:
     def __init__(self, *args, **kwargs):

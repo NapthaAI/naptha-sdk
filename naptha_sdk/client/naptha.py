@@ -12,7 +12,7 @@ class Naptha:
             node_url,
             routing_url,
             indirect_node_id,
-            public_key,
+            public_key=None,
             hub_username=None, 
             hub_password=None, 
             *args, 
