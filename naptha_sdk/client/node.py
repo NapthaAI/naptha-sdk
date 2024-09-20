@@ -1,7 +1,7 @@
 from typing import Dict, Optional
 from naptha_sdk.schemas import ModuleRun, ModuleRunInput
 from naptha_sdk.client.comms.http_client import (
-    check_user_http, register_user_http, run_task_http, check_tasks_http, check_task_http, 
+    check_user_http, register_user_http, run_task_http, check_task_http, 
     create_task_run_http, update_task_run_http, read_storage_http, write_storage_http
 )
 from naptha_sdk.client.comms.ws_client import (
@@ -67,12 +67,6 @@ class Node:
                 indirect_node_id=self.indirect_node_id,
                 module_run_input=module_run_input
             )
-
-    async def check_tasks(self):
-        if self.client == 'http':
-            return await check_tasks_http(self.node_url)
-        else:
-            raise NotImplementedError("check_tasks is not implemented for ws client")
 
     async def check_task(self, module_run: ModuleRun) -> ModuleRun:
         if self.client == 'http':
