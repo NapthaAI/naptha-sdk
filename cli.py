@@ -100,6 +100,7 @@ async def create_module(naptha, module_config):
 async def run(
     naptha, 
     module_name, 
+    user_id,
     parameters=None, 
     worker_nodes=None,
     yaml_file=None, 
@@ -111,7 +112,7 @@ async def run(
         parameters = load_yaml_to_dict(yaml_file)
 
     module_run_input = {
-        'consumer_id': naptha.hub.user_id,
+        'consumer_id': user_id,
         "module_name": module_name,
         'worker_nodes': worker_nodes,
         "module_params": parameters,
@@ -247,10 +248,8 @@ async def main():
             if not hub_username or not hub_password:
                 print("Please set HUB_USER and HUB_PASS environment variables or sign up first (run naptha signup).")
                 return
-            success, _, _ = await naptha.hub.signin(hub_username, hub_password)
-            if not success:
-                print("Authentication failed. Please check your credentials.")
-                return
+            async with naptha as naptha:
+                _, _, user_id = await naptha.hub.signin(hub_username, hub_password)
 
         if args.command == "nodes":
             await list_nodes(naptha)   
@@ -302,7 +301,7 @@ async def main():
             else:
                 worker_nodes = None
             
-            await run(naptha, args.module, parsed_params, worker_nodes, args.file)
+            await run(naptha, args.module, user_id, parsed_params, worker_nodes, args.file)
         elif args.command == "read_storage":
             await read_storage(naptha, args.module_run_id, args.output_dir, args.ipfs)
         elif args.command == "write_storage":

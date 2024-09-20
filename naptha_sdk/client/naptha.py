@@ -10,8 +10,8 @@ class Naptha:
     def __init__(self,
             hub_url,
             node_url,
-            routing_url,
-            indirect_node_id,
+            routing_url=None,
+            indirect_node_id=None,
             public_key=None,
             hub_username=None, 
             hub_password=None, 
@@ -30,39 +30,13 @@ class Naptha:
             indirect_node_id=indirect_node_id
         )
         self.services = Services()
-        self.__storedargs = public_key, hub_username, hub_password, hub_url, node_url, args, kwargs
-        self.async_initialized = False
-        self.hub = Hub(hub_url, public_key)  # Initialize Hub with only the URL
+        self.hub = Hub(hub_url, public_key)  
 
-    async def __ainit__(self,
-            user,
-            hub_username, 
-            hub_password, 
-            hub_url,
-            node_url,
-            routing_url,
-            indirect_node_id,
-            *args, 
-            **kwargs):
-        """Async constructor"""
-        if hub_username and hub_password:
-            print("Signing in to hub...")
-            await self.hub.signin(hub_username, hub_password)
-
-    async def __initobj(self):
-        """Crutch used for __await__ after spawning"""
-        assert not self.async_initialized
-        self.async_initialized = True
-        await self.__ainit__(
-            self.__storedargs[0], 
-            self.__storedargs[1], 
-            self.__storedargs[2], 
-            self.__storedargs[3], 
-            self.__storedargs[4], 
-            self.__storedargs[5], 
-            self.__storedargs[6],
-        )
+    async def __aenter__(self):
+        """Async enter method for context manager"""
+        await self.hub.connect()
         return self
 
-    def __await__(self):
-        return self.__initobj().__await__()
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async exit method for context manager"""
+        await self.hub.close()
