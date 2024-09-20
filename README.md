@@ -188,13 +188,16 @@ import os
 
 ```python
 async def main():
-  naptha = await Naptha(
-      user=generate_user()[0],
-      hub_username=os.getenv("HUB_USER"), 
-      hub_password=os.getenv("HUB_PASS"), 
+   naptha = Naptha(
       hub_url="ws://node.naptha.ai:3001/rpc",
       node_url="http://node.naptha.ai:7001",
-  )
+      public_key=get_public_key(os.getenv("PRIVATE_KEY")),
+      hub_username=os.getenv("HUB_USER"), 
+      hub_password=os.getenv("HUB_PASS"), 
+   )
+
+   async with naptha as naptha:
+         await naptha.hub.signin(hub_username, hub_password) 
 
   flow_inputs = {"prompt": 'i would like to count up to ten, one number at a time. ill start. one.'}
   worker_nodes = [Node("http://node.naptha.ai:7001"), Node("http://node1.naptha.ai:7001")]
