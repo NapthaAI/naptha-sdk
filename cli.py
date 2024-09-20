@@ -238,76 +238,74 @@ async def main():
     # Signup command
     signup_parser = subparsers.add_parser("signup", help="Sign up a new user.")
 
-    
-    # Parse arguments
-    args = parser.parse_args()
-    if args.command == "signup":
-        _, user_id = await user_setup_flow(hub_url, public_key)
-    elif args.command in ["nodes", "modules", "run", "read_storage", "write_storage"]:
-        if not naptha.hub.is_authenticated:
-            if not hub_username or not hub_password:
-                print("Please set HUB_USER and HUB_PASS environment variables or sign up first (run naptha signup).")
-                return
-            async with naptha as naptha:
+    async with naptha as naptha:
+        args = parser.parse_args()
+        if args.command == "signup":
+            _, user_id = await user_setup_flow(hub_url, public_key)
+        elif args.command in ["nodes", "modules", "run", "read_storage", "write_storage"]:
+            if not naptha.hub.is_authenticated:
+                if not hub_username or not hub_password:
+                    print("Please set HUB_USER and HUB_PASS environment variables or sign up first (run naptha signup).")
+                    return
                 _, _, user_id = await naptha.hub.signin(hub_username, hub_password)
 
-        if args.command == "nodes":
-            await list_nodes(naptha)   
-        elif args.command == "modules":
-            if not args.module_name:
-                await list_modules(naptha)
-            elif args.delete and len(args.module_name.split()) == 1:
-                await naptha.hub.delete_module(args.module_name)
-            elif len(args.module_name.split()) == 1:
-                if hasattr(args, 'parameters') and args.parameters is not None:
-                    params = shlex.split(args.parameters)
-                    parsed_params = {}
-                    for param in params:
-                        key, value = param.split('=')
-                        parsed_params[key] = value
+            if args.command == "nodes":
+                await list_nodes(naptha)   
+            elif args.command == "modules":
+                if not args.module_name:
+                    await list_modules(naptha)
+                elif args.delete and len(args.module_name.split()) == 1:
+                    await naptha.hub.delete_module(args.module_name)
+                elif len(args.module_name.split()) == 1:
+                    if hasattr(args, 'parameters') and args.parameters is not None:
+                        params = shlex.split(args.parameters)
+                        parsed_params = {}
+                        for param in params:
+                            key, value = param.split('=')
+                            parsed_params[key] = value
 
-                    required_parameters = ['description', 'url', 'type', 'version']
-                    if not all(param in parsed_params for param in required_parameters):
-                        print(f"Missing one or more of the following required parameters: {required_parameters}")
-                        return
-                        
-                    module_config = {
-                        "id": f"module:{args.module_name}",
-                        "name": args.module_name,
-                        "description": parsed_params['description'],
-                        "author": naptha.hub.user_id,
-                        "url": parsed_params['url'],
-                        "type": parsed_params['type'],
-                        "version": parsed_params['version'],
-                    }
-                    await create_module(naptha, module_config)
-            else:
-                print("Invalid command.")
-        elif args.command == "run":
-            if hasattr(args, 'parameters') and args.parameters is not None:
-                try:
-                    parsed_params = json.loads(args.parameters)
-                except json.JSONDecodeError:
-                    params = shlex.split(args.parameters)
-                    parsed_params = {}
-                    for param in params:
-                        key, value = param.split('=')
-                        parsed_params[key] = value
-            else:
-                parsed_params = None
-            
-            if hasattr(args, 'worker_nodes') and args.worker_nodes is not None:
-                worker_nodes = args.worker_nodes.split(',')
-            else:
-                worker_nodes = None
-            
-            await run(naptha, args.module, user_id, parsed_params, worker_nodes, args.file)
-        elif args.command == "read_storage":
-            await read_storage(naptha, args.module_run_id, args.output_dir, args.ipfs)
-        elif args.command == "write_storage":
-            await write_storage(naptha, args.storage_input, args.ipfs, args.publish_to_ipns, args.update_ipns_name)
-    else:
-        parser.print_help()
+                        required_parameters = ['description', 'url', 'type', 'version']
+                        if not all(param in parsed_params for param in required_parameters):
+                            print(f"Missing one or more of the following required parameters: {required_parameters}")
+                            return
+                            
+                        module_config = {
+                            "id": f"module:{args.module_name}",
+                            "name": args.module_name,
+                            "description": parsed_params['description'],
+                            "author": naptha.hub.user_id,
+                            "url": parsed_params['url'],
+                            "type": parsed_params['type'],
+                            "version": parsed_params['version'],
+                        }
+                        await create_module(naptha, module_config)
+                else:
+                    print("Invalid command.")
+            elif args.command == "run":
+                if hasattr(args, 'parameters') and args.parameters is not None:
+                    try:
+                        parsed_params = json.loads(args.parameters)
+                    except json.JSONDecodeError:
+                        params = shlex.split(args.parameters)
+                        parsed_params = {}
+                        for param in params:
+                            key, value = param.split('=')
+                            parsed_params[key] = value
+                else:
+                    parsed_params = None
+                
+                if hasattr(args, 'worker_nodes') and args.worker_nodes is not None:
+                    worker_nodes = args.worker_nodes.split(',')
+                else:
+                    worker_nodes = None
+                
+                await run(naptha, args.module, user_id, parsed_params, worker_nodes, args.file)
+            elif args.command == "read_storage":
+                await read_storage(naptha, args.module_run_id, args.output_dir, args.ipfs)
+            elif args.command == "write_storage":
+                await write_storage(naptha, args.storage_input, args.ipfs, args.publish_to_ipns, args.update_ipns_name)
+        else:
+            parser.print_help()
 
 def cli():
     asyncio.run(main())
