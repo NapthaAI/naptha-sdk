@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.user import get_public_key
-from naptha_sdk.schemas import ModuleRun
+from naptha_sdk.schemas import AgentRun
 import os
 import shlex
 import time
@@ -36,10 +36,6 @@ async def list_nodes(naptha):
         print("No nodes found.")
         return
 
-    # Print the first node to see its structure
-    print("Sample node structure:")
-    print(json.dumps(nodes[0], indent=2))
-
     # Determine available keys
     keys = list(nodes[0].keys())
 
@@ -62,44 +58,44 @@ async def list_nodes(naptha):
     print(tabulate(table_data, headers=headers, tablefmt="grid"))
     print(f"\nTotal nodes: {len(nodes)}")
 
-async def list_modules(naptha):
-    modules = await naptha.hub.list_modules()
+async def list_agents(naptha):
+    agents = await naptha.hub.list_agents()
     
-    if not modules:
-        print("No modules found.")
+    if not agents:
+        print("No agents found.")
         return
 
     headers = ["Name", "ID", "Type", "Version", "Author", "Description"]
     table_data = []
 
-    for m in modules:
+    for agent in agents:
         # Wrap the description text
-        wrapped_description = '\n'.join(wrap(m['description'], width=50))
+        wrapped_description = '\n'.join(wrap(agent['description'], width=50))
         
         row = [
-            m['name'],
-            m['id'],
-            m['type'],
-            m['version'],
-            m['author'],
+            agent['name'],
+            agent['id'],
+            agent['type'],
+            agent['version'],
+            agent['author'],
             wrapped_description
         ]
         table_data.append(row)
 
     print(tabulate(table_data, headers=headers, tablefmt="grid"))
-    print(f"\nTotal modules: {len(modules)}")
+    print(f"\nTotal agents: {len(agents)}")
 
-async def create_module(naptha, module_config):
-    print(f"Module Config: {module_config}")
-    module = await naptha.hub.create_module(module_config)
-    if isinstance(module, dict):
-        print(f"Module created: {module}")
-    elif isinstance(module, list):
-        print(f"Module created: {module[0]}")
+async def create_agent(naptha, agent_config):
+    print(f"Agent Config: {agent_config}")
+    agent = await naptha.hub.create_agent(agent_config)
+    if isinstance(agent, dict):
+        print(f"Agent created: {agent}")
+    elif isinstance(agent, list):
+        print(f"Agent created: {agent[0]}")
 
 async def run(
     naptha, 
-    module_name, 
+    agent_name, 
     user_id,
     parameters=None, 
     worker_nodes=None,
@@ -111,14 +107,14 @@ async def run(
     if yaml_file:
         parameters = load_yaml_to_dict(yaml_file)
 
-    module_run_input = {
+    agent_run_input = {
         'consumer_id': user_id,
-        "module_name": module_name,
+        "agent_name": agent_name,
         'worker_nodes': worker_nodes,
-        "module_params": parameters,
+        "agent_run_params": parameters,
     }
     
-    print(f"Running module {module_name} with parameters: {module_run_input}")
+    print(f"Running agent {agent_name} with parameters: {agent_run_input}")
 
     print("Checking user with public key: ", naptha.hub.public_key)
     user = await naptha.node.check_user(user_input={"public_key": naptha.hub.public_key})
@@ -131,40 +127,40 @@ async def run(
         print(f"User registered: {user}.")
 
     print("Running...")
-    module_run = await naptha.node.run_task(module_run_input)
+    agent_run = await naptha.node.run_agent(agent_run_input)
 
 
-    if isinstance(module_run, dict):
-        module_run = ModuleRun(**module_run)
+    if isinstance(agent_run, dict):
+        agent_run = AgentRun(**agent_run)
 
-    print(f"Module Run ID: {module_run.id}")
+    print(f"Agent Run ID: {agent_run.id}")
     current_results_len = 0
     while True:
-        module_run = await naptha.node.check_task(module_run)
+        agent_run = await naptha.node.check_agent_run(agent_run)
 
-        if isinstance(module_run, dict):
-            module_run = ModuleRun(**module_run)
+        if isinstance(agent_run, dict):
+            agent_run = AgentRun(**agent_run)
 
-        output = f"{module_run.status} {module_run.module_type} {module_run.module_name}"
-        if len(module_run.child_runs) > 0:
-            output += f", task {len(module_run.child_runs)} {module_run.child_runs[-1].module_name} (node: {module_run.child_runs[-1].worker_nodes[0]})"
+        output = f"{agent_run.status} {agent_run.agent_run_type} {agent_run.agent_name}"
+        if len(agent_run.child_runs) > 0:
+            output += f", agent {len(agent_run.child_runs)} {agent_run.child_runs[-1].agent_name} (node: {agent_run.child_runs[-1].worker_nodes[0]})"
         print(output)
 
-        if len(module_run.results) > current_results_len:
-            print("Output: ", module_run.results[-1])
+        if len(agent_run.results) > current_results_len:
+            print("Output: ", agent_run.results[-1])
             current_results_len += 1
 
-        if module_run.status == 'completed':
+        if agent_run.status == 'completed':
             break
-        if module_run.status == 'error':
+        if agent_run.status == 'error':
             break
 
         time.sleep(3)
 
-    if module_run.status == 'completed':
-        print(module_run.results)
+    if agent_run.status == 'completed':
+        print(agent_run.results)
     else:
-        print(module_run.error_message)
+        print(agent_run.error_message)
 
 
 async def read_storage(naptha, hash_or_name, output_dir='./files', ipfs=False):
@@ -210,21 +206,21 @@ async def main():
     # Node commands
     nodes_parser = subparsers.add_parser("nodes", help="List available nodes.")
 
-    # Module commands
-    modules_parser = subparsers.add_parser("modules", help="List available modules.")
-    modules_parser.add_argument('module_name', nargs='?', help='Optional module name')
-    modules_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
-    modules_parser.add_argument('-d', '--delete', action='store_true', help='Delete a module')
+    # Agent commands
+    agents_parser = subparsers.add_parser("agents", help="List available agents.")
+    agents_parser.add_argument('agent_name', nargs='?', help='Optional agent name')
+    agents_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
+    agents_parser.add_argument('-d', '--delete', action='store_true', help='Delete a agent')
 
     # Run command
     run_parser = subparsers.add_parser("run", help="Execute run command.")
-    run_parser.add_argument("module", help="Select the module to run")
+    run_parser.add_argument("agent", help="Select the agent to run")
     run_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
-    run_parser.add_argument("-n", "--worker_nodes", help="Worker nodes to take part in module runs.")
-    run_parser.add_argument("-f", "--file", help="YAML file with module parameters")
+    run_parser.add_argument("-n", "--worker_nodes", help="Worker nodes to take part in agent runs.")
+    run_parser.add_argument("-f", "--file", help="YAML file with agent run parameters")
     # Read storage commands
     read_storage_parser = subparsers.add_parser("read_storage", help="Read from storage.")
-    read_storage_parser.add_argument("-id", "--module_run_id", help="Module run ID to read from")
+    read_storage_parser.add_argument("-id", "--agent_run_id", help="Agent run ID to read from")
     read_storage_parser.add_argument("-o", "--output_dir", default="files", help="Output directory to write to")
     read_storage_parser.add_argument("--ipfs", help="Read from IPFS", action="store_true")
 
@@ -242,7 +238,7 @@ async def main():
         args = parser.parse_args()
         if args.command == "signup":
             _, user_id = await user_setup_flow(hub_url, public_key)
-        elif args.command in ["nodes", "modules", "run", "read_storage", "write_storage"]:
+        elif args.command in ["nodes", "agents", "run", "read_storage", "write_storage"]:
             if not naptha.hub.is_authenticated:
                 if not hub_username or not hub_password:
                     print("Please set HUB_USER and HUB_PASS environment variables or sign up first (run naptha signup).")
@@ -251,12 +247,12 @@ async def main():
 
             if args.command == "nodes":
                 await list_nodes(naptha)   
-            elif args.command == "modules":
-                if not args.module_name:
-                    await list_modules(naptha)
-                elif args.delete and len(args.module_name.split()) == 1:
-                    await naptha.hub.delete_module(args.module_name)
-                elif len(args.module_name.split()) == 1:
+            elif args.command == "agents":
+                if not args.agent_name:
+                    await list_agents(naptha)
+                elif args.delete and len(args.agent_name.split()) == 1:
+                    await naptha.hub.delete_agent(args.agent_name)
+                elif len(args.agent_name.split()) == 1:
                     if hasattr(args, 'parameters') and args.parameters is not None:
                         params = shlex.split(args.parameters)
                         parsed_params = {}
@@ -269,16 +265,16 @@ async def main():
                             print(f"Missing one or more of the following required parameters: {required_parameters}")
                             return
                             
-                        module_config = {
-                            "id": f"module:{args.module_name}",
-                            "name": args.module_name,
+                        agent_config = {
+                            "id": f"agent:{args.agent_name}",
+                            "name": args.agent_name,
                             "description": parsed_params['description'],
                             "author": naptha.hub.user_id,
                             "url": parsed_params['url'],
                             "type": parsed_params['type'],
                             "version": parsed_params['version'],
                         }
-                        await create_module(naptha, module_config)
+                        await create_agent(naptha, agent_config)
                 else:
                     print("Invalid command.")
             elif args.command == "run":
@@ -299,9 +295,9 @@ async def main():
                 else:
                     worker_nodes = None
                 
-                await run(naptha, args.module, user_id, parsed_params, worker_nodes, args.file)
+                await run(naptha, args.agent, user_id, parsed_params, worker_nodes, args.file)
             elif args.command == "read_storage":
-                await read_storage(naptha, args.module_run_id, args.output_dir, args.ipfs)
+                await read_storage(naptha, args.agent_run_id, args.output_dir, args.ipfs)
             elif args.command == "write_storage":
                 await write_storage(naptha, args.storage_input, args.ipfs, args.publish_to_ipns, args.update_ipns_name)
         else:

@@ -1,12 +1,12 @@
 from typing import Dict, Optional
-from naptha_sdk.schemas import ModuleRun, ModuleRunInput
+from naptha_sdk.schemas import AgentRun, AgentRunInput
 from naptha_sdk.client.comms.http_client import (
-    check_user_http, register_user_http, run_task_http, check_task_http, 
-    create_task_run_http, update_task_run_http, read_storage_http, write_storage_http
+    check_user_http, register_user_http, run_agent_http, check_agent_run_http, 
+    create_agent_run_http, update_agent_run_http, read_storage_http, write_storage_http
 )
 from naptha_sdk.client.comms.ws_client import (
-    check_user_ws, register_user_ws, run_task_ws, check_task_ws, 
-    create_task_run_ws, update_task_run_ws, read_storage_ws, write_storage_ws
+    check_user_ws, register_user_ws, run_agent_ws, check_agent_run_ws, 
+    create_agent_run_ws, update_agent_run_ws, read_storage_ws, write_storage_ws
 )
 from naptha_sdk.utils import get_logger
 
@@ -54,45 +54,45 @@ class Node:
         else:
             return await register_user_ws(self.routing_url, self.indirect_node_id, user_input)
 
-    async def run_task(self, module_run_input: ModuleRunInput) -> ModuleRun:
+    async def run_agent(self, agent_run_input: AgentRunInput) -> AgentRun:
         if self.client == 'http':
-            return await run_task_http(
+            return await run_agent_http(
                 node_url=self.node_url,
-                module_run_input=module_run_input,
+                agent_run_input=agent_run_input,
                 access_token=self.access_token
             )
         else:
-            return await run_task_ws(
+            return await run_agent_ws(
                 routing_url=self.routing_url,
                 indirect_node_id=self.indirect_node_id,
-                module_run_input=module_run_input
+                agent_run_input=agent_run_input
             )
 
-    async def check_task(self, module_run: ModuleRun) -> ModuleRun:
+    async def check_agent_run(self, agent_run: AgentRun) -> AgentRun:
         if self.client == 'http':
-            return await check_task_http(self.node_url, module_run)
+            return await check_agent_run_http(self.node_url, agent_run)
         else:
-            return await check_task_ws(self.routing_url, self.indirect_node_id, module_run)
+            return await check_agent_run_ws(self.routing_url, self.indirect_node_id, agent_run)
 
-    async def create_task_run(self, module_run_input: ModuleRunInput) -> ModuleRun:
+    async def create_agent_run(self, agent_run_input: AgentRunInput) -> AgentRun:
         if self.client == 'http':
-            logger.info(f"Creating task run with input: {module_run_input}")
+            logger.info(f"Creating agent run with input: {agent_run_input}")
             logger.info(f"Node URL: {self.node_url}")
-            return await create_task_run_http(self.node_url, module_run_input)
+            return await create_agent_run_http(self.node_url, agent_run_input)
         else:
-            return await create_task_run_ws(self.routing_url, self.indirect_node_id, module_run_input)
+            return await create_agent_run_ws(self.routing_url, self.indirect_node_id, agent_run_input)
 
-    async def update_task_run(self, module_run: ModuleRun):
+    async def update_agent_run(self, agent_run: AgentRun):
         if self.client == 'http':
-            return await update_task_run_http(self.node_url, module_run)
+            return await update_agent_run_http(self.node_url, agent_run)
         else:
-            return await update_task_run_ws(self.routing_url, self.indirect_node_id, module_run)
+            return await update_agent_run_ws(self.routing_url, self.indirect_node_id, agent_run)
 
-    async def read_storage(self, module_run_id, output_dir, ipfs=False):
+    async def read_storage(self, agent_run_id, output_dir, ipfs=False):
         if self.client == 'http':
-            return await read_storage_http(self.node_url, module_run_id, output_dir, ipfs)
+            return await read_storage_http(self.node_url, agent_run_id, output_dir, ipfs)
         else:
-            return await read_storage_ws(self.routing_url, self.indirect_node_id, module_run_id, output_dir, ipfs)
+            return await read_storage_ws(self.routing_url, self.indirect_node_id, agent_run_id, output_dir, ipfs)
     
     async def write_storage(self, storage_input: str, ipfs: bool = False, publish_to_ipns: bool = False, update_ipns_name: Optional[str] = None):
         if self.client == 'http':

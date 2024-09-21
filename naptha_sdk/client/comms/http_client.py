@@ -9,7 +9,7 @@ import zipfile
 from pathlib import Path
 import traceback
 from typing import Dict, Any, List, Tuple
-from naptha_sdk.schemas import ModuleRun, ModuleRunInput
+from naptha_sdk.schemas import AgentRun, AgentRunInput
 from naptha_sdk.utils import get_logger
 
 logger = get_logger(__name__)
@@ -19,7 +19,7 @@ async def check_user_http(node_url: str, user_input: Dict[str, Any]) -> Dict[str
     """
     Check if a user exists on a node
     """
-    endpoint = node_url + "/check_user"
+    endpoint = node_url + "/user/check"
     try:
         async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
             headers = {
@@ -44,7 +44,7 @@ async def register_user_http(node_url: str, user_input: Dict[str, Any]) -> Dict[
     """
     Register a user on a node
     """
-    endpoint = node_url + "/register_user"
+    endpoint = node_url + "/user/register"
     try:
         async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
             headers = {
@@ -64,19 +64,19 @@ async def register_user_http(node_url: str, user_input: Dict[str, Any]) -> Dict[
         logger.info(f"An unexpected error occurred: {e}")
         logger.info(f"Full traceback: {traceback.format_exc()}")
 
-async def run_task_http(node_url: str, module_run_input: Dict[str, Any], access_token: str) -> Dict[str, Any]:
+async def run_agent_http(node_url: str, agent_run_input: Dict[str, Any], access_token: str) -> Dict[str, Any]:
     """
-    Run a task on a node
+    Run a agent on a node
     """
-    print("Running module...")
+    print("Running agent...")
     print(f"Node URL: {node_url}")
 
-    endpoint = node_url + "/create_task"
+    endpoint = node_url + "/agent/run"
     
-    if isinstance(module_run_input, dict):
-        task_input = ModuleRunInput(**module_run_input)
+    if isinstance(agent_run_input, dict):
+        agent_run_input = AgentRunInput(**agent_run_input)
     else:
-        task_input = module_run_input
+        agent_run_input = agent_run_input
 
     try:
         async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
@@ -86,11 +86,11 @@ async def run_task_http(node_url: str, module_run_input: Dict[str, Any], access_
             }
             response = await client.post(
                 endpoint, 
-                json=task_input.model_dict(),
+                json=agent_run_input.model_dict(),
                 headers=headers
             )
             response.raise_for_status()
-        return ModuleRun(**json.loads(response.text))
+        return AgentRun(**json.loads(response.text))
     except HTTPStatusError as e:
         logger.info(f"HTTP error occurred: {e}")
         raise  
@@ -100,14 +100,14 @@ async def run_task_http(node_url: str, module_run_input: Dict[str, Any], access_
         print(f"Full traceback: {error_details}")
 
 
-async def check_task_http(node_url: str, module_run: ModuleRun) -> ModuleRun:
+async def check_agent_run_http(node_url: str, agent_run: AgentRun) -> AgentRun:
     try:
         async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
             response = await client.post(
-                f"{node_url}/check_task", json=module_run.model_dict()
+                f"{node_url}/agent/check", json=agent_run.model_dict()
             )
             response.raise_for_status()
-        return ModuleRun(**json.loads(response.text))
+        return AgentRun(**json.loads(response.text))
     except HTTPStatusError as e:
         logger.info(f"HTTP error occurred: {e}")
         raise  
@@ -116,14 +116,14 @@ async def check_task_http(node_url: str, module_run: ModuleRun) -> ModuleRun:
         logger.info(f"Full traceback: {traceback.format_exc()}")
 
 
-async def create_task_run_http(node_url: str, module_run_input: ModuleRunInput) -> ModuleRun:
+async def create_agent_run_http(node_url: str, agent_run_input: AgentRunInput) -> AgentRun:
     try:
         async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
             response = await client.post(
-                f"{node_url}/create_task_run", json=module_run_input.model_dict()
+                f"{node_url}/monitor/create_agent_run", json=agent_run_input.model_dict()
             )
             response.raise_for_status()
-        return ModuleRun(**json.loads(response.text))
+        return AgentRun(**json.loads(response.text))
     except HTTPStatusError as e:
         logger.info(f"HTTP error occurred: {e}")
         raise  
@@ -131,14 +131,14 @@ async def create_task_run_http(node_url: str, module_run_input: ModuleRunInput) 
         logger.info(f"An unexpected error occurred: {e}")
         logger.info(f"Full traceback: {traceback.format_exc()}")
 
-async def update_task_run_http(node_url: str, module_run: ModuleRun):
+async def update_agent_run_http(node_url: str, agent_run: AgentRun):
     try:
         async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
             response = await client.post(
-                f"{node_url}/update_task_run", json=module_run.model_dict()
+                f"{node_url}/monitor/update_agent_run", json=agent_run.model_dict()
             )
             response.raise_for_status()
-        return ModuleRun(**json.loads(response.text))
+        return AgentRun(**json.loads(response.text))
     except HTTPStatusError as e:
         logger.info(f"HTTP error occurred: {e}")
         raise  
@@ -171,10 +171,10 @@ def prepare_files(file_path: str) -> List[Tuple[str, str]]:
     return file
 
 
-async def read_storage_http(node_url: str, module_run_id: str, output_dir: str, ipfs: bool = False) -> str:
+async def read_storage_http(node_url: str, agent_run_id: str, output_dir: str, ipfs: bool = False) -> str:
     print("Reading from storage...")
     try:
-        endpoint = f"{node_url}/{'read_ipfs' if ipfs else 'read_storage'}/{module_run_id}"
+        endpoint = f"{node_url}/{'storage/read_ipfs' if ipfs else 'storage/read'}/{agent_run_id}"
 
         async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
             response = await client.get(endpoint)
@@ -217,7 +217,7 @@ async def write_storage_http(node_url: str, storage_input: str, ipfs: bool = Fal
     print("Writing storage")
     try:
         file = prepare_files(storage_input)
-        endpoint = f"{node_url}/write_ipfs" if ipfs else f"{node_url}/write_storage"
+        endpoint = f"{node_url}/storage/write_ipfs" if ipfs else f"{node_url}/storage/write"
         
         if update_ipns_name:
             publish_to_ipns = True

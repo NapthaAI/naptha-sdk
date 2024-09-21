@@ -9,7 +9,7 @@ import traceback
 import tempfile
 from typing import Dict, Any, List, Tuple
 import websockets
-from naptha_sdk.schemas import ModuleRun, ModuleRunInput
+from naptha_sdk.schemas import AgentRun, AgentRunInput
 from naptha_sdk.utils import get_logger
 
 logger = get_logger(__name__)
@@ -128,60 +128,60 @@ async def register_user_ws(routing_url: str, indirect_node_id: str, user_input: 
     logger.info(f"Register user response: {response}")
     return response
 
-async def run_task_ws(routing_url: str, indirect_node_id: str, module_run_input: ModuleRunInput) -> Dict[str, Any]:
-    """Run a task via websocket."""
-    logger.info("Running module...")
+async def run_agent_ws(routing_url: str, indirect_node_id: str, agent_run_input: AgentRunInput) -> Dict[str, Any]:
+    """Run an agent via websocket."""
+    logger.info("Running agent...")
     logger.info(f"Routing URL: {routing_url}")
     logger.info(f"Indirect node ID: {indirect_node_id}")
 
-    if isinstance(module_run_input, ModuleRun):
-        module_run_input = ModuleRunInput(**module_run_input).model_dict()
+    if isinstance(agent_run_input, AgentRun):
+        agent_run_input = AgentRunInput(**agent_run_input).model_dict()
 
     params = {
         'target_node': indirect_node_id,
-        'path': 'create_task',
-        'params': module_run_input
+        'path': 'run_agent',
+        'params': agent_run_input
     }
     try:
         response = await relay_message(routing_url, params)
-        logger.info(f"Run task response: {response}")
+        logger.info(f"Run agent response: {response}")
         return response
     except Exception as e:
         logger.error(f"Exception occurred: {e}")
         logger.error(f"Full traceback: {traceback.format_exc()}")
         return {"error": str(e)}
 
-async def check_task_ws(routing_url: str, indirect_node_id: str, module_run: ModuleRun) -> Dict[str, Any]:
-    """Check a task via websocket."""
+async def check_agent_run_ws(routing_url: str, indirect_node_id: str, agent_run: AgentRun) -> Dict[str, Any]:
+    """Check a agent via websocket."""
     params = {
         'target_node': indirect_node_id,
-        'path': 'check_task',
-        'params': module_run.model_dict()
+        'path': 'check_agent_run',
+        'params': agent_run.model_dict()
     }
     response = await relay_message(routing_url, params)
-    logger.info(f"Check task response: {response}")
+    logger.info(f"Check agent run response: {response}")
     return response
 
-async def create_task_run_ws(routing_url: str, indirect_node_id: str, module_run_input: ModuleRunInput) -> Dict[str, Any]:
-    """Create a task run via websocket."""
+async def create_agent_run_ws(routing_url: str, indirect_node_id: str, agent_run_input: AgentRunInput) -> Dict[str, Any]:
+    """Create a agent run via websocket."""
     params = {
         'target_node': indirect_node_id,
-        'path': 'create_task_run',
-        'params': module_run_input.model_dict()
+        'path': 'create_agent_run',
+        'params': agent_run_input.model_dict()
     }
     response = await relay_message(routing_url, params)
-    logger.info(f"Create task run response: {response}")
+    logger.info(f"Create agent run response: {response}")
     return response
 
-async def update_task_run_ws(routing_url: str, indirect_node_id: str, module_run: ModuleRun) -> Dict[str, Any]:
-    """Update a task run via websocket."""
+async def update_agent_run_ws(routing_url: str, indirect_node_id: str, agent_run: AgentRun) -> Dict[str, Any]:
+    """Update a agent run via websocket."""
     params = {
         'target_node': indirect_node_id,
-        'path': 'update_task_run',
-        'params': module_run.model_dict()
+        'path': 'update_agent_run',
+        'params': agent_run.model_dict()
     }
     response = await relay_message(routing_url, params)
-    logger.info(f"Update task run response: {response}")
+    logger.info(f"Update agent run response: {response}")
     return response
 
 async def read_storage_ws(routing_url: str, indirect_node_id: str, folder_id: str, output_dir: str, ipfs: bool = False) -> str:
