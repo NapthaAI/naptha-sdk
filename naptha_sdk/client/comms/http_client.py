@@ -19,7 +19,7 @@ async def check_user_http(node_url: str, user_input: Dict[str, Any]) -> Dict[str
     """
     Check if a user exists on a node
     """
-    endpoint = node_url + "/check_user"
+    endpoint = node_url + "/CheckUser"
     try:
         async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
             headers = {
@@ -44,7 +44,7 @@ async def register_user_http(node_url: str, user_input: Dict[str, Any]) -> Dict[
     """
     Register a user on a node
     """
-    endpoint = node_url + "/register_user"
+    endpoint = node_url + "/RegisterUser"
     try:
         async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
             headers = {
@@ -71,7 +71,7 @@ async def run_task_http(node_url: str, module_run_input: Dict[str, Any], access_
     print("Running module...")
     print(f"Node URL: {node_url}")
 
-    endpoint = node_url + "/create_task"
+    endpoint = node_url + "/CreateTask"
     
     if isinstance(module_run_input, dict):
         task_input = ModuleRunInput(**module_run_input)
@@ -104,7 +104,7 @@ async def check_task_http(node_url: str, module_run: ModuleRun) -> ModuleRun:
     try:
         async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
             response = await client.post(
-                f"{node_url}/check_task", json=module_run.model_dict()
+                f"{node_url}/CheckTask", json=module_run.model_dict()
             )
             response.raise_for_status()
         return ModuleRun(**json.loads(response.text))
@@ -120,7 +120,7 @@ async def create_task_run_http(node_url: str, module_run_input: ModuleRunInput) 
     try:
         async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
             response = await client.post(
-                f"{node_url}/create_task_run", json=module_run_input.model_dict()
+                f"{node_url}/CreateTaskRun", json=module_run_input.model_dict()
             )
             response.raise_for_status()
         return ModuleRun(**json.loads(response.text))
@@ -135,7 +135,7 @@ async def update_task_run_http(node_url: str, module_run: ModuleRun):
     try:
         async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
             response = await client.post(
-                f"{node_url}/update_task_run", json=module_run.model_dict()
+                f"{node_url}/UpdateTaskRun", json=module_run.model_dict()
             )
             response.raise_for_status()
         return ModuleRun(**json.loads(response.text))
