@@ -71,44 +71,44 @@ naptha nodes
 
 Make note of a Node ID for running a workflow below.
 
-### Check out available Modules
+### Check out available Agents
 
-Modules can be workflows, agents or multi-agent systems. Modules typically involve one or more LLMs, along with humans in the loop. You can also use the CLI to explore available modules that you can run on a node:
+Agents can be workflows, agents or multi-agent systems. Agents typically involve one or more LLMs, along with humans in the loop. You can also use the CLI to explore available agents that you can run on a node:
 
 ```bash
-naptha modules
+naptha agents
 ```
 
-For each module, you will see a url where you can check out the code. 
+For each agent, you will see a url where you can check out the code.
 
-### Create a New Module
+### Create a New Agent
 
 ```bash
-naptha modules module_name -p "description='Module description' url='https://github.com/NapthaAI/module_name' type='flow' version='0.1'" 
+naptha agents agent_name -p "description='Agent description' url='https://github.com/NapthaAI/agent_name' type='flow' version='0.1'" 
 ```
 
-### Delete a Module
+### Delete a Agent
 
 ```bash
-naptha modules -d module_name
+naptha agents -d agent_name
 ```
 
-### Run a Module
+### Run an Agent
 
-Now you've found a node and a module you'd like to run, so let's run it locally! You can use the commandline tool to connect with the node and run the workflow. 
+Now you've found a node and a agent you'd like to run, so let's run it locally! You can use the commandline tool to connect with the node and run the workflow. 
 
 ```bash
-# usage: naptha run <module_name> <module args>
+# usage: naptha run <agent_name> <agent args>
 naptha run hello_world -p "param1=world param2=naptha"
 ```
 
-Try a module that uses the local LLM running on your node:
+Try a agent that uses the local LLM running on your node:
 
 ```bash
 naptha run chat -p "prompt='tell me a joke'"
 ```
 
-You can also try a module that generates images (make sure that the .env file in node has a valid Stability platform API key):
+You can also try a agent that generates images (make sure that the .env file in node has a valid Stability platform API key):
 
 ```bash
 naptha run generate_image -p "prompt='Beautiful green mountains and clear blue skies. Sun shining and birds chirping. A perfect day for a hike. You are walking through the forest, enjoying the scenery, when you come across a fork in the road. Do you go left or right?'"
@@ -117,10 +117,10 @@ naptha run generate_image -p "prompt='Beautiful green mountains and clear blue s
 Now let's run an image-to-image model on this image:
 
 ```bash
-naptha run image_to_image -p "prompt='Cyberpunk with a wolf' input_dir=<module_run_id_1>"
+naptha run image_to_image -p "prompt='Cyberpunk with a wolf' input_dir=<agent_run_id_1>"
 ```
 
-You can also run modules from yaml files using: 
+You can also run agents from yaml files using: 
 
 ```bash
 naptha run create_profile_description -f ./example_yamls/create_profile_description.yml
@@ -134,10 +134,10 @@ naptha run docker_hello_world -f ./example_yamls/docker_hello_world.yml
 
 ### Interact with Node Storage
 
-After the module runs finish, you can download the file from the node using:
+After the agent runs finish, you can download the file from the node using:
 
 ```bash
-naptha read_storage -id <module_run_id>
+naptha read_storage -id <agent_run_id>
 ```
 
 You can write to the node using:
@@ -179,7 +179,7 @@ To use the SDK as part of a script, start with importing the hub and service sub
 import asyncio
 from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.client.node import Node
-from naptha_sdk.task import Task
+from naptha_sdk.task import Task as Agent
 from naptha_sdk.flow import Flow
 from naptha_sdk.user import generate_user
 import os
@@ -202,16 +202,16 @@ async def main():
   flow_inputs = {"prompt": 'i would like to count up to ten, one number at a time. ill start. one.'}
   worker_nodes = [Node("http://node.naptha.ai:7001"), Node("http://node1.naptha.ai:7001")]
 
-  flow = Flow(name="multiplayer_chat", user_id=naptha.user["id"], worker_nodes=worker_nodes, module_params=flow_inputs)
+  agentnet = Flow(name="multiplayer_chat", user_id=naptha.user["id"], worker_nodes=worker_nodes, agent_run_params=flow_inputs)
 
-  task1 = Task(name="chat_initiator", fn="chat", worker_node=worker_nodes[0], orchestrator_node=naptha.node, flow_run=flow.flow_run)
-  task2 = Task(name="chat_receiver", fn="chat", worker_node=worker_nodes[1], orchestrator_node=naptha.node, flow_run=flow.flow_run)
+  agent1 = Agent(name="chat_initiator", fn="chat", worker_node=worker_nodes[0], orchestrator_node=naptha.node, flow_run=agentnet.flow_run)
+  agent2 = Agent(name="chat_receiver", fn="chat", worker_node=worker_nodes[1], orchestrator_node=naptha.node, flow_run=agentnet.flow_run)
 
-  response = await task1(prompt=flow_inputs["prompt"])
+  response = await agent1(prompt=flow_inputs["prompt"])
 
   for i in range(10):
-      response = await task2(prompt=response)
-      response = await task1(prompt=response)
+      response = await agent2(prompt=response)
+      response = await agent1(prompt=response)
 
 asyncio.run(await main())
 
@@ -219,11 +219,11 @@ asyncio.run(await main())
 
 # ***More examples and tutorials coming soon.***
 
-### Create your own Module
+### Create your own Agent
 
-Clone the [base template](https://huggingface.co/NapthaAI/template) for creating task and flow modules, and follow the instructions in the readme for prototyping the module. You can check out other examples of task and flow modules at https://huggingface.co/NapthaAI.
+Clone the [base template](https://huggingface.co/NapthaAI/template) for creating agent and flow agents, and follow the instructions in the readme for prototyping the agent. You can check out other examples of agents and networks at https://huggingface.co/NapthaAI.
 
-Register your module on the Naptha Hub (Coming Soon).
+Register your agent on the Naptha Hub (Coming Soon).
 
 # Run a Node
 

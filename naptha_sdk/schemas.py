@@ -3,10 +3,9 @@ from typing import Dict, List, Optional, Union
 from datetime import datetime
 from pydantic import BaseModel
 
-class ModuleType(str, Enum):
+class AgentRunType(str, Enum):
+    package = "package"
     docker = "docker"
-    template = "template"
-    flow = "flow"
 
 class DockerParams(BaseModel):
     docker_image: str
@@ -35,9 +34,9 @@ class DockerParams(BaseModel):
                 model_dict[key] = value.isoformat()
         return model_dict
 
-class ModuleRun(BaseModel):
-    module_name: str
-    module_type: ModuleType
+class AgentRun(BaseModel):
+    agent_name: str
+    agent_run_type: AgentRunType
     consumer_id: str
     status: str = "pending"
     error: bool = False
@@ -49,12 +48,12 @@ class ModuleRun(BaseModel):
     start_processing_time: Optional[datetime] = None
     completed_time: Optional[datetime] = None
     duration: Optional[float] = None
-    module_params: Optional[Union[Dict, DockerParams]] = None
-    child_runs: List['ModuleRun'] = []
-    parent_runs: List['ModuleRun'] = []
+    agent_run_params: Optional[Union[Dict, DockerParams]] = None
+    child_runs: List['AgentRun'] = []
+    parent_runs: List['AgentRun'] = []
     input_schema_ipfs_hash: Optional[str] = None
-    module_url: Optional[str] = None
-    module_version: Optional[str] = None
+    agent_source_url: Optional[str] = None
+    agent_version: Optional[str] = None
 
     class Config:
         allow_mutation = True
@@ -67,7 +66,7 @@ class ModuleRun(BaseModel):
         for key, value in model_dict.items():
             if isinstance(value, datetime):
                 model_dict[key] = value.isoformat()
-            elif isinstance(value, ModuleType):
+            elif isinstance(value, AgentRunType):
                 model_dict[key] = value.value
         for i, parent_run in enumerate(model_dict['parent_runs']):
             for key, value in parent_run.items():
@@ -79,15 +78,15 @@ class ModuleRun(BaseModel):
                     model_dict['child_runs'][i][key] = value.isoformat()
         return model_dict
 
-class ModuleRunInput(BaseModel):
-    module_name: str
+class AgentRunInput(BaseModel):
+    agent_name: str
     consumer_id: str
     worker_nodes: Optional[list[str]] = None
-    module_params: Optional[Union[Dict, DockerParams]] = None
-    module_type: Optional[ModuleType] = None
-    parent_runs: List['ModuleRun'] = []
-    module_url: Optional[str] = None
-    module_version: Optional[str] = None
+    agent_run_params: Optional[Union[Dict, DockerParams]] = None
+    agent_run_type: Optional[AgentRunType] = None
+    parent_runs: List['AgentRun'] = []
+    agent_source_url: Optional[str] = None
+    agent_version: Optional[str] = None
 
     def model_dict(self):
         model_dict = self.dict()

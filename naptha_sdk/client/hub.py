@@ -110,30 +110,30 @@ class Hub:
         nodes = await self.surrealdb.query("SELECT * FROM node;")
         return nodes[0]['result']
 
-    async def list_modules(self, module_name=None) -> List:
-        if not module_name:
-            modules = await self.surrealdb.query("SELECT * FROM module;")
-            return modules[0]['result']
+    async def list_agents(self, agent_name=None) -> List:
+        if not agent_name:
+            agents = await self.surrealdb.query("SELECT * FROM agent;")
+            return agents[0]['result']
         else:
-            module = await self.surrealdb.query("SELECT * FROM module WHERE id=$module_name;", {"module_name": module_name})
-            return module[0]['result'][0]
+            agent = await self.surrealdb.query("SELECT * FROM agent WHERE id=$agent_name;", {"agent_name": agent_name})
+            return agent[0]['result'][0]
 
-    async def delete_module(self, module_id: str) -> Tuple[bool, Optional[Dict]]:
-        if ":" not in module_id:
-            module_id = f"module:{module_id}".strip()
-        print(f"Deleting module: {module_id}")
-        success = await self.surrealdb.delete(module_id)
+    async def delete_agent(self, agent_id: str) -> Tuple[bool, Optional[Dict]]:
+        if ":" not in agent_id:
+            agent_id = f"agent:{agent_id}".strip()
+        print(f"Deleting agent: {agent_id}")
+        success = await self.surrealdb.delete(agent_id)
         if success:
-            print("Deleted module")
+            print("Deleted agent")
         else:
-            print("Failed to delete module")
+            print("Failed to delete agent")
         return success
 
-    async def create_module(self, module_config: Dict) -> Tuple[bool, Optional[Dict]]:
-        if not module_config.get('id'):
-            return await self.surrealdb.create("module", module_config)
+    async def create_agent(self, agent_config: Dict) -> Tuple[bool, Optional[Dict]]:
+        if not agent_config.get('id'):
+            return await self.surrealdb.create("agent", agent_config)
         else:
-            return await self.surrealdb.create(module_config.pop('id'), module_config)
+            return await self.surrealdb.create(agent_config.pop('id'), agent_config)
 
     async def close(self):
         """Close the database connection"""
@@ -146,7 +146,6 @@ class Hub:
                 self.is_authenticated = False
                 self.user_id = None
                 self.token = None
-                logger.info("Database connection closed")
 
     async def __aenter__(self):
         """Async enter method for context manager"""
