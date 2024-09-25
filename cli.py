@@ -13,7 +13,7 @@ import json
 from tabulate import tabulate
 from textwrap import wrap
 
-load_dotenv()
+load_dotenv(override=True)
 
 def load_yaml_to_dict(file_path):
     with open(file_path, 'r') as file:
@@ -114,12 +114,9 @@ async def run(
         "agent_run_params": parameters,
     }
     
-    print(f"Running agent {agent_name} with parameters: {agent_run_input}")
-
-    print("Checking user with public key: ", naptha.hub.public_key)
     user = await naptha.node.check_user(user_input={"public_key": naptha.hub.public_key})
 
-    if user is not None:
+    if user['is_registered'] == True:
         print("Found user...", user)
     else:
         print("No user found. Registering user...")
@@ -129,39 +126,12 @@ async def run(
     print("Running...")
     agent_run = await naptha.node.run_agent(agent_run_input)
 
-
-    if isinstance(agent_run, dict):
-        agent_run = AgentRun(**agent_run)
-
-    print(f"Agent Run ID: {agent_run.id}")
-    current_results_len = 0
-    while True:
-        agent_run = await naptha.node.check_agent_run(agent_run)
-
-        if isinstance(agent_run, dict):
-            agent_run = AgentRun(**agent_run)
-
-        output = f"{agent_run.status} {agent_run.agent_run_type} {agent_run.agent_name}"
-        if len(agent_run.child_runs) > 0:
-            output += f", agent {len(agent_run.child_runs)} {agent_run.child_runs[-1].agent_name} (node: {agent_run.child_runs[-1].worker_nodes[0]})"
-        print(output)
-
-        if len(agent_run.results) > current_results_len:
-            print("Output: ", agent_run.results[-1])
-            current_results_len += 1
-
-        if agent_run.status == 'completed':
-            break
-        if agent_run.status == 'error':
-            break
-
-        time.sleep(3)
-
     if agent_run.status == 'completed':
-        print(agent_run.results)
+        print("Agent run completed successfully.")
+        print("Results: ", agent_run.results)
     else:
+        print("Agent run failed.")
         print(agent_run.error_message)
-
 
 async def read_storage(naptha, hash_or_name, output_dir='./files', ipfs=False):
     """Read from storage, IPFS, or IPNS."""

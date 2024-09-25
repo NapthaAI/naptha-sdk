@@ -146,7 +146,6 @@ class Hub:
                 self.is_authenticated = False
                 self.user_id = None
                 self.token = None
-                logger.info("Database connection closed")
 
     async def __aenter__(self):
         """Async enter method for context manager"""
