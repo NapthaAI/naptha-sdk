@@ -99,37 +99,40 @@ Now you've found a node and a agent you'd like to run, so let's run it locally! 
 
 ```bash
 # usage: naptha run <agent_name> <agent args>
-naptha run hello_world -p "param1=world param2=naptha"
+naptha run hello_world_agent -p "param1=world param2=naptha"
 ```
 
-Try a agent that uses the local LLM running on your node:
+Try an agent that uses the local LLM running on your node:
 
 ```bash
-naptha run chat -p "prompt='tell me a joke'"
+naptha run simple_chat_agent -p "prompt='tell me a joke'"
 ```
 
-You can also try a agent that generates images (make sure that the .env file in node has a valid Stability platform API key):
-
-```bash
-naptha run generate_image -p "prompt='Beautiful green mountains and clear blue skies. Sun shining and birds chirping. A perfect day for a hike. You are walking through the forest, enjoying the scenery, when you come across a fork in the road. Do you go left or right?'"
-```
-
-Now let's run an image-to-image model on this image:
-
-```bash
-naptha run image_to_image -p "prompt='Cyberpunk with a wolf' input_dir=<agent_run_id_1>"
-```
-
-You can also run agents from yaml files using: 
-
-```bash
-naptha run create_profile_description -f ./example_yamls/create_profile_description.yml
-```
-
-Or docker images:
+You can also run agents from docker images:
 
 ```bash
 naptha run docker_hello_world -f ./example_yamls/docker_hello_world.yml
+```
+
+### Run Multi-Agent Networks across several Nodes
+
+```bash
+naptha run multiagent_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --worker_nodes "http://node.naptha.ai:7001,http://node1.naptha.ai:7001"
+```
+
+```bash
+naptha run babyagi -p "objective='Research the history of football'" --worker_nodes "http://node.naptha.ai:7001,http://node1.naptha.ai:7001"
+```
+
+```bash
+naptha run multiagent_debate -p "initial_claim='Teslas price will exceed $250 in 2 weeks.' max_rounds=2 context='Teslas current price is $207, and recent innovations and strong Q2 results will drive the price up.
+
+News Summary 1:
+Tesla stock was lower to start a new week of trading, falling as investors worry about global growth. Shares of the electric-vehicle giant were down 7.3% in premarket trading Monday at $192.33. Stocks around the world were falling as investors fretted that weak economic data signal a recession ahead. Despite positive comments from CEO Elon Musk about Tesla’s sales, the stock has fallen about 16% this year and is struggling to overcome negative global investor sentiment.
+
+News Summary 2:
+Tesla faces growing competition and softening demand, impacting its stock price which is trading 43% below its all-time high. The company’s profitability is declining, with earnings per share shrinking 46% year-over-year in Q2 2024. Despite recent price cuts and a plan to produce a low-cost EV model, sales growth has decelerated. Tesla is also involved in autonomous self-driving software, humanoid robots, and solar energy, but these segments may take years to significantly impact revenue.
+'" --worker_nodes "http://node.naptha.ai:7001"
 ```
 
 ### Interact with Node Storage
@@ -149,27 +152,6 @@ naptha write_storage -i files/<filename>.jpg
 ### Interact with IPFS thorugh Node
 ```bash
 naptha write_storage -i files/<filename>.jpg --ipfs
-```
-
-### Run Multi-Node Workflows
-
-```bash
-naptha run multiplayer_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --worker_nodes "http://node.naptha.ai:7001,http://node1.naptha.ai:7001"
-```
-
-```bash
-naptha run babyagi -p "objective='Research the history of football'" --worker_nodes "http://node.naptha.ai:7001,http://node1.naptha.ai:7001"
-```
-
-```bash
-naptha run debate_protocol -p "initial_claim='Teslas price will exceed $250 in 2 weeks.' max_rounds=2 context='Teslas current price is $207, and recent innovations and strong Q2 results will drive the price up.
-
-News Summary 1:
-Tesla stock was lower to start a new week of trading, falling as investors worry about global growth. Shares of the electric-vehicle giant were down 7.3% in premarket trading Monday at $192.33. Stocks around the world were falling as investors fretted that weak economic data signal a recession ahead. Despite positive comments from CEO Elon Musk about Tesla’s sales, the stock has fallen about 16% this year and is struggling to overcome negative global investor sentiment.
-
-News Summary 2:
-Tesla faces growing competition and softening demand, impacting its stock price which is trading 43% below its all-time high. The company’s profitability is declining, with earnings per share shrinking 46% year-over-year in Q2 2024. Despite recent price cuts and a plan to produce a low-cost EV model, sales growth has decelerated. Tesla is also involved in autonomous self-driving software, humanoid robots, and solar energy, but these segments may take years to significantly impact revenue.
-'" --worker_nodes "http://node.naptha.ai:7001"
 ```
 
 ## Using the SDK non-interactively
@@ -204,8 +186,8 @@ async def main():
 
   agentnet = Flow(name="multiplayer_chat", user_id=naptha.user["id"], worker_nodes=worker_nodes, agent_run_params=flow_inputs)
 
-  agent1 = Agent(name="chat_initiator", fn="chat", worker_node=worker_nodes[0], orchestrator_node=naptha.node, flow_run=agentnet.flow_run)
-  agent2 = Agent(name="chat_receiver", fn="chat", worker_node=worker_nodes[1], orchestrator_node=naptha.node, flow_run=agentnet.flow_run)
+  agent1 = Agent(name="chat_initiator", fn="simple_chat_agent", worker_node=worker_nodes[0], orchestrator_node=naptha.node, flow_run=agentnet.flow_run)
+  agent2 = Agent(name="chat_receiver", fn="simple_chat_agent", worker_node=worker_nodes[1], orchestrator_node=naptha.node, flow_run=agentnet.flow_run)
 
   response = await agent1(prompt=flow_inputs["prompt"])
 
