@@ -1,12 +1,32 @@
-from naptha_sdk.task_engine import run_task
+from naptha_sdk.utils import get_logger
+import time
+
+logger = get_logger(__name__)
 
 class Task:
-    def __init__(self, name, fn, worker_node, orchestrator_node, flow_run):
+    def __init__(self, name, fn, worker_node, orchestrator_node, task_engine):
         self.name = name
         self.fn = fn
         self.worker_node = worker_node
         self.orchestrator_node = orchestrator_node
-        self.flow_run = flow_run
+        self.task_engine = task_engine
 
     async def __call__(self, *args, **kwargs):
-        return await run_task(task=self, flow_run=self.flow_run, parameters=kwargs)
+        return await run_task(task=self, task_engine=self.task_engine, parameters=kwargs)
+    
+async def run_task(task, task_engine, parameters) -> None:
+    await task_engine.init_run(task, parameters)
+    try:
+        await task_engine.start_run()
+        while True:
+            if task_engine.agent_run.status == "error":
+                await task_engine.fail()
+                break
+            else:
+                await task_engine.complete()
+                break
+            time.sleep(3)
+        return task_engine.agent_result[-1]
+    except Exception as e:
+        logger.error(f"An error occurred: {str(e)}")
+        await task_engine.fail()
