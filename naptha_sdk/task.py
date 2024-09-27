@@ -7,7 +7,7 @@ class Task:
     def __init__(self, 
         name, 
         fn, 
-        worker_node_url, 
+        worker_nodes, 
         orchestrator_node, 
         flow_run, 
         task_engine_cls,
@@ -18,7 +18,10 @@ class Task:
         self.orchestrator_node = orchestrator_node
         self.flow_run = flow_run
         self.task_engine_cls = task_engine_cls
-        self.worker_node = self.node_url_to_node(worker_node_url, node_cls)
+        if isinstance(worker_nodes, str):
+            self.worker_node = self.node_url_to_node(worker_nodes, node_cls)
+        else:
+            self.worker_node = worker_nodes
 
     async def __call__(self, *args, **kwargs):
         return await run_task(
