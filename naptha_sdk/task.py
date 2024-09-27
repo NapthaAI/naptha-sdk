@@ -4,17 +4,23 @@ import time
 logger = get_logger(__name__)
 
 class Task:
-    def __init__(self, name, fn, worker_node, orchestrator_node, task_engine):
+    def __init__(self, name, fn, worker_node, orchestrator_node, task_engine_cls):
         self.name = name
         self.fn = fn
         self.worker_node = worker_node
         self.orchestrator_node = orchestrator_node
-        self.task_engine = task_engine
+        self.task_engine_cls = task_engine_cls
 
     async def __call__(self, *args, **kwargs):
-        return await run_task(task=self, task_engine=self.task_engine, parameters=kwargs)
+        return await run_task(
+            task=self, 
+            parameters=kwargs, 
+            flow_run=self.flow_run, 
+            task_engine_cls=self.task_engine_cls
+        )
     
-async def run_task(task, task_engine, parameters) -> None:
+async def run_task(task, parameters, flow_run, task_engine_cls) -> None:
+    task_engine = task_engine_cls(flow_run)
     await task_engine.init_run(task, parameters)
     try:
         await task_engine.start_run()
