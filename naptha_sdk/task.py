@@ -26,7 +26,6 @@ class Task:
             parameters=kwargs, 
             flow_run=self.flow_run, 
             task_engine_cls=self.task_engine_cls,
-            node_cls=self.node_cls,
         )
     
     def node_url_to_node(self, node_url, node_cls):
