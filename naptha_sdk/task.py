@@ -4,21 +4,37 @@ import time
 logger = get_logger(__name__)
 
 class Task:
-    def __init__(self, name, fn, worker_node, orchestrator_node, flow_run, task_engine):
+    def __init__(self, 
+        name, 
+        fn, 
+        worker_node_url, 
+        orchestrator_node, 
+        flow_run, 
+        task_engine_cls,
+        node_cls,
+    ):
         self.name = name
         self.fn = fn
-        self.worker_node = worker_node
         self.orchestrator_node = orchestrator_node
         self.flow_run = flow_run
-        self.task_engine_cls = task_engine
+        self.task_engine_cls = task_engine_cls
+        self.worker_node = self.node_url_to_node(worker_node_url, node_cls)
 
     async def __call__(self, *args, **kwargs):
         return await run_task(
             task=self, 
             parameters=kwargs, 
             flow_run=self.flow_run, 
-            task_engine_cls=self.task_engine_cls
+            task_engine_cls=self.task_engine_cls,
+            node_cls=self.node_cls,
         )
+    
+    def node_url_to_node(self, node_url, node_cls):
+        if 'ws://' in node_url:
+            return node_cls(node_url, 'ws')
+        else:
+            return node_cls(node_url, 'http')
+
     
 async def run_task(task, parameters, flow_run, task_engine_cls) -> None:
     task_engine = task_engine_cls(flow_run)
