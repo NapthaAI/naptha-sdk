@@ -10,6 +10,7 @@ class Task:
         worker_node_url, 
         orchestrator_node, 
         flow_run, 
+        cfg,
         task_engine_cls,
         node_cls,
     ):
