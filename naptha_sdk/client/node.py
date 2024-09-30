@@ -260,12 +260,7 @@ class Node:
             raise
 
     async def run_agent_ws(self, agent_run_input: AgentRunInput) -> AgentRun:
-        data = {
-            "agent_name": agent_run_input["agent_name"],
-            "consumer_id": agent_run_input["consumer_id"],
-            "agent_run_params": agent_run_input["agent_run_params"],
-        }
-        response = await self.send_receive_ws(data, "run_agent")
+        response = await self.send_receive_ws(agent_run_input, "run_agent")
         
         if response['status'] == 'success':
             response['data'] = parse_datetime(response['data'])
