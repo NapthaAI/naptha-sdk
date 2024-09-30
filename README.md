@@ -99,13 +99,13 @@ Now you've found a node and a agent you'd like to run, so let's run it locally! 
 
 ```bash
 # usage: naptha run <agent_name> <agent args>
-naptha run hello_world_agent -p "param1=world param2=naptha"
+naptha run hello_world_agent -p "firstname=sam surname=altman"
 ```
 
 Try an agent that uses the local LLM running on your node:
 
 ```bash
-naptha run simple_chat_agent -p "prompt='tell me a joke'"
+naptha run simple_chat_agent -p "prompt='what is an ai agent?'"
 ```
 
 You can also run agents from docker images:
