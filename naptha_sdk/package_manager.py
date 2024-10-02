@@ -84,10 +84,11 @@ logger = get_logger(__name__)
     transformed_lines = [line[4:] if line.startswith('    ') else line for line in lines]
     
     code_body = '\n'.join(transformed_lines)
+    self_attributes = re.findall(r'self\.(\w+)', code_body)
     code_body = code_body.replace('self', 'inputs')
     rendered_code = content + '\n' + code_body
     
-    return rendered_code
+    return rendered_code, self_attributes
 
 import yaml
 
@@ -128,16 +129,19 @@ def generate_component_yaml(agent_name, user_id):
     with open(f'tmp/{agent_name}/{agent_name}/component.yaml', 'w') as file:
         yaml.dump(component, file, default_flow_style=False)
 
-def generate_schema(agent_name):
+def generate_schema(agent_name, input_params):
     schema_code = '''from pydantic import BaseModel
 
 class InputSchema(BaseModel):
-    prompt: str
 '''
+
+    for input_param in input_params:
+        schema_code += f'    {input_param}: str\n'
+
     with open(f'tmp/{agent_name}/{agent_name}/schemas.py', 'w') as file:
         file.write(schema_code)
 
-def add_files_to_package(agent_name, code, user_id):
+def add_files_to_package(agent_name, code, input_params, user_id):
 
     # Define paths
     package_path = f'tmp/{agent_name}'
@@ -149,7 +153,7 @@ def add_files_to_package(agent_name, code, user_id):
         file.write(code)
 
     # Generate schema and component yaml (you should provide these functions)
-    generate_schema(agent_name)
+    generate_schema(agent_name, input_params)
     generate_component_yaml(agent_name, user_id)
 
     return package_path

@@ -60,9 +60,9 @@ class Naptha:
             create_poetry_package(agent.name)
 
             agent_code, local_modules, installed_modules = scrape_code(agent.fn)
-            agent_code = render_agent_code(agent.name, agent_code, local_modules, installed_modules)
+            agent_code, input_params = render_agent_code(agent.name, agent_code, local_modules, installed_modules)
             add_dependencies_to_pyproject(agent.name, installed_modules)
-            package_path = add_files_to_package(agent.name, agent_code, self.hub_username)
+            package_path = add_files_to_package(agent.name, agent_code, input_params, self.hub_username)
             success, response = await publish_ipfs_package(package_path)
 
             agent_config = {
