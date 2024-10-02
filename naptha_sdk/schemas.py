@@ -45,8 +45,8 @@ class AgentRun(BaseModel):
     worker_nodes: Optional[list[str]] = None
     error_message: Optional[str] = None
     created_time: Optional[str] = None
-    start_processing_time: Optional[datetime] = None
-    completed_time: Optional[datetime] = None
+    start_processing_time: Optional[str] = None
+    completed_time: Optional[str] = None
     duration: Optional[float] = None
     agent_run_params: Optional[Union[Dict, DockerParams]] = None
     child_runs: List['AgentRun'] = []
