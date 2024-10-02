@@ -29,6 +29,8 @@ def scrape_code(func):
     installed_modules = []
     for name, obj in func_globals.items():
         if inspect.isclass(obj) and name in inspect.getsource(func):
+            print()
+
             module = sys.modules[obj.__module__]
             is_local = is_local_module(module)
 
@@ -42,6 +44,7 @@ def scrape_code(func):
             if is_local:
                 class_info['source'] = inspect.getsource(obj)
                 local_modules.append(class_info)
+                print("222222", obj.__bases__)
             else:
                 installed_modules.append(class_info)
 

@@ -1,42 +1,35 @@
 import asyncio
+from dotenv import load_dotenv
 from naptha_sdk.client.hub import Hub
 from naptha_sdk.client.node import Node
 from naptha_sdk.client.services import Services
 from naptha_sdk.package_manager import add_files_to_package, add_dependencies_to_pyproject, create_poetry_package, publish_ipfs_package, render_agent_code
 from naptha_sdk.scrape import scrape_code
 from naptha_sdk.utils import get_logger
+import os
 from typing import Dict, List, Tuple
 
 logger = get_logger(__name__)
 
+load_dotenv(override=True)
+
 class Naptha:
     """The entry point into Naptha."""
 
-    def __init__(self,
-            hub_url,
-            node_url,
-            routing_url=None,
-            indirect_node_id=None,
-            public_key=None,
-            hub_username=None, 
-            hub_password=None, 
-            *args, 
-            **kwargs
-    ):
-        
-        self.public_key = public_key
-        self.hub_username = hub_username
-        self.hub_url = hub_url
-        self.node_url = node_url
-        self.routing_url = routing_url
-        self.indirect_node_id = indirect_node_id
+    def __init__(self):
+        self.public_key = get_public_key(os.getenv("PRIVATE_KEY")) if os.getenv("PRIVATE_KEY") else None
+        self.hub_username = os.getenv("HUB_USERNAME", None)
+        self.hub_url = os.getenv("HUB_URL", None)
+        self.node_url = os.getenv("NODE_URL", None)
+        self.routing_url = os.getenv("ROUTING_URL", None)
+        self.indirect_node_id = os.getenv("INDIRECT_NODE_ID", None)
         self.node = Node(
-            node_url=node_url,
-            routing_url=routing_url,
-            indirect_node_id=indirect_node_id
+            node_url=self.node_url,
+            routing_url=self.routing_url,
+            indirect_node_id=self.indirect_node_id
         )
         self.services = Services()
-        self.hub = Hub(hub_url, public_key)  
+        self.hub = Hub(self.hub_url, self.public_key)  
         self.agents = []
 
     async def __aenter__(self):
@@ -84,6 +77,7 @@ class Naptha:
 
     def publish(self):
         asyncio.run(self.connect_publish())
+
 
 class Agent:
     def __init__(self, 
