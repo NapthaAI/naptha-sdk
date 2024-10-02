@@ -83,8 +83,9 @@ logger = get_logger(__name__)
     # Remove one tab space from each line
     transformed_lines = [line[4:] if line.startswith('    ') else line for line in lines]
     
-    # Join the transformed lines with the new header
-    rendered_code = content + '\n' + '\n'.join(transformed_lines)
+    code_body = '\n'.join(transformed_lines)
+    code_body = code_body.replace('self', 'inputs')
+    rendered_code = content + '\n' + code_body
     
     return rendered_code
 
