@@ -17,21 +17,26 @@ IPFS_GATEWAY_URL="/dns/provider.akash.pro/tcp/31832/http"
 def create_poetry_package(package_name):
     subprocess.run(["poetry", "new", f"tmp/{package_name}"])
 
-def add_dependency_to_pyproject(package_name, packages, version="*", dev=False):
+def add_dependencies_to_pyproject(package_name, packages):
     with open(f"tmp/{package_name}/pyproject.toml", 'r', encoding='utf-8') as file:
         data = tomlkit.parse(file.read())
 
-    # Access the correct dependencies section
-    dep_key = 'dev-dependencies' if dev else 'dependencies'
-    dependencies = data['tool']['poetry'][dep_key]
 
+    dependencies = data['tool']['poetry']['dependencies']
+    dependencies["python"] = ">=3.10,<3.13"
     dependencies["naptha-sdk"] = {
         "git": "https://github.com/NapthaAI/naptha-sdk.git",
         "branch": "feat/agent-decorator"
     }
 
+    packages_to_add = []
     for package in packages:
-        dependencies[package] = version
+        curr_package = package['module'].split('.')[0]
+        if curr_package not in packages_to_add:
+            packages_to_add.append(curr_package)
+
+    for package in packages_to_add:
+        dependencies[package] = "*"
 
     # Serialize the TOML data and write it back to the file
     with open(f"tmp/{package_name}/pyproject.toml", 'w', encoding='utf-8') as file:
@@ -136,10 +141,6 @@ def add_files_to_package(agent_name, code, user_id):
     # Define paths
     package_path = f'tmp/{agent_name}'
     code_path = os.path.join(package_path, agent_name, 'run.py')
-
-    # Clean up if directory exists
-    if os.path.exists(package_path):
-        shutil.rmtree(package_path)
 
     # Write the provided code to the specified path
     os.makedirs(os.path.dirname(code_path), exist_ok=True)
