@@ -45,7 +45,7 @@ class Hub:
                 {
                     "NS": self.ns,
                     "DB": self.db,
-                    "SC": "user",
+                    "AC": "user",
                     "username": username,
                     "password": password,
                 },
@@ -65,11 +65,10 @@ class Hub:
         user = await self.surrealdb.signup({
             "NS": self.ns,
             "DB": self.db,
-            "SC": "user",
+            "AC": "user",
             "name": username,
             "username": username,
             "password": password,
-            "invite": "DZHA4ZTK",
             "public_key": public_key,
         })
         if not user:
