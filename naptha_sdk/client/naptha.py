@@ -1,3 +1,4 @@
+import asyncio
 from naptha_sdk.client.hub import Hub
 from naptha_sdk.client.node import Node
 from naptha_sdk.client.services import Services
@@ -53,7 +54,7 @@ class Naptha:
             return func
         return decorator
 
-    async def publish(self):
+    async def publish_agents(self):
         for agent in self.agents:
             logger.info(f"Publishing Agent Package...")
             create_poetry_package(agent.name)
@@ -76,6 +77,13 @@ class Naptha:
             agent = await self.hub.create_agent(agent_config)
             logger.info(f"Published Agent: {agent}")
 
+    async def connect_publish(self):
+        await self.hub.connect()
+        await self.publish_agents()
+        await self.hub.close()
+
+    def publish(self):
+        asyncio.run(self.connect_publish())
 
 class Agent:
     def __init__(self, 
