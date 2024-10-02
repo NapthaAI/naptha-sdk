@@ -1,7 +1,7 @@
 from naptha_sdk.client.hub import Hub
 from naptha_sdk.client.node import Node
 from naptha_sdk.client.services import Services
-from naptha_sdk.package_manager import add_files_to_package, add_dependency_to_pyproject, create_poetry_package, publish_ipfs_package, transform_code_agent
+from naptha_sdk.package_manager import add_files_to_package, add_dependency_to_pyproject, create_poetry_package, publish_ipfs_package, render_agent_code
 from naptha_sdk.scrape import scrape_code
 from naptha_sdk.utils import get_logger
 from typing import Dict, List, Tuple
@@ -59,7 +59,7 @@ class Naptha:
 
             agent_code, local_modules, installed_modules = scrape_code(agent.fn)
 
-            agent_code = transform_code_agent(agent_code)
+            agent_code = render_agent_code(agent.name, agent_code, local_modules, installed_modules)
             create_poetry_package(agent.name)
             # add_dependency_to_pyproject(agent.name, used_classes)
             package_path = add_files_to_package(agent.name, agent_code, self.hub_username)

@@ -37,13 +37,28 @@ def add_dependency_to_pyproject(package_name, packages, version="*", dev=False):
     with open(f"tmp/{package_name}/pyproject.toml", 'w', encoding='utf-8') as file:
         file.write(tomlkit.dumps(data))
 
-def transform_code_agent(input_code):
-    # Define the new function signature and logger setup
-    new_header = '''from naptha_sdk.utils import get_logger
+def render_agent_code(agent_name, input_code, local_modules, installed_modules):
+    # Add the imports for installed modules (e.g. crewai)
+    content = ''
+    for module in installed_modules:
+        line = f'from {module['module']} import {module['name']} \n'
+        content += line
+
+    # Add the naptha imports and logger setup
+    naptha_imports = f'''from {agent_name}.schemas import InputSchema
+from naptha_sdk.utils import get_logger
 
 logger = get_logger(__name__)
 
-def run(inputs, worker_nodes = None, orchestrator_node = None, flow_run = None, cfg: dict = None):'''
+'''
+    content += naptha_imports
+
+    # Add the source code for the local modules 
+    for module in local_modules:
+        content += module['source'] + "\n"
+
+    # Define the new function signature
+    content += 'def run(inputs: InputSchema, *args, **kwargs): \n'
     
     # Split the input code into lines
     lines = input_code.strip().split('\n')
@@ -64,9 +79,9 @@ def run(inputs, worker_nodes = None, orchestrator_node = None, flow_run = None, 
     transformed_lines = [line[4:] if line.startswith('    ') else line for line in lines]
     
     # Join the transformed lines with the new header
-    transformed_code = new_header + '\n' + '\n'.join(transformed_lines)
+    rendered_code = content + '\n' + '\n'.join(transformed_lines)
     
-    return transformed_code
+    return rendered_code
 
 import yaml
 
