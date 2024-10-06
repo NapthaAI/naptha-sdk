@@ -42,10 +42,15 @@ def add_dependencies_to_pyproject(package_name, packages):
     with open(f"tmp/{package_name}/pyproject.toml", 'w', encoding='utf-8') as file:
         file.write(tomlkit.dumps(data))
 
-def render_agent_code(agent_name, input_code, local_modules, installed_modules):
+def render_agent_code(agent_name, input_code, local_modules, selective_import_modules, standard_import_modules):
     # Add the imports for installed modules (e.g. crewai)
     content = ''
-    for module in installed_modules:
+
+    for module in standard_import_modules:
+        line = f'import {module['name']} \n'
+        content += line
+
+    for module in selective_import_modules:
         line = f'from {module['module']} import {module['name']} \n'
         content += line
 
@@ -105,8 +110,6 @@ logger = get_logger(__name__)
     content += main_block
 
     return content, self_attributes
-
-import yaml
 
 def generate_component_yaml(agent_name, user_id):
     component = {
