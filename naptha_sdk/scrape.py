@@ -21,86 +21,6 @@ def is_local_module(module):
     
     return False  # It's outside the project directory
 
-# def get_class_dependencies(cls):
-#     dependencies = []
-#     # Check if it's a Pydantic model
-#     # if issubclass(cls, BaseModel):
-#     #     print("Class is a pydantic model...")
-#     #     args_schema = cls.model_fields.get('args_schema')
-#     #     print("Args Schema: ", args_schema)
-#             # field_type = field.annotation
-#             # if inspect.isclass(field_type):
-#             #     dependency = {
-#             #         'name': field_type.__name__,
-#             #         'module': field_type.__module__,
-#             #         'is_local': is_local_module(sys.modules[field_type.__module__]),
-#             #         'type': 'pydantic_field'
-#             #     }
-#             #     dependencies.append(dependency)
-
-#     # # Check base classes
-#     # for base in cls.__bases__:
-#     #     if base != object and base != BaseModel:  # Exclude object and BaseModel
-#     #         dependency = {
-#     #             'name': base.__name__,
-#     #             'module': base.__module__,
-#     #             'is_local': is_local_module(sys.modules[base.__module__]),
-#     #             'type': 'base_class'
-#     #         }
-#     #         dependencies.append(dependency)
-
-#     class_source = inspect.getsource(cls)
-#     class_ast = ast.parse(class_source)
-
-#     dependencies = []
-#     for node in ast.walk(class_ast):
-#         if isinstance(node, ast.Name):
-#             if not node.id in dir(builtins):
-#                 # print('GGGGG', node, node.id, type(node.ctx).__name__, isinstance(node, ast.Import))
-#                 dependency = {
-#                     'name': node.id,
-#                     'type': type(node.ctx).__name__
-#                 }
-#                 dependencies.append(dependency)
-
-#     print(dependencies)
-
-#     # Remove "Load" dependencies if a "Store" dependency with the same name exists
-#     store_names = {dep['name'] for dep in dependencies if dep['type'] == 'Store'}
-#     dependencies = [dep for dep in dependencies if not (dep['type'] == 'Load' and dep['name'] in store_names)]
-
-#     # Keep only dependencies with type "Load"
-#     dependencies = [dep for dep in dependencies if dep['type'] == 'Load']
-
-#     print(dependencies)
-
-
-#             # if node.id in sys.modules:
-#             #     print(is_local_module(sys.modules[node.id]))
-#             # # Check if the node represents a module
-#             # if node.id in sys.modules:
-#             #     module = sys.modules[node.id]
-#             #     if is_local_module(module):
-#             #         dependency = {
-#             #             'name': node.id,
-#             #             'module': module.__name__,
-#             #             'is_local': True,
-#             #             'type': 'local_module'
-#             #         }
-#             #         dependencies.append(dependency)
-
-
-#     # for name, obj in cls.__dict__.items():
-#     #     print("222222", name, obj)
-#     #     if inspect.isclass(obj) and obj != cls:
-#     #         dependency = {
-#     #             'name': obj.__name__,
-#     #             'module': obj.__module__,
-#     #             'is_local': is_local_module(sys.modules[obj.__module__])
-#     #         }
-#     #         dependencies.append(dependency)
-#     return dependencies
-
 def get_class_dependencies(obj, module):
     modules = []
     for name, module_obj in module.__dict__.items():
@@ -128,9 +48,47 @@ def get_class_dependencies(obj, module):
 
     return modules
 
+def scrape_init(file_path):
+    with open(file_path, 'r') as file:
+        tree = ast.parse(file.read(), filename=file_path)
+
+    variables = []
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    if isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Name):                        
+                        data = {"target": target.id, "cls_name":  node.value.func.id}
+
+                        if node.value.keywords:
+                            data['keywords'] = [kw.arg for kw in node.value.keywords]
+                            values = []
+                            for kw in node.value.keywords:
+                                if isinstance(kw.value, ast.Constant):
+                                    values.append(kw.value.value)
+                                elif isinstance(kw.value, ast.Name):
+                                    values.append(kw.value.id)
+                                elif isinstance(kw.value, ast.Attribute):
+                                    values.append(f"{kw.value.value.id}.{kw.value.attr}")
+                                elif isinstance(kw.value, ast.Call):
+                                    values.append(f"{kw.value.func.id}()")
+                                else:
+                                    values.append(ast.unparse(kw.value))
+                            data['values'] = values
+
+                        variables.append(data)
+
+    print("Variables", variables)
+
+    return variables
+
 def scrape_code(func):
-    print("FUNC", func)
     fn_code = inspect.getsource(func)
+
+    # Remove lines that start with '@' (decorators)
+    fn_code = "\n".join(line for line in fn_code.splitlines() if not line.strip().startswith("@"))
+    print("FUNC", fn_code)
 
     func_globals = func.__globals__
 
@@ -138,9 +96,13 @@ def scrape_code(func):
     modules = []
     seen = set()  # To keep track of unique modules
     for name, obj in func_globals.items():
-        if inspect.isclass(obj) and name in inspect.getsource(func):
+        if name in fn_code:
+            print("AAAAAAA", name, obj)
+
             module = sys.modules[obj.__module__]
             is_local = is_local_module(module)
+
+
 
             class_info = {
                 'name': name,

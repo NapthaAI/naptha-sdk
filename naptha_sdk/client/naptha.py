@@ -1,10 +1,11 @@
 import asyncio
 from dotenv import load_dotenv
+import inspect
 from naptha_sdk.client.hub import Hub
 from naptha_sdk.client.node import Node
 from naptha_sdk.client.services import Services
 from naptha_sdk.package_manager import add_files_to_package, add_dependencies_to_pyproject, create_poetry_package, publish_ipfs_package, render_agent_code
-from naptha_sdk.scrape import scrape_code
+from naptha_sdk.scrape import scrape_code, scrape_init
 from naptha_sdk.utils import get_logger
 import os
 from typing import Dict, List, Tuple
@@ -40,6 +41,15 @@ class Naptha:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async exit method for context manager"""
         await self.hub.close()
+
+    def init(self):
+        frame = inspect.currentframe()
+        # Get the caller's frame (the frame that called this constructor)
+        caller_frame = frame.f_back
+        # Get the file name from the caller's frame
+        instantiation_file = caller_frame.f_code.co_filename
+
+        scrape_init(instantiation_file)
 
     def agent(self, name, worker_node_url):
         def decorator(func):
