@@ -86,9 +86,25 @@ logger = get_logger(__name__)
     code_body = '\n'.join(transformed_lines)
     self_attributes = re.findall(r'self\.(\w+)', code_body)
     code_body = code_body.replace('self', 'inputs')
-    rendered_code = content + '\n' + code_body
+    content += '\n' + code_body + '\n\n'
     
-    return rendered_code, self_attributes
+    main_block = f'''if __name__ == "__main__":
+    from naptha_sdk.utils import load_yaml
+    from {agent_name}.schemas import InputSchema
+
+    cfg_path = "{agent_name}/component.yaml"
+    cfg = load_yaml(cfg_path)
+
+    inputs = {{"agents_config": "config/agents.yaml"}}
+    inputs = InputSchema(**inputs)
+
+    response = run(inputs)
+    print(response)
+'''
+    
+    content += main_block
+
+    return content, self_attributes
 
 import yaml
 
