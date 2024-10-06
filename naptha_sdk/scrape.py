@@ -44,9 +44,21 @@ def scrape_code(func):
             if is_local:
                 class_info['source'] = inspect.getsource(obj)
                 local_modules.append(class_info)
-                print("222222", obj.__bases__)
+                # Add base classes to installed_modules
+                for base in obj.__bases__:
+                    base_module = sys.modules[base.__module__]
+                    if not is_local_module(base_module):
+                        base_info = {
+                            'name': base.__name__,
+                            'module': base.__module__,
+                            'is_local': False
+                        }
+                        if base_info not in installed_modules:
+                            installed_modules.append(base_info)
             else:
                 installed_modules.append(class_info)
+            
+
 
     print(f"Classes used in {func.__name__}:")
     for cls in local_modules:
