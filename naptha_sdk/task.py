@@ -19,10 +19,7 @@ class Task:
         self.orchestrator_node = orchestrator_node
         self.flow_run = flow_run
         self.task_engine_cls = task_engine_cls
-        if isinstance(worker_node_url, str):
-            self.worker_node = self.node_url_to_node(worker_node_url, node_cls)
-        else:
-            self.worker_node = worker_node_url
+        self.worker_node_url = worker_node_url
 
     async def __call__(self, *args, **kwargs):
         return await run_task(
@@ -31,13 +28,6 @@ class Task:
             flow_run=self.flow_run, 
             task_engine_cls=self.task_engine_cls,
         )
-    
-    def node_url_to_node(self, node_url, node_cls):
-        if 'ws://' in node_url:
-            return node_cls(node_url, 'ws')
-        else:
-            return node_cls(node_url, 'http')
-
     
 async def run_task(task, parameters, flow_run, task_engine_cls) -> None:
     task_engine = task_engine_cls(flow_run)
