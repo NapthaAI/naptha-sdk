@@ -61,7 +61,7 @@ class Naptha:
 
             agent_code, local_modules, selective_import_modules, standard_import_modules, variable_modules = scrape_func(agent.fn, self.variables)
             agent_code, input_params = render_agent_code(agent.name, agent_code, local_modules, selective_import_modules, standard_import_modules, variable_modules)
-            add_dependencies_to_pyproject(agent.name, selective_import_modules)
+            add_dependencies_to_pyproject(agent.name, selective_import_modules + standard_import_modules)
             package_path = add_files_to_package(agent.name, agent_code, input_params, self.hub_username)
             # success, response = await publish_ipfs_package(package_path)
 

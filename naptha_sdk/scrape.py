@@ -57,6 +57,7 @@ def scrape_init(file_path):
     for node in ast.walk(tree):
         if isinstance(node, ast.Assign):
             for target in node.targets:
+                print('GGGGG', target, target.id, node.value, node.value.func)
                 if isinstance(target, ast.Name):
                     if isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Name):                        
                         data = {"target": target.id, "cls_name":  node.value.func.id}
@@ -102,7 +103,6 @@ def scrape_func(func, variables):
     modules = []
     seen = set()  # To keep track of unique modules
     for name, obj in func_globals.items():
-        print("AAAAAAA", name, obj)
         if inspect.isclass(obj) and name in fn_code:
 
             module = sys.modules[obj.__module__]

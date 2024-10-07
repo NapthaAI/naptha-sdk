@@ -1,3 +1,4 @@
+import importlib.util
 import ipfshttpclient
 from naptha_sdk.utils import get_logger
 import os
@@ -16,6 +17,13 @@ IPFS_GATEWAY_URL="/dns/provider.akash.pro/tcp/31832/http"
 def create_poetry_package(package_name):
     subprocess.run(["poetry", "new", f"tmp/{package_name}"])
 
+def is_std_lib(module_name):
+    try:
+        module_spec = importlib.util.find_spec(module_name)
+        return module_spec is not None and 'site-packages' not in module_spec.origin
+    except ImportError:
+        return False
+
 def add_dependencies_to_pyproject(package_name, packages):
     with open(f"tmp/{package_name}/pyproject.toml", 'r', encoding='utf-8') as file:
         data = tomlkit.parse(file.read())
@@ -28,10 +36,11 @@ def add_dependencies_to_pyproject(package_name, packages):
         "branch": "feat/agent-decorator"
     }
 
+
     packages_to_add = []
     for package in packages:
         curr_package = package['module'].split('.')[0]
-        if curr_package not in packages_to_add:
+        if curr_package not in packages_to_add and not is_std_lib(curr_package):
             packages_to_add.append(curr_package)
 
     for package in packages_to_add:
