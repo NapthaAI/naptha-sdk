@@ -83,12 +83,18 @@ def scrape_init(file_path):
 
     return variables
 
-def scrape_code(func):
+def scrape_func(func, variables):
     fn_code = inspect.getsource(func)
 
     # Remove lines that start with '@' (decorators)
     fn_code = "\n".join(line for line in fn_code.splitlines() if not line.strip().startswith("@"))
     print("FUNC", fn_code)
+
+
+    used_variables = []
+    for variable in variables:
+        if variable['target'] in fn_code:
+            used_variables.append(variable)
 
     func_globals = func.__globals__
 
@@ -96,13 +102,11 @@ def scrape_code(func):
     modules = []
     seen = set()  # To keep track of unique modules
     for name, obj in func_globals.items():
-        if name in fn_code:
+        if inspect.isclass(obj) and name in fn_code:
             print("AAAAAAA", name, obj)
 
             module = sys.modules[obj.__module__]
             is_local = is_local_module(module)
-
-
 
             class_info = {
                 'name': name,
@@ -130,9 +134,36 @@ def scrape_code(func):
 
                 modules.append(class_info)
 
+    # Deal with variables from the main file
+    for used_variable in used_variables:
+        # if the class is already in modules, skip it
+        if any(module['name'] == used_variable['cls_name'] for module in modules):
+            continue
+        # If the variable's class is not in modules, add it
+        var_class = func_globals.get(used_variable['cls_name'])
+        if var_class and inspect.isclass(var_class):
+            module = sys.modules[var_class.__module__]
+            class_info = {
+                'name': used_variable['cls_name'],
+                'module': var_class.__module__,
+                'import_type': "variable",
+                'is_local': False
+            }
+            line = f"{used_variable['target']} = {used_variable['cls_name']}("
+            for kw, value in zip(used_variable['keywords'], used_variable['values']):
+                if isinstance(value, str):
+                    line += f"{kw}='{value}', "
+                else:
+                    line += f"{kw}={value}, "
+            line += ")"
+            print("LINE", line)
+            class_info['source'] = line
+            modules.append(class_info)
+
     local_modules = [module for module in modules if module['is_local']]
-    selective_import_modules = [module for module in modules if not module['is_local'] and module['import_type'] != 'standard']
+    selective_import_modules = [module for module in modules if not module['is_local'] and module['import_type'] == 'selective']
     standard_import_modules = [module for module in modules if module['import_type'] == 'standard']
+    variable_modules = [module for module in modules if module['import_type'] == 'variable']
 
     print(f"Classes and modules used in {func.__name__}:")
     
@@ -150,4 +181,4 @@ def scrape_code(func):
     for cls in standard_import_modules:
         print(f"  {cls['name']} from {cls['module']} (Standard import package)")
 
-    return fn_code, local_modules, selective_import_modules, standard_import_modules
+    return fn_code, local_modules, selective_import_modules, standard_import_modules, variable_modules
