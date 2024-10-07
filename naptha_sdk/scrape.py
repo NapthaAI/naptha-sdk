@@ -1,8 +1,10 @@
 import ast
 import inspect
 import os
+from pathlib import Path
 from pydantic import BaseModel
 import sys
+import yaml
 
 def is_local_module(module):
     if not hasattr(module, '__file__'):
@@ -57,10 +59,9 @@ def scrape_init(file_path):
     for node in ast.walk(tree):
         if isinstance(node, ast.Assign):
             for target in node.targets:
-                print('GGGGG', target, target.id, node.value, node.value.func)
                 if isinstance(target, ast.Name):
                     if isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Name):                        
-                        data = {"target": target.id, "cls_name":  node.value.func.id}
+                        data = {"type": "call", "target": target.id, "cls_name":  node.value.func.id}
 
                         if node.value.keywords:
                             data['keywords'] = [kw.arg for kw in node.value.keywords]
@@ -77,8 +78,9 @@ def scrape_init(file_path):
                                 else:
                                     values.append(ast.unparse(kw.value))
                             data['values'] = values
-
-                        variables.append(data)
+                    elif isinstance(node.value, ast.Constant):
+                        data = {"type": "constant", "target": target.id, "value": node.value.value}
+                    variables.append(data)
 
     print("Variables", variables)
 
@@ -136,28 +138,45 @@ def scrape_func(func, variables):
 
     # Deal with variables from the main file
     for used_variable in used_variables:
-        # if the class is already in modules, skip it
-        if any(module['name'] == used_variable['cls_name'] for module in modules):
-            continue
-        # If the variable's class is not in modules, add it
-        var_class = func_globals.get(used_variable['cls_name'])
-        if var_class and inspect.isclass(var_class):
-            module = sys.modules[var_class.__module__]
-            class_info = {
-                'name': used_variable['cls_name'],
-                'module': var_class.__module__,
-                'import_type': "variable",
-                'is_local': False
-            }
-            line = f"{used_variable['target']} = {used_variable['cls_name']}("
-            for kw, value in zip(used_variable['keywords'], used_variable['values']):
-                if isinstance(value, str):
-                    line += f"{kw}='{value}', "
-                else:
-                    line += f"{kw}={value}, "
-            line += ")\n"
-            class_info['source'] = line
-            modules.append(class_info)
+        if used_variable['type'] == 'constant':
+            cwd = Path.cwd()
+            full_path = Path(f"src/{cwd.name}/{used_variable['value']}")
+            if full_path.exists():
+                with open(full_path, 'r') as file:
+                    yaml_data = yaml.safe_load(file)
+                line = f"{used_variable['target']} = {yaml_data}\n"
+                class_info = {
+                    'name': used_variable['target'],
+                    'module': None,
+                    'import_type': "variable",
+                    'is_local': False
+                }
+                class_info['source'] = line
+                modules.append(class_info)
+
+        elif used_variable['type'] == 'call':
+            # if the class is already in modules, skip it
+            if any(module['name'] == used_variable['cls_name'] for module in modules):
+                continue
+            # If the variable's class is not in modules, add it
+            var_class = func_globals.get(used_variable['cls_name'])
+            if var_class and inspect.isclass(var_class):
+                module = sys.modules[var_class.__module__]
+                class_info = {
+                    'name': used_variable['cls_name'],
+                    'module': var_class.__module__,
+                    'import_type': "variable",
+                    'is_local': False
+                }
+                line = f"{used_variable['target']} = {used_variable['cls_name']}("
+                for kw, value in zip(used_variable['keywords'], used_variable['values']):
+                    if isinstance(value, str):
+                        line += f"{kw}='{value}', "
+                    else:
+                        line += f"{kw}={value}, "
+                line += ")\n"
+                class_info['source'] = line
+                modules.append(class_info)
 
     local_modules = [module for module in modules if module['is_local']]
     selective_import_modules = [module for module in modules if not module['is_local'] and module['import_type'] == 'selective']
@@ -171,7 +190,6 @@ def scrape_func(func, variables):
         print(f"  {cls['name']} from {cls['module']} (Local module)")
         print(f"  Source code:\n{cls['source'][:100]}...\n")  # Truncated for brevity
     
-
     print("Selective import packages:")
     for cls in selective_import_modules:
         print(f"  {cls['name']} from {cls['module']} (Selective import package)")
@@ -179,5 +197,10 @@ def scrape_func(func, variables):
     print("Standard import packages:")
     for cls in standard_import_modules:
         print(f"  {cls['name']} from {cls['module']} (Standard import package)")
+    
+    print("Variable modules:")
+    for cls in variable_modules:
+        print(f"  {cls['name']} from {cls['module']} (Variable module)")
+        print(f"  Source code:\n{cls['source'][:100]}...\n")  # Truncated for brevity
 
     return fn_code, local_modules, selective_import_modules, standard_import_modules, variable_modules

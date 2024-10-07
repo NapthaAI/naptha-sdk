@@ -63,7 +63,8 @@ def render_agent_code(agent_name, input_code, local_modules, selective_import_mo
         content += line
 
     for module in variable_modules:
-        content += f"from {module['module']} import {module['name']} \n"
+        if module['module']:
+            content += f"from {module['module']} import {module['name']} \n"
 
     # Add the naptha imports and logger setup
     naptha_imports = f'''from {agent_name}.schemas import InputSchema
