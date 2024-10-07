@@ -155,20 +155,8 @@ async def main():
     public_key = get_public_key(os.getenv("PRIVATE_KEY")) if os.getenv("PRIVATE_KEY") else None
     hub_username = os.getenv("HUB_USER")
     hub_password = os.getenv("HUB_PASS")
-    node_url = os.getenv("NODE_URL", None)
-    routing_url = os.getenv("ROUTING_URL", None)
-    indirect_node_id = os.getenv("INDIRECT_NODE_ID", None)
 
-
-    naptha = Naptha(
-        hub_url=hub_url,
-        node_url=node_url,
-        routing_url=routing_url,
-        indirect_node_id=indirect_node_id,
-        public_key=public_key,
-        hub_username=hub_username,
-        hub_password=hub_password,
-    )
+    naptha = Naptha()
 
     parser = argparse.ArgumentParser(description="CLI with for Naptha")
     subparsers = parser.add_subparsers(title="commands", dest="command")

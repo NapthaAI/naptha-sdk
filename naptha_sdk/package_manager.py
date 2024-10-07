@@ -231,6 +231,9 @@ async def write_to_ipfs(file_path):
         return (201, response)
     except Exception as e:
         logger.error(f"Error writing file to IPFS: {e}")
+        import traceback
+        logger.error(f"Error writing file to IPFS: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return (500, {"message": f"Error writing file to IPFS: {e}"})
 
 async def publish_ipfs_package(package_path):

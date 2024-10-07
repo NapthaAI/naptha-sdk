@@ -6,6 +6,7 @@ from naptha_sdk.client.node import Node
 from naptha_sdk.client.services import Services
 from naptha_sdk.package_manager import add_files_to_package, add_dependencies_to_pyproject, create_poetry_package, publish_ipfs_package, render_agent_code
 from naptha_sdk.scrape import scrape_init, scrape_func
+from naptha_sdk.user import get_public_key
 from naptha_sdk.utils import get_logger
 import os
 from typing import Dict, List, Tuple
@@ -66,9 +67,10 @@ class Naptha:
             success, response = await publish_ipfs_package(package_path)
 
             agent_config = {
+                "id": f"agent:{agent.name}",
                 "name": agent.name,
                 "description": agent.name,
-                "author": f"user:{self.hub_username}",
+                "author": self.hub.user_id,
                 "url": f"ipfs://{response['ipfs_hash']}",
                 "type": "package",
                 "version": "0.1"
@@ -79,6 +81,7 @@ class Naptha:
 
     async def connect_publish(self):
         await self.hub.connect()
+        await self.hub.signin(os.getenv("HUB_USER"), os.getenv("HUB_PASS"))
         await self.publish_agents()
         await self.hub.close()
 
