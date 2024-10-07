@@ -63,19 +63,19 @@ class Naptha:
             agent_code = render_agent_code(agent.name, agent_code, local_modules, selective_import_modules, standard_import_modules, variable_modules)
             add_dependencies_to_pyproject(agent.name, selective_import_modules + standard_import_modules)
             package_path = add_files_to_package(agent.name, agent_code, self.hub_username)
-            # success, response = await publish_ipfs_package(package_path)
+            success, response = await publish_ipfs_package(package_path)
 
-            # agent_config = {
-            #     "name": agent.name,
-            #     "description": agent.name,
-            #     "author": f"user:{self.hub_username}",
-            #     "url": f"ipfs://{response['ipfs_hash']}",
-            #     "type": "package",
-            #     "version": "0.1"
-            # }
-            # logger.info(f"Registering Agent {agent_config}")
-            # agent = await self.hub.create_agent(agent_config)
-            # logger.info(f"Published Agent: {agent}")
+            agent_config = {
+                "name": agent.name,
+                "description": agent.name,
+                "author": f"user:{self.hub_username}",
+                "url": f"ipfs://{response['ipfs_hash']}",
+                "type": "package",
+                "version": "0.1"
+            }
+            logger.info(f"Registering Agent {agent_config}")
+            agent = await self.hub.create_agent(agent_config)
+            logger.info(f"Published Agent: {agent}")
 
     async def connect_publish(self):
         await self.hub.connect()

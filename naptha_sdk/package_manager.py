@@ -45,6 +45,7 @@ def add_dependencies_to_pyproject(package_name, packages):
 
     for package in packages_to_add:
         dependencies[package] = "*"
+    dependencies["python-dotenv"] = "*"
 
     # Serialize the TOML data and write it back to the file
     with open(f"tmp/{package_name}/pyproject.toml", 'w', encoding='utf-8') as file:
@@ -68,10 +69,13 @@ def render_agent_code(agent_name, agent_code, local_modules, selective_import_mo
 
     # Add the naptha imports and logger setup
     naptha_imports = f'''from crewai import Task
+from dotenv import load_dotenv
 from {agent_name}.schemas import InputSchema
 from naptha_sdk.utils import get_logger
 
 logger = get_logger(__name__)
+
+load_dotenv()
 
 '''
     content += naptha_imports
@@ -179,6 +183,11 @@ def add_files_to_package(agent_name, code, user_id):
     # Generate schema and component yaml (you should provide these functions)
     generate_schema(agent_name)
     generate_component_yaml(agent_name, user_id)
+
+    # Create .env.example file
+    env_example_path = os.path.join(package_path, '.env.example')
+    with open(env_example_path, 'w') as env_file:
+        env_file.write('OPENAI_API_KEY=\n')
 
     return package_path
 

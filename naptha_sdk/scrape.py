@@ -82,8 +82,6 @@ def scrape_init(file_path):
                         data = {"type": "constant", "target": target.id, "value": node.value.value}
                     variables.append(data)
 
-    print("Variables", variables)
-
     return variables
 
 def scrape_func(func, variables):
@@ -91,8 +89,6 @@ def scrape_func(func, variables):
 
     # Remove lines that start with '@' (decorators)
     fn_code = "\n".join(line for line in fn_code.splitlines() if not line.strip().startswith("@"))
-    print("FUNC", fn_code)
-
 
     used_variables = []
     for variable in variables:
@@ -123,7 +119,6 @@ def scrape_func(func, variables):
                 seen.add(module_key)
 
                 if is_local:
-                    print(f"Module Name: {name}")
                     class_info['source'] = inspect.getsource(obj)
                     
                     # Also get dependencies of the local module
@@ -182,25 +177,5 @@ def scrape_func(func, variables):
     selective_import_modules = [module for module in modules if not module['is_local'] and module['import_type'] == 'selective']
     standard_import_modules = [module for module in modules if module['import_type'] == 'standard']
     variable_modules = [module for module in modules if module['import_type'] == 'variable']
-
-    print(f"Classes and modules used in {func.__name__}:")
-    
-    print("Local modules:")
-    for cls in local_modules:
-        print(f"  {cls['name']} from {cls['module']} (Local module)")
-        print(f"  Source code:\n{cls['source'][:100]}...\n")  # Truncated for brevity
-    
-    print("Selective import packages:")
-    for cls in selective_import_modules:
-        print(f"  {cls['name']} from {cls['module']} (Selective import package)")
-    
-    print("Standard import packages:")
-    for cls in standard_import_modules:
-        print(f"  {cls['name']} from {cls['module']} (Standard import package)")
-    
-    print("Variable modules:")
-    for cls in variable_modules:
-        print(f"  {cls['name']} from {cls['module']} (Variable module)")
-        print(f"  Source code:\n{cls['source'][:100]}...\n")  # Truncated for brevity
 
     return fn_code, local_modules, selective_import_modules, standard_import_modules, variable_modules
