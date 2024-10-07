@@ -1,11 +1,10 @@
-import io
 import ipfshttpclient
 from naptha_sdk.utils import get_logger
 import os
 import re
-import shutil
 import subprocess
 import tempfile
+import textwrap
 import tomlkit
 import yaml
 import zipfile
@@ -91,10 +90,10 @@ logger = get_logger(__name__)
     # Remove all lines up to and including the line that contains the 'def'
     lines = lines[def_line_index + 1:]
 
-    # Remove one tab space from each line
-    transformed_lines = [line[4:] if line.startswith('    ') else line for line in lines]
+    # Use textwrap to dedent and then indent once
+    code_body = textwrap.dedent('\n'.join(lines))
+    code_body = textwrap.indent(code_body, '    ')
     
-    code_body = '\n'.join(transformed_lines)
     self_attributes = re.findall(r'self\.(\w+)', code_body)
     code_body = code_body.replace('self', 'inputs')
     content += '\n' + code_body + '\n\n'

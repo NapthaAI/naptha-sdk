@@ -102,8 +102,8 @@ def scrape_func(func, variables):
     modules = []
     seen = set()  # To keep track of unique modules
     for name, obj in func_globals.items():
+        print("AAAAAAA", name, obj)
         if inspect.isclass(obj) and name in fn_code:
-            print("AAAAAAA", name, obj)
 
             module = sys.modules[obj.__module__]
             is_local = is_local_module(module)
@@ -155,8 +155,7 @@ def scrape_func(func, variables):
                     line += f"{kw}='{value}', "
                 else:
                     line += f"{kw}={value}, "
-            line += ")"
-            print("LINE", line)
+            line += ")\n"
             class_info['source'] = line
             modules.append(class_info)
 
