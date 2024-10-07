@@ -50,7 +50,7 @@ def add_dependencies_to_pyproject(package_name, packages):
     with open(f"tmp/{package_name}/pyproject.toml", 'w', encoding='utf-8') as file:
         file.write(tomlkit.dumps(data))
 
-def render_agent_code(agent_name, input_code, local_modules, selective_import_modules, standard_import_modules, variable_modules):
+def render_agent_code(agent_name, agent_code, local_modules, selective_import_modules, standard_import_modules, variable_modules):
     # Add the imports for installed modules (e.g. crewai)
     content = ''
 
@@ -67,7 +67,8 @@ def render_agent_code(agent_name, input_code, local_modules, selective_import_mo
             content += f"from {module['module']} import {module['name']} \n"
 
     # Add the naptha imports and logger setup
-    naptha_imports = f'''from {agent_name}.schemas import InputSchema
+    naptha_imports = f'''from crewai import Task
+from {agent_name}.schemas import InputSchema
 from naptha_sdk.utils import get_logger
 
 logger = get_logger(__name__)
@@ -82,49 +83,39 @@ logger = get_logger(__name__)
     for module in local_modules:
         content += module['source'] + "\n"
 
+    # Convert class method to function
+    agent_code = agent_code.replace('self.', '')
+    agent_code = agent_code.replace('self', '')
+
+    content += textwrap.dedent(agent_code) + "\n\n"
+
     # Define the new function signature
-    content += 'def run(inputs: InputSchema, *args, **kwargs): \n'
-    
-    # Split the input code into lines
-    lines = input_code.strip().split('\n')
-    
-    def_line_index = 0  # Initialize the index to find where the function definition starts
+    content += f'''def run(inputs: InputSchema, *args, **kwargs):
+    {agent_name}_0 = {agent_name}()
 
-    # Find the index of the line that starts with 'def' or 'async def'
-    for i, line in enumerate(lines):
-        stripped_line = line.strip()
-        if stripped_line.startswith('def ') or stripped_line.startswith('async def'):
-            def_line_index = i
-            break
-    
-    # Remove all lines up to and including the line that contains the 'def'
-    lines = lines[def_line_index + 1:]
+    task = Task(
+        description=inputs.description,
+        expected_output=inputs.expected_output,
+        agent={agent_name}_0,
+    )
 
-    # Use textwrap to dedent and then indent once
-    code_body = textwrap.dedent('\n'.join(lines))
-    code_body = textwrap.indent(code_body, '    ')
-    
-    self_attributes = re.findall(r'self\.(\w+)', code_body)
-    code_body = code_body.replace('self', 'inputs')
-    content += '\n' + code_body + '\n\n'
-    
-    main_block = f'''if __name__ == "__main__":
+    return {agent_name}_0.execute_task(task)
+
+if __name__ == "__main__":
     from naptha_sdk.utils import load_yaml
     from {agent_name}.schemas import InputSchema
 
     cfg_path = "{agent_name}/component.yaml"
     cfg = load_yaml(cfg_path)
 
-    inputs = {{"agents_config": "config/agents.yaml"}}
+    inputs = {{"description": "Do something", "expected_output": "Some output"}}
     inputs = InputSchema(**inputs)
 
     response = run(inputs)
     print(response)
 '''
     
-    content += main_block
-
-    return content, self_attributes
+    return content
 
 def generate_component_yaml(agent_name, user_id):
     component = {
@@ -163,19 +154,18 @@ def generate_component_yaml(agent_name, user_id):
     with open(f'tmp/{agent_name}/{agent_name}/component.yaml', 'w') as file:
         yaml.dump(component, file, default_flow_style=False)
 
-def generate_schema(agent_name, input_params):
+def generate_schema(agent_name):
     schema_code = '''from pydantic import BaseModel
 
 class InputSchema(BaseModel):
+    description: str
+    expected_output: str
 '''
-
-    for input_param in input_params:
-        schema_code += f'    {input_param}: str\n'
 
     with open(f'tmp/{agent_name}/{agent_name}/schemas.py', 'w') as file:
         file.write(schema_code)
 
-def add_files_to_package(agent_name, code, input_params, user_id):
+def add_files_to_package(agent_name, code, user_id):
 
     # Define paths
     package_path = f'tmp/{agent_name}'
@@ -187,7 +177,7 @@ def add_files_to_package(agent_name, code, input_params, user_id):
         file.write(code)
 
     # Generate schema and component yaml (you should provide these functions)
-    generate_schema(agent_name, input_params)
+    generate_schema(agent_name)
     generate_component_yaml(agent_name, user_id)
 
     return package_path
