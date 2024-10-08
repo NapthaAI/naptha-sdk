@@ -34,6 +34,7 @@ class Task:
             parameters=self.run_params, 
             flow_run=self.flow_run, 
             task_engine_cls=self.task_engine_cls,
+            run_params=self.run_params,
             *combined_args,
             **combined_kwargs
         )
