@@ -27,21 +27,16 @@ class Task:
         self.kwargs = kwargs
 
     async def __call__(self, *call_args, **call_kwargs):
-        combined_args = self.args + call_args
-        combined_kwargs = {**self.kwargs, **call_kwargs}
         return await run_task(
             task=self, 
-            parameters=self.run_params, 
+            run_params=self.run_params, 
             flow_run=self.flow_run, 
             task_engine_cls=self.task_engine_cls,
-            run_params=self.run_params,
-            *combined_args,
-            **combined_kwargs
         )
     
-async def run_task(task, run_params, flow_run, task_engine_cls, *args, **kwargs) -> None:
+async def run_task(task, run_params, flow_run, task_engine_cls) -> None:
     task_engine = task_engine_cls(flow_run)
-    await task_engine.init_run(task, run_params, *args, **kwargs)
+    await task_engine.init_run(task, run_params)
     try:
         await task_engine.start_run()
         while True:
