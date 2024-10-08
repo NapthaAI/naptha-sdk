@@ -14,7 +14,7 @@ import zipfile
 logger = get_logger(__name__)
 
 IPFS_GATEWAY_URL="/dns/provider.akash.pro/tcp/31832/http"
-
+AGENT_DIR = "naptha_agents"
 # Certain packages cause issues with dependencies and can be slow to resolve, better to specify ranges
 PACKAGE_VERSIONS = {
     "crewai": "^0.41.1",
@@ -23,8 +23,8 @@ PACKAGE_VERSIONS = {
 }
 
 def init_agent_package(package_name):
-    subprocess.run(["poetry", "new", f"tmp/{package_name}"])
-    subprocess.run(["git", "init", f"tmp/{package_name}"])
+    subprocess.run(["poetry", "new", f"{AGENT_DIR}/{package_name}"])
+    subprocess.run(["git", "init", f"{AGENT_DIR}/{package_name}"])
 
 def is_std_lib(module_name):
     try:
@@ -36,17 +36,16 @@ def is_std_lib(module_name):
 def add_dependencies_to_pyproject(package_name, packages):
     start_time = time.time()
 
-    with open(f"tmp/{package_name}/pyproject.toml", 'r', encoding='utf-8') as file:
+    with open(f"{AGENT_DIR}/{package_name}/pyproject.toml", 'r', encoding='utf-8') as file:
         data = tomlkit.parse(file.read())
 
     dependencies = data['tool']['poetry']['dependencies']
     dependencies["python"] = ">=3.10,<3.13"
     dependencies["naptha-sdk"] = {
-        "git": "https://github.com/NapthaAI/naptha-sdk.git",
-        "branch": "feat/agent-decorator"
+        "git": "https://github.com/NapthaAI/naptha-sdk.git"
     }
 
-    with open(f"tmp/{package_name}/pyproject.toml", 'w', encoding='utf-8') as file:
+    with open(f"{AGENT_DIR}/{package_name}/pyproject.toml", 'w', encoding='utf-8') as file:
         file.write(tomlkit.dumps(data))
 
     packages_to_add = {}
@@ -57,7 +56,7 @@ def add_dependencies_to_pyproject(package_name, packages):
             packages_to_add[curr_package] = PACKAGE_VERSIONS.get(curr_package, "")
 
     original_dir = os.getcwd()
-    os.chdir(f"tmp/{package_name}")
+    os.chdir(f"{AGENT_DIR}/{package_name}")
 
     for package, version in packages_to_add.items():
         subprocess.run(["poetry", "add", f"{package}{version}"])
@@ -173,7 +172,7 @@ def generate_component_yaml(agent_name, user_id):
         }
     }
 
-    with open(f'tmp/{agent_name}/{agent_name}/component.yaml', 'w') as file:
+    with open(f'{AGENT_DIR}/{agent_name}/{agent_name}/component.yaml', 'w') as file:
         yaml.dump(component, file, default_flow_style=False)
 
 def generate_schema(agent_name):
@@ -184,16 +183,16 @@ class InputSchema(BaseModel):
     expected_output: str
 '''
 
-    with open(f'tmp/{agent_name}/{agent_name}/schemas.py', 'w') as file:
+    with open(f'{AGENT_DIR}/{agent_name}/{agent_name}/schemas.py', 'w') as file:
         file.write(schema_code)
 
 def git_add_commit(agent_name):
-    subprocess.run(["git", "-C", f"tmp/{agent_name}", "add", "-A"])
-    subprocess.run(["git", "-C", f"tmp/{agent_name}", "commit", "-m", "Initial commit"])
-    subprocess.run(["git", "-C", f"tmp/{agent_name}", "tag", "v0.1"])
+    subprocess.run(["git", "-C", f"{AGENT_DIR}/{agent_name}", "add", "-A"])
+    subprocess.run(["git", "-C", f"{AGENT_DIR}/{agent_name}", "commit", "-m", "Initial commit"])
+    subprocess.run(["git", "-C", f"{AGENT_DIR}/{agent_name}", "tag", "-f", "v0.1"])
 
 def add_files_to_package(agent_name, code, user_id):
-    package_path = f'tmp/{agent_name}'
+    package_path = f'{AGENT_DIR}/{agent_name}'
     code_path = os.path.join(package_path, agent_name, 'run.py')
 
     os.makedirs(os.path.dirname(code_path), exist_ok=True)
@@ -256,7 +255,8 @@ async def write_to_ipfs(file_path):
         logger.error(f"Traceback: {traceback.format_exc()}")
         return (500, {"message": f"Error writing file to IPFS: {e}"})
 
-async def publish_ipfs_package(package_path):
+async def publish_ipfs_package(agent_name):
+    package_path = f"{AGENT_DIR}/{agent_name}"
     output_zip_file = zip_dir(package_path)
     success, response = await write_to_ipfs(output_zip_file)
     logger.info(f"Response: {response}")

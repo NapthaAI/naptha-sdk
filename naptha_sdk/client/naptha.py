@@ -56,17 +56,25 @@ class Naptha:
             return func
         return decorator
 
-    async def publish_agents(self):
+    async def build_agents(self):
+        logger.info(f"Building Agent Packages...")
         start_time = time.time()
         for agent in self.agents:
-            logger.info(f"Publishing Agent Package...")
             init_agent_package(agent.name)
             agent_code, local_modules, selective_import_modules, standard_import_modules, variable_modules = scrape_func(agent.fn, self.variables)
             agent_code = render_agent_code(agent.name, agent_code, local_modules, selective_import_modules, standard_import_modules, variable_modules)
             add_dependencies_to_pyproject(agent.name, selective_import_modules + standard_import_modules)
-            package_path = add_files_to_package(agent.name, agent_code, self.hub_username)
+            add_files_to_package(agent.name, agent_code, self.hub_username)
+        end_time = time.time()
+        total_time = end_time - start_time
+        logger.info(f"Total time taken to build {len(self.agents)} agents: {total_time:.2f} seconds")
+
+    async def publish_agents(self):
+        logger.info(f"Publishing Agent Packages...")
+        start_time = time.time()
+        for agent in self.agents:
             git_add_commit(agent.name)
-            success, response = await publish_ipfs_package(package_path)
+            success, response = await publish_ipfs_package(agent.name)
 
             agent_config = {
                 "id": f"agent:{agent.name}",
@@ -83,7 +91,10 @@ class Naptha:
         
         end_time = time.time()
         total_time = end_time - start_time
-        logger.info(f"Total time taken to pre-install, store and publish {len(self.agents)} agents: {total_time:.2f} seconds")
+        logger.info(f"Total time taken to publish {len(self.agents)} agents: {total_time:.2f} seconds")
+
+    def build(self):
+        asyncio.run(self.build_agents())
 
     async def connect_publish(self):
         await self.hub.connect()

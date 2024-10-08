@@ -115,7 +115,7 @@ class Hub:
             return agents[0]['result']
         else:
             agent = await self.surrealdb.query("SELECT * FROM agent WHERE id=$agent_name;", {"agent_name": agent_name})
-            return agent[0]['result'][0]
+            return agent[0]['result']
 
     async def delete_agent(self, agent_id: str) -> Tuple[bool, Optional[Dict]]:
         if ":" not in agent_id:
