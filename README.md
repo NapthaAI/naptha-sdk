@@ -84,7 +84,7 @@ For each agent, you will see a url where you can check out the code.
 ### Create a New Agent
 
 ```bash
-naptha agents agent_name -p "description='Agent description' url='https://github.com/NapthaAI/agent_name' type='flow' version='0.1'" 
+naptha agents agent_name -p "description='Agent description' url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg' type='package' version='0.1'" 
 ```
 
 ### Delete a Agent

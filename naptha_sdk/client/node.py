@@ -263,7 +263,6 @@ class Node:
         response = await self.send_receive_ws(agent_run_input, "run_agent")
         
         if response['status'] == 'success':
-            response['data'] = parse_datetime(response['data'])
             return AgentRun(**response['data'])
         else:
             logger.error(f"Error running agent: {response['message']}")
@@ -408,18 +407,3 @@ def prepare_files(file_path: str) -> List[Tuple[str, str]]:
     
     return file
 
-def parse_datetime(data):
-    if isinstance(data, dict):
-        for key, value in data.items():
-            if isinstance(value, str):
-                try:
-                    data[key] = datetime.fromisoformat(value)
-                except ValueError:
-                    pass
-            elif isinstance(value, (dict, list)):
-                parse_datetime(value)
-    elif isinstance(data, list):
-        for i, item in enumerate(data):
-            if isinstance(item, (dict, list)):
-                parse_datetime(item)
-    return data
