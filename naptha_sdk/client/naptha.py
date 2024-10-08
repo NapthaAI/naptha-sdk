@@ -9,6 +9,7 @@ from naptha_sdk.scrape import scrape_init, scrape_func
 from naptha_sdk.user import get_public_key
 from naptha_sdk.utils import get_logger
 import os
+import time
 from typing import Dict, List, Tuple
 
 logger = get_logger(__name__)
@@ -56,6 +57,7 @@ class Naptha:
         return decorator
 
     async def publish_agents(self):
+        start_time = time.time()
         for agent in self.agents:
             logger.info(f"Publishing Agent Package...")
             create_poetry_package(agent.name)
@@ -78,6 +80,10 @@ class Naptha:
             logger.info(f"Registering Agent {agent_config}")
             agent = await self.hub.create_agent(agent_config)
             logger.info(f"Published Agent: {agent}")
+        
+        end_time = time.time()
+        total_time = end_time - start_time
+        logger.info(f"Total time taken to pre-install, store and publish {len(self.agents)} agents: {total_time:.2f} seconds")
 
     async def connect_publish(self):
         await self.hub.connect()

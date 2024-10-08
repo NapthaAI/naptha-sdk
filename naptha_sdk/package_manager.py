@@ -6,6 +6,7 @@ import re
 import subprocess
 import tempfile
 import textwrap
+import time
 import tomlkit
 import yaml
 import zipfile
@@ -13,6 +14,13 @@ import zipfile
 logger = get_logger(__name__)
 
 IPFS_GATEWAY_URL="/dns/provider.akash.pro/tcp/31832/http"
+
+# Certain packages cause issues with dependencies and can be slow to resolve, better to specify ranges
+PACKAGE_VERSIONS = {
+    "crewai": "^0.41.1",
+    "crewai_tools": ">=0.4.6,<0.5.0",
+    "embedchain": ">=0.1.113,<0.2.0",
+}
 
 def create_poetry_package(package_name):
     subprocess.run(["poetry", "new", f"tmp/{package_name}"])
@@ -25,9 +33,10 @@ def is_std_lib(module_name):
         return False
 
 def add_dependencies_to_pyproject(package_name, packages):
+    start_time = time.time()
+
     with open(f"tmp/{package_name}/pyproject.toml", 'r', encoding='utf-8') as file:
         data = tomlkit.parse(file.read())
-
 
     dependencies = data['tool']['poetry']['dependencies']
     dependencies["python"] = ">=3.10,<3.13"
@@ -36,20 +45,28 @@ def add_dependencies_to_pyproject(package_name, packages):
         "branch": "feat/agent-decorator"
     }
 
+    with open(f"tmp/{package_name}/pyproject.toml", 'w', encoding='utf-8') as file:
+        file.write(tomlkit.dumps(data))
 
-    packages_to_add = []
+    packages_to_add = {}
     for package in packages:
         curr_package = package['module'].split('.')[0]
         if curr_package not in packages_to_add and not is_std_lib(curr_package):
-            packages_to_add.append(curr_package)
+            # Check the PACKAGE_VERSIONS dictionary for the version
+            packages_to_add[curr_package] = PACKAGE_VERSIONS.get(curr_package, "")
 
-    for package in packages_to_add:
-        dependencies[package] = "*"
-    dependencies["python-dotenv"] = "*"
+    original_dir = os.getcwd()
+    os.chdir(f"tmp/{package_name}")
 
-    # Serialize the TOML data and write it back to the file
-    with open(f"tmp/{package_name}/pyproject.toml", 'w', encoding='utf-8') as file:
-        file.write(tomlkit.dumps(data))
+    for package, version in packages_to_add.items():
+        subprocess.run(["poetry", "add", f"{package}{version}"])
+    subprocess.run(["poetry", "add", "python-dotenv"])
+
+    os.chdir(original_dir)
+
+    end_time = time.time()
+    logger.info(f"Time taken to add dependencies: {end_time - start_time:.2f} seconds")
+
 
 def render_agent_code(agent_name, agent_code, local_modules, selective_import_modules, standard_import_modules, variable_modules):
     # Add the imports for installed modules (e.g. crewai)
