@@ -12,7 +12,9 @@ class Task:
         flow_run, 
         cfg,
         task_engine_cls,
-        connection_manager,
+        run_params,
+        *args,
+        **kwargs
     ):
         self.name = name
         self.fn = fn
@@ -20,19 +22,25 @@ class Task:
         self.flow_run = flow_run
         self.task_engine_cls = task_engine_cls
         self.worker_node_url = worker_node_url
-        self.connection_manager = connection_manager
+        self.run_params = run_params
+        self.args = args
+        self.kwargs = kwargs
 
-    async def __call__(self, *args, **kwargs):
+    async def __call__(self, *call_args, **call_kwargs):
+        combined_args = self.args + call_args
+        combined_kwargs = {**self.kwargs, **call_kwargs}
         return await run_task(
             task=self, 
-            parameters=kwargs, 
+            parameters=self.run_params, 
             flow_run=self.flow_run, 
             task_engine_cls=self.task_engine_cls,
+            *combined_args,
+            **combined_kwargs
         )
     
-async def run_task(task, parameters, flow_run, task_engine_cls) -> None:
+async def run_task(task, run_params, flow_run, task_engine_cls, *args, **kwargs) -> None:
     task_engine = task_engine_cls(flow_run)
-    await task_engine.init_run(task, parameters)
+    await task_engine.init_run(task, run_params, *args, **kwargs)
     try:
         await task_engine.start_run()
         while True:
