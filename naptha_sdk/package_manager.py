@@ -22,8 +22,9 @@ PACKAGE_VERSIONS = {
     "embedchain": ">=0.1.113,<0.2.0",
 }
 
-def create_poetry_package(package_name):
+def init_agent_package(package_name):
     subprocess.run(["poetry", "new", f"tmp/{package_name}"])
+    subprocess.run(["git", "init", f"tmp/{package_name}"])
 
 def is_std_lib(module_name):
     try:
