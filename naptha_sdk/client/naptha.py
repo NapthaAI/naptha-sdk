@@ -78,7 +78,7 @@ class Naptha:
                 "version": "0.1"
             }
             logger.info(f"Registering Agent {agent_config}")
-            agent = await self.hub.create_agent(agent_config)
+            agent = await self.hub.create_or_update_agent(agent_config)
             logger.info(f"Published Agent: {agent}")
         
         end_time = time.time()
