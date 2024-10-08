@@ -187,18 +187,20 @@ class InputSchema(BaseModel):
     with open(f'tmp/{agent_name}/{agent_name}/schemas.py', 'w') as file:
         file.write(schema_code)
 
-def add_files_to_package(agent_name, code, user_id):
+def git_add_commit(agent_name):
+    subprocess.run(["git", "-C", f"tmp/{agent_name}", "add", "-A"])
+    subprocess.run(["git", "-C", f"tmp/{agent_name}", "commit", "-m", "Initial commit"])
+    subprocess.run(["git", "-C", f"tmp/{agent_name}", "tag", "v0.1"])
 
-    # Define paths
+def add_files_to_package(agent_name, code, user_id):
     package_path = f'tmp/{agent_name}'
     code_path = os.path.join(package_path, agent_name, 'run.py')
 
-    # Write the provided code to the specified path
     os.makedirs(os.path.dirname(code_path), exist_ok=True)
     with open(code_path, 'w') as file:
         file.write(code)
 
-    # Generate schema and component yaml (you should provide these functions)
+    # Generate schema and component yaml
     generate_schema(agent_name)
     generate_component_yaml(agent_name, user_id)
 
