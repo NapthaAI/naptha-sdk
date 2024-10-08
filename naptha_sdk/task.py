@@ -12,7 +12,7 @@ class Task:
         flow_run, 
         cfg,
         task_engine_cls,
-        node_cls,
+        connection_manager,
     ):
         self.name = name
         self.fn = fn
@@ -20,6 +20,7 @@ class Task:
         self.flow_run = flow_run
         self.task_engine_cls = task_engine_cls
         self.worker_node_url = worker_node_url
+        self.connection_manager = connection_manager
 
     async def __call__(self, *args, **kwargs):
         return await run_task(
