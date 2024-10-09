@@ -51,6 +51,21 @@ def get_class_dependencies(obj, module):
     return modules
 
 def scrape_init(file_path):
+    def extract_value(value):
+        if isinstance(value, ast.Constant):
+            return value.value
+        elif isinstance(value, ast.Name):
+            return value.id
+        elif isinstance(value, ast.Attribute):
+            return f"{extract_value(value.value)}.{value.attr}"
+        elif isinstance(value, ast.Call):
+            if isinstance(value.func, ast.Attribute):
+                return f"{extract_value(value.func.value)}.{value.func.attr}()"
+            elif isinstance(value.func, ast.Name):
+                return f"{value.func.id}()"
+        else:
+            return ast.unparse(value)
+
     with open(file_path, 'r') as file:
         tree = ast.parse(file.read(), filename=file_path)
 
@@ -60,24 +75,11 @@ def scrape_init(file_path):
         if isinstance(node, ast.Assign):
             for target in node.targets:
                 if isinstance(target, ast.Name):
-                    if isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Name):                        
-                        data = {"type": "call", "target": target.id, "cls_name":  node.value.func.id}
-
+                    if isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Name):
+                        data = {"type": "call", "target": target.id, "cls_name": node.value.func.id}
                         if node.value.keywords:
                             data['keywords'] = [kw.arg for kw in node.value.keywords]
-                            values = []
-                            for kw in node.value.keywords:
-                                if isinstance(kw.value, ast.Constant):
-                                    values.append(kw.value.value)
-                                elif isinstance(kw.value, ast.Name):
-                                    values.append(kw.value.id)
-                                elif isinstance(kw.value, ast.Attribute):
-                                    values.append(f"{kw.value.value.id}.{kw.value.attr}")
-                                elif isinstance(kw.value, ast.Call):
-                                    values.append(f"{kw.value.func.id}()")
-                                else:
-                                    values.append(ast.unparse(kw.value))
-                            data['values'] = values
+                            data['values'] = [extract_value(kw.value) for kw in node.value.keywords]
                     elif isinstance(node.value, ast.Constant):
                         data = {"type": "constant", "target": target.id, "value": node.value.value}
                     variables.append(data)
