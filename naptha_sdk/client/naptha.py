@@ -44,18 +44,6 @@ class Naptha:
         """Async exit method for context manager"""
         await self.hub.close()
 
-    def agent(self, name, worker_node_url):
-        def decorator(func):
-            frame = inspect.currentframe()
-            caller_frame = frame.f_back
-            instantiation_file = caller_frame.f_code.co_filename
-            self.variables = scrape_init(instantiation_file)
-            print("INSTANTIATION", instantiation_file)
-            print("VARIABLES", self.variables)
-            self.agents.append(Agent(name=name, fn=func, worker_node_url=worker_node_url))
-            return func
-        return decorator
-
     async def build_agents(self):
         logger.info(f"Building Agent Packages...")
         start_time = time.time()
@@ -105,6 +93,23 @@ class Naptha:
     def publish(self):
         asyncio.run(self.connect_publish())
 
+
+def agent(name, worker_node_url):
+    def decorator(func):
+        frame = inspect.currentframe()
+        caller_frame = frame.f_back
+        instantiation_file = caller_frame.f_code.co_filename
+        variables = scrape_init(instantiation_file)
+        agent_code, local_modules, selective_import_modules, standard_import_modules, variable_modules = scrape_func(func, variables)
+        agent_code = render_agent_code(name, agent_code, local_modules, selective_import_modules, standard_import_modules, variable_modules)
+ 
+        dependencies = selective_import_modules + standard_import_modules
+        print("DEPENDENCIES", dependencies)
+        print("AGENT CODE", agent_code)
+
+        # self.agents.append(Agent(name=name, fn=func, worker_node_url=worker_node_url))
+        return func
+    return decorator
 
 class Agent:
     def __init__(self, 
