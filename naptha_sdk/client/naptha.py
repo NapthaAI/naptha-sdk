@@ -21,7 +21,7 @@ class Naptha:
 
     def __init__(self):
         self.public_key = get_public_key(os.getenv("PRIVATE_KEY")) if os.getenv("PRIVATE_KEY") else None
-        self.hub_username = os.getenv("HUB_USERNAME", None)
+        self.hub_username = os.getenv("HUB_USER", None)
         self.hub_url = os.getenv("HUB_URL", None)
         self.node_url = os.getenv("NODE_URL", None)
         self.routing_url = os.getenv("ROUTING_URL", None)
@@ -56,6 +56,25 @@ class Naptha:
         end_time = time.time()
         total_time = end_time - start_time
         logger.info(f"Total time taken to build {len(self.agents)} agents: {total_time:.2f} seconds")
+
+    async def create_agent(self, name):
+        async with self.hub:
+            _, _, user_id = await self.hub.signin(self.hub_username, os.getenv("HUB_PASS"))
+            agent_config = {
+                "id": f"agent:{name}",
+                "name": name,
+                "description": name,
+                "author": self.hub.user_id,
+                "url": "None",
+                "type": "package",
+                "version": "0.1"
+            }
+            logger.info(f"Registering Agent {agent_config}")
+            agent = await self.hub.create_or_update_agent(agent_config)
+            if agent:
+                logger.info(f"Agent {name} created successfully")
+            else:
+                logger.error(f"Failed to create agent {name}")
 
     async def publish_agents(self):
         logger.info(f"Publishing Agent Packages...")
@@ -107,7 +126,8 @@ def agent(name, worker_node_url):
         print("DEPENDENCIES", dependencies)
         print("AGENT CODE", agent_code)
 
-        # self.agents.append(Agent(name=name, fn=func, worker_node_url=worker_node_url))
+        asyncio.run(Naptha().create_agent(name))
+
         return func
     return decorator
 
