@@ -44,14 +44,14 @@ class Naptha:
         """Async exit method for context manager"""
         await self.hub.close()
 
-    def init(self):
-        frame = inspect.currentframe()
-        caller_frame = frame.f_back
-        instantiation_file = caller_frame.f_code.co_filename
-        self.variables = scrape_init(instantiation_file)
-
     def agent(self, name, worker_node_url):
         def decorator(func):
+            frame = inspect.currentframe()
+            caller_frame = frame.f_back
+            instantiation_file = caller_frame.f_code.co_filename
+            self.variables = scrape_init(instantiation_file)
+            print("INSTANTIATION", instantiation_file)
+            print("VARIABLES", self.variables)
             self.agents.append(Agent(name=name, fn=func, worker_node_url=worker_node_url))
             return func
         return decorator
