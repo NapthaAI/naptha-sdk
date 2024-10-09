@@ -73,11 +73,11 @@ def render_agent_code(agent_name, agent_code, local_modules, selective_import_mo
     content = ''
 
     for module in standard_import_modules:
-        line = f'import {module['name']} \n'
+        line = f'import {module["name"]} \n'
         content += line
 
     for module in selective_import_modules:
-        line = f'from {module['module']} import {module['name']} \n'
+        line = f'from {module["module"]} import {module["name"]} \n'
         content += line
 
     for module in variable_modules:
