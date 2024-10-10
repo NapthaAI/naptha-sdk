@@ -5,7 +5,7 @@ from naptha_sdk.config import AGENT_DIR, HUB_URL, NODE_URL
 from naptha_sdk.client.hub import Hub
 from naptha_sdk.client.node import Node
 from naptha_sdk.client.services import Services
-from naptha_sdk.package_manager import add_files_to_package, add_wildcard_dependencies_to_pyproject, git_add_commit, init_agent_package, publish_ipfs_package, render_agent_code, write_code_to_package
+from naptha_sdk.package_manager import add_files_to_package, add_dependencies_to_pyproject, git_add_commit, init_agent_package, publish_ipfs_package, render_agent_code, write_code_to_package
 from naptha_sdk.scrape import scrape_init, scrape_func
 from naptha_sdk.user import get_public_key
 from naptha_sdk.utils import get_logger
@@ -102,7 +102,7 @@ def agent(name, worker_node_url):
         agent_code = render_agent_code(name, agent_code, local_modules, selective_import_modules, standard_import_modules, variable_modules)
         init_agent_package(name)
         write_code_to_package(name, agent_code)
-        add_wildcard_dependencies_to_pyproject(name, selective_import_modules + standard_import_modules)
+        add_dependencies_to_pyproject(name, selective_import_modules + standard_import_modules)
         add_files_to_package(name, os.getenv("HUB_USER"))
 
         asyncio.run(Naptha().create_agent(name))

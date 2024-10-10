@@ -33,42 +33,7 @@ def is_std_lib(module_name):
     except ImportError:
         return False
 
-def add_versioned_dependencies_to_pyproject(package_name, packages):
-    # Uses poetry add to add dependencies with more specific versioning
-    start_time = time.time()
-
-    with open(f"{AGENT_DIR}/{package_name}/pyproject.toml", 'r', encoding='utf-8') as file:
-        data = tomlkit.parse(file.read())
-
-    dependencies = data['tool']['poetry']['dependencies']
-    dependencies["python"] = ">=3.10,<3.13"
-    dependencies["naptha-sdk"] = {
-        "git": "https://github.com/NapthaAI/naptha-sdk.git"
-    }
-
-    with open(f"{AGENT_DIR}/{package_name}/pyproject.toml", 'w', encoding='utf-8') as file:
-        file.write(tomlkit.dumps(data))
-
-    packages_to_add = {}
-    for package in packages:
-        curr_package = package['module'].split('.')[0]
-        if curr_package not in packages_to_add and not is_std_lib(curr_package):
-            # Check the PACKAGE_VERSIONS dictionary for the version
-            packages_to_add[curr_package] = PACKAGE_VERSIONS.get(curr_package, "")
-
-    original_dir = os.getcwd()
-    os.chdir(f"{AGENT_DIR}/{package_name}")
-
-    for package, version in packages_to_add.items():
-        subprocess.run(["poetry", "add", f"{package}{version}"])
-    subprocess.run(["poetry", "add", "python-dotenv"])
-
-    os.chdir(original_dir)
-
-    end_time = time.time()
-    logger.info(f"Time taken to add dependencies: {end_time - start_time:.2f} seconds")
-
-def add_wildcard_dependencies_to_pyproject(package_name, packages):
+def add_dependencies_to_pyproject(package_name, packages):
     # Adds dependencies with wildcard versioning
     with open(f"{AGENT_DIR}/{package_name}/pyproject.toml", 'r', encoding='utf-8') as file:
         data = tomlkit.parse(file.read())
@@ -84,10 +49,7 @@ def add_wildcard_dependencies_to_pyproject(package_name, packages):
     for package in packages:
         curr_package = package['module'].split('.')[0]
         if curr_package not in packages_to_add and not is_std_lib(curr_package):
-            packages_to_add.append(curr_package)
-
-    for package in packages_to_add:
-        dependencies[package] = "*"
+            dependencies[curr_package] = PACKAGE_VERSIONS.get(curr_package, "*")
     dependencies["python-dotenv"] = "*"
 
     # Serialize the TOML data and write it back to the file
