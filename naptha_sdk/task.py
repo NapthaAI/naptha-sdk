@@ -35,8 +35,12 @@ class Task:
     def node_url_to_node(self, node_url, node_cls):
         if 'ws://' in node_url:
             return node_cls(node_url, 'ws')
-        else:
+        elif 'http://' in node_url:
             return node_cls(node_url, 'http')
+        elif '://' not in node_url:
+            return node_cls(node_url, 'grpc')
+        else:
+            raise ValueError(f"Invalid node URL: {node_url}")
 
     
 async def run_task(task, parameters, flow_run, task_engine_cls) -> None:
