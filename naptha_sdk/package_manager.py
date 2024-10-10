@@ -14,7 +14,7 @@ import zipfile
 logger = get_logger(__name__)
 
 IPFS_GATEWAY_URL="/dns/provider.akash.pro/tcp/31832/http"
-AGENT_DIR = "naptha_agents"
+AGENT_DIR = "agent_pkgs"
 # Certain packages cause issues with dependencies and can be slow to resolve, better to specify ranges
 PACKAGE_VERSIONS = {
     "crewai": "^0.41.1",
@@ -33,7 +33,8 @@ def is_std_lib(module_name):
     except ImportError:
         return False
 
-def add_dependencies_to_pyproject(package_name, packages):
+def add_versioned_dependencies_to_pyproject(package_name, packages):
+    # Uses poetry add to add dependencies with more specific versioning
     start_time = time.time()
 
     with open(f"{AGENT_DIR}/{package_name}/pyproject.toml", 'r', encoding='utf-8') as file:
@@ -67,6 +68,31 @@ def add_dependencies_to_pyproject(package_name, packages):
     end_time = time.time()
     logger.info(f"Time taken to add dependencies: {end_time - start_time:.2f} seconds")
 
+def add_wildcard_dependencies_to_pyproject(package_name, packages):
+    # Adds dependencies with wildcard versioning
+    with open(f"{AGENT_DIR}/{package_name}/pyproject.toml", 'r', encoding='utf-8') as file:
+        data = tomlkit.parse(file.read())
+
+    dependencies = data['tool']['poetry']['dependencies']
+    dependencies["python"] = ">=3.10,<3.13"
+    dependencies["naptha-sdk"] = {
+        "git": "https://github.com/NapthaAI/naptha-sdk.git",
+        "branch": "feat/cli-improvements"
+    }
+
+    packages_to_add = []
+    for package in packages:
+        curr_package = package['module'].split('.')[0]
+        if curr_package not in packages_to_add and not is_std_lib(curr_package):
+            packages_to_add.append(curr_package)
+
+    for package in packages_to_add:
+        dependencies[package] = "*"
+    dependencies["python-dotenv"] = "*"
+
+    # Serialize the TOML data and write it back to the file
+    with open(f"{AGENT_DIR}/{package_name}/pyproject.toml", 'w', encoding='utf-8') as file:
+        file.write(tomlkit.dumps(data))
 
 def render_agent_code(agent_name, agent_code, local_modules, selective_import_modules, standard_import_modules, variable_modules):
     # Add the imports for installed modules (e.g. crewai)
@@ -191,13 +217,16 @@ def git_add_commit(agent_name):
     subprocess.run(["git", "-C", f"{AGENT_DIR}/{agent_name}", "commit", "-m", "Initial commit"])
     subprocess.run(["git", "-C", f"{AGENT_DIR}/{agent_name}", "tag", "-f", "v0.1"])
 
-def add_files_to_package(agent_name, code, user_id):
+def write_code_to_package(agent_name, code):
     package_path = f'{AGENT_DIR}/{agent_name}'
     code_path = os.path.join(package_path, agent_name, 'run.py')
 
     os.makedirs(os.path.dirname(code_path), exist_ok=True)
     with open(code_path, 'w') as file:
         file.write(code)
+
+def add_files_to_package(agent_name, user_id):
+    package_path = f'{AGENT_DIR}/{agent_name}'
 
     # Generate schema and component yaml
     generate_schema(agent_name)
@@ -207,8 +236,6 @@ def add_files_to_package(agent_name, code, user_id):
     env_example_path = os.path.join(package_path, '.env.example')
     with open(env_example_path, 'w') as env_file:
         env_file.write('OPENAI_API_KEY=\n')
-
-    return package_path
 
 def zip_dir(directory_path: str) -> None:
     """

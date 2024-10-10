@@ -4,7 +4,7 @@ import inspect
 from naptha_sdk.client.hub import Hub
 from naptha_sdk.client.node import Node
 from naptha_sdk.client.services import Services
-from naptha_sdk.package_manager import add_files_to_package, add_dependencies_to_pyproject, git_add_commit, init_agent_package, publish_ipfs_package, render_agent_code
+from naptha_sdk.package_manager import add_files_to_package, add_wildcard_dependencies_to_pyproject, add_versioned_dependencies_to_pyproject, git_add_commit, init_agent_package, publish_ipfs_package, render_agent_code, write_code_to_package
 from naptha_sdk.scrape import scrape_init, scrape_func
 from naptha_sdk.user import get_public_key
 from naptha_sdk.utils import get_logger
@@ -51,7 +51,7 @@ class Naptha:
             init_agent_package(agent.name)
             agent_code, local_modules, selective_import_modules, standard_import_modules, variable_modules = scrape_func(agent.fn, self.variables)
             agent_code = render_agent_code(agent.name, agent_code, local_modules, selective_import_modules, standard_import_modules, variable_modules)
-            add_dependencies_to_pyproject(agent.name, selective_import_modules + standard_import_modules)
+            add_versioned_dependencies_to_pyproject(agent.name, selective_import_modules + standard_import_modules)
             add_files_to_package(agent.name, agent_code, self.hub_username)
         end_time = time.time()
         total_time = end_time - start_time
@@ -121,10 +121,10 @@ def agent(name, worker_node_url):
         variables = scrape_init(instantiation_file)
         agent_code, local_modules, selective_import_modules, standard_import_modules, variable_modules = scrape_func(func, variables)
         agent_code = render_agent_code(name, agent_code, local_modules, selective_import_modules, standard_import_modules, variable_modules)
- 
-        dependencies = selective_import_modules + standard_import_modules
-        print("DEPENDENCIES", dependencies)
-        print("AGENT CODE", agent_code)
+        init_agent_package(name)
+        write_code_to_package(name, agent_code)
+        add_wildcard_dependencies_to_pyproject(name, selective_import_modules + standard_import_modules)
+        add_files_to_package(name, os.getenv("HUB_USER"))
 
         asyncio.run(Naptha().create_agent(name))
 
