@@ -5,13 +5,13 @@ from naptha_sdk.config import AGENT_DIR, HUB_URL, NODE_URL
 from naptha_sdk.client.hub import Hub
 from naptha_sdk.client.node import Node
 from naptha_sdk.client.services import Services
-from naptha_sdk.package_manager import add_files_to_package, add_wildcard_dependencies_to_pyproject, add_versioned_dependencies_to_pyproject, git_add_commit, init_agent_package, publish_ipfs_package, render_agent_code, write_code_to_package
+from naptha_sdk.package_manager import add_files_to_package, add_wildcard_dependencies_to_pyproject, git_add_commit, init_agent_package, publish_ipfs_package, render_agent_code, write_code_to_package
 from naptha_sdk.scrape import scrape_init, scrape_func
 from naptha_sdk.user import get_public_key
 from naptha_sdk.utils import get_logger
 import os
+from pathlib import Path
 import time
-from typing import Dict, List, Tuple
 
 logger = get_logger(__name__)
 
@@ -34,7 +34,6 @@ class Naptha:
         )
         self.services = Services()
         self.hub = Hub(self.hub_url, self.public_key)  
-        self.agents = []
 
     async def __aenter__(self):
         """Async enter method for context manager"""
@@ -44,19 +43,6 @@ class Naptha:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async exit method for context manager"""
         await self.hub.close()
-
-    async def build_agents(self):
-        logger.info(f"Building Agent Packages...")
-        start_time = time.time()
-        for agent in self.agents:
-            init_agent_package(agent.name)
-            agent_code, local_modules, selective_import_modules, standard_import_modules, variable_modules = scrape_func(agent.fn, self.variables)
-            agent_code = render_agent_code(agent.name, agent_code, local_modules, selective_import_modules, standard_import_modules, variable_modules)
-            add_versioned_dependencies_to_pyproject(agent.name, selective_import_modules + standard_import_modules)
-            add_files_to_package(agent.name, agent_code, self.hub_username)
-        end_time = time.time()
-        total_time = end_time - start_time
-        logger.info(f"Total time taken to build {len(self.agents)} agents: {total_time:.2f} seconds")
 
     async def create_agent(self, name):
         async with self.hub:
@@ -80,26 +66,18 @@ class Naptha:
     async def publish_agents(self):
         logger.info(f"Publishing Agent Packages...")
         start_time = time.time()
-        for agent in self.agents:
-            git_add_commit(agent.name)
-            success, response = await publish_ipfs_package(agent.name)
 
-            agent_config = {
-                "id": f"agent:{agent.name}",
-                "name": agent.name,
-                "description": agent.name,
-                "author": self.hub.user_id,
-                "url": f"ipfs://{response['ipfs_hash']}",
-                "type": "package",
-                "version": "0.1"
-            }
-            logger.info(f"Registering Agent {agent_config}")
-            agent = await self.hub.create_or_update_agent(agent_config)
+        path = Path.cwd() / AGENT_DIR
+        agents = [item.name for item in path.iterdir() if item.is_dir()]
+
+        for agent in agents:
+            git_add_commit(agent)
+            success, response = await publish_ipfs_package(agent)
             logger.info(f"Published Agent: {agent}")
         
         end_time = time.time()
         total_time = end_time - start_time
-        logger.info(f"Total time taken to publish {len(self.agents)} agents: {total_time:.2f} seconds")
+        logger.info(f"Total time taken to publish {len(agents)} agents: {total_time:.2f} seconds")
 
     def build(self):
         asyncio.run(self.build_agents())
