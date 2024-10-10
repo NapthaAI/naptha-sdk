@@ -13,7 +13,8 @@ import zipfile
 
 logger = get_logger(__name__)
 
-from naptha_sdk.config import AGENT_DIR, IPFS_GATEWAY_URL
+IPFS_GATEWAY_URL="/dns/provider.akash.pro/tcp/31832/http"
+AGENT_DIR = "agent_pkgs"
 
 # Certain packages cause issues with dependencies and can be slow to resolve, better to specify ranges
 PACKAGE_VERSIONS = {

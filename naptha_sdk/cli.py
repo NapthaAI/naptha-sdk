@@ -3,7 +3,6 @@ import asyncio
 from dotenv import load_dotenv
 from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.client.hub import user_setup_flow
-from naptha_sdk.config import HUB_URL
 from naptha_sdk.user import get_public_key
 from naptha_sdk.schemas import AgentRun
 import os
@@ -154,6 +153,7 @@ async def main():
     public_key = get_public_key(os.getenv("PRIVATE_KEY")) if os.getenv("PRIVATE_KEY") else None
     hub_username = os.getenv("HUB_USER")
     hub_password = os.getenv("HUB_PASS")
+    hub_url = os.getenv("HUB_URL")
 
     naptha = Naptha()
 
@@ -198,7 +198,7 @@ async def main():
     async with naptha as naptha:
         args = parser.parse_args()
         if args.command == "signup":
-            _, user_id = await user_setup_flow(HUB_URL, public_key)
+            _, user_id = await user_setup_flow(hub_url, public_key)
         elif args.command in ["nodes", "agents", "run", "read_storage", "write_storage", "publish"]:
             if not naptha.hub.is_authenticated:
                 if not hub_username or not hub_password:
