@@ -251,3 +251,28 @@ async def publish_ipfs_package(agent_name):
     logger.info(f"Response: {response}")
     return success, response
 
+# Function to sort modules based on dependencies
+def sort_modules(modules, dependencies):
+    sorted_modules = []
+    unsorted_modules = modules.copy()
+
+    while unsorted_modules:
+        for mod in unsorted_modules:
+            mod_deps = dependencies[mod['name']]
+            if all(dep in [m['name'] for m in sorted_modules] for dep in mod_deps):
+                sorted_modules.append(mod)
+                unsorted_modules.remove(mod)
+                break
+
+    return sorted_modules
+
+# Define a function to extract dependencies from the source code
+def extract_dependencies(module, modules):
+    dependencies = []
+    for mod in modules:
+        if mod['name'] != module['name']:
+            # Use a negative lookahead to exclude matches within quotes
+            pattern = r'\b' + re.escape(mod['name']) + r'\b(?=([^"\']*["\'][^"\']*["\'])*[^"\']*$)'
+            if re.search(pattern, module['source']):
+                dependencies.append(mod['name'])
+    return dependencies

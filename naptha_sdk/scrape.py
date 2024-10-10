@@ -1,8 +1,9 @@
 import ast
 import inspect
+from naptha_sdk.package_manager import sort_modules, extract_dependencies
 import os
 from pathlib import Path
-from pydantic import BaseModel
+import re
 import sys
 import yaml
 
@@ -156,6 +157,8 @@ def scrape_func(func, variables):
                 modules.append(class_info)
 
     local_modules = [module for module in modules if module['is_local']]
+    module_dependencies = {mod['name']: extract_dependencies(mod, local_modules) for mod in local_modules}
+    local_modules = sort_modules(local_modules, module_dependencies) # Sort local modules based on dependencies
     selective_import_modules = [module for module in modules if not module['is_local'] and module['import_type'] == 'selective']
     standard_import_modules = [module for module in modules if module['import_type'] == 'standard']
     variable_modules = [module for module in modules if module['import_type'] == 'variable']
