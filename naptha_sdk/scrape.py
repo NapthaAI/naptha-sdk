@@ -1,8 +1,9 @@
 import ast
 import inspect
+from naptha_sdk.package_manager import sort_modules, extract_dependencies
 import os
 from pathlib import Path
-from pydantic import BaseModel
+import re
 import sys
 import yaml
 
@@ -23,34 +24,22 @@ def is_local_module(module):
     
     return False  # It's outside the project directory
 
-def get_class_dependencies(obj, module):
-    modules = []
-    for name, module_obj in module.__dict__.items():
-        if name.startswith("__"):
-            continue
-        elif inspect.ismodule(module_obj):
-            obj_info = {
-                'name': name,
-                'module': module_obj.__name__,
-                'import_type': "standard",
-                'is_local': is_local_module(module_obj)
-            }
-            modules.append(obj_info)
-        else:
-            is_local = is_local_module(sys.modules[module_obj.__module__])
-            obj_info = {
-                'name': name,
-                'module': module_obj.__module__,
-                'import_type': "selective",
-                'is_local': is_local
-            }
-            if is_local:
-                obj_info['source'] = inspect.getsource(module_obj) 
-            modules.append(obj_info)
-
-    return modules
-
 def scrape_init(file_path):
+    def extract_value(value):
+        if isinstance(value, ast.Constant):
+            return value.value
+        elif isinstance(value, ast.Name):
+            return value.id
+        elif isinstance(value, ast.Attribute):
+            return f"{extract_value(value.value)}.{value.attr}"
+        elif isinstance(value, ast.Call):
+            if isinstance(value.func, ast.Attribute):
+                return f"{extract_value(value.func.value)}.{value.func.attr}()"
+            elif isinstance(value.func, ast.Name):
+                return f"{value.func.id}()"
+        else:
+            return ast.unparse(value)
+
     with open(file_path, 'r') as file:
         tree = ast.parse(file.read(), filename=file_path)
 
@@ -60,34 +49,57 @@ def scrape_init(file_path):
         if isinstance(node, ast.Assign):
             for target in node.targets:
                 if isinstance(target, ast.Name):
-                    if isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Name):                        
-                        data = {"type": "call", "target": target.id, "cls_name":  node.value.func.id}
-
+                    if isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Name):
+                        data = {"type": "call", "target": target.id, "cls_name": node.value.func.id}
                         if node.value.keywords:
                             data['keywords'] = [kw.arg for kw in node.value.keywords]
-                            values = []
-                            for kw in node.value.keywords:
-                                if isinstance(kw.value, ast.Constant):
-                                    values.append(kw.value.value)
-                                elif isinstance(kw.value, ast.Name):
-                                    values.append(kw.value.id)
-                                elif isinstance(kw.value, ast.Attribute):
-                                    values.append(f"{kw.value.value.id}.{kw.value.attr}")
-                                elif isinstance(kw.value, ast.Call):
-                                    values.append(f"{kw.value.func.id}()")
-                                else:
-                                    values.append(ast.unparse(kw.value))
-                            data['values'] = values
+                            data['values'] = [extract_value(kw.value) for kw in node.value.keywords]
                     elif isinstance(node.value, ast.Constant):
                         data = {"type": "constant", "target": target.id, "value": node.value.value}
                     variables.append(data)
 
     return variables
 
+def get_obj_dependencies(context_globals, fn_code, processed=None):
+    if processed is None:
+        processed = set()
+
+    modules = []
+    for name, obj in context_globals.items():
+        if name in fn_code and obj not in processed:
+            if name.startswith("__"):
+                continue
+
+            processed.add(obj)  # Add the current object to the set of processed objects
+
+            if inspect.ismodule(obj):
+                obj_info = {
+                    'name': name,
+                    'module': obj.__name__,
+                    'import_type': "standard",
+                    'is_local': is_local_module(obj)
+                }
+                modules.append(obj_info)
+            else:
+                module = sys.modules.get(obj.__module__, None)
+                if module and module not in processed:
+                    is_local = is_local_module(module)
+                    obj_info = {
+                        'name': name,
+                        'module': obj.__module__,
+                        'import_type': "selective",
+                        'is_local': is_local
+                    }
+                    if is_local:
+                        obj_info['source'] = inspect.getsource(obj)
+                        modules.extend(get_obj_dependencies(module.__dict__, obj_info['source'], processed))
+                    modules.append(obj_info)
+
+    return modules
+
 def scrape_func(func, variables):
     fn_code = inspect.getsource(func)
-
-    # Remove lines that start with '@' (decorators)
+    fn_name = func.__name__
     fn_code = "\n".join(line for line in fn_code.splitlines() if not line.strip().startswith("@"))
 
     used_variables = []
@@ -95,41 +107,13 @@ def scrape_func(func, variables):
         if variable['target'] in fn_code:
             used_variables.append(variable)
 
-    func_globals = func.__globals__
+    if inspect.isfunction(func):
+        context_globals = func.__globals__
+    elif inspect.isclass(func):
+        module = sys.modules[func.__module__]
+        context_globals = module.__dict__
 
-    # Find classes used in the function
-    modules = []
-    seen = set()  # To keep track of unique modules
-    for name, obj in func_globals.items():
-        if inspect.isclass(obj) and name in fn_code:
-
-            module = sys.modules[obj.__module__]
-            is_local = is_local_module(module)
-
-            class_info = {
-                'name': name,
-                'module': obj.__module__,
-                'import_type': "selective",
-                'is_local': is_local
-            }
-
-            # Check if this module has already been added
-            module_key = (class_info['name'], class_info['module'])
-            if module_key not in seen:
-                seen.add(module_key)
-
-                if is_local:
-                    class_info['source'] = inspect.getsource(obj)
-                    
-                    # Also get dependencies of the local module
-                    add_modules = get_class_dependencies(obj, module)
-                    for add_module in add_modules:
-                        add_key = (add_module['name'], add_module['module'])
-                        if add_key not in seen:
-                            seen.add(add_key)
-                            modules.append(add_module)
-
-                modules.append(class_info)
+    modules = get_obj_dependencies(context_globals, fn_code)
 
     # Deal with variables from the main file
     for used_variable in used_variables:
@@ -154,7 +138,7 @@ def scrape_func(func, variables):
             if any(module['name'] == used_variable['cls_name'] for module in modules):
                 continue
             # If the variable's class is not in modules, add it
-            var_class = func_globals.get(used_variable['cls_name'])
+            var_class = context_globals.get(used_variable['cls_name'])
             if var_class and inspect.isclass(var_class):
                 module = sys.modules[var_class.__module__]
                 class_info = {
@@ -174,8 +158,10 @@ def scrape_func(func, variables):
                 modules.append(class_info)
 
     local_modules = [module for module in modules if module['is_local']]
+    module_dependencies = {mod['name']: extract_dependencies(mod, local_modules) for mod in local_modules}
+    local_modules = sort_modules(local_modules, module_dependencies) # Sort local modules based on dependencies
     selective_import_modules = [module for module in modules if not module['is_local'] and module['import_type'] == 'selective']
     standard_import_modules = [module for module in modules if module['import_type'] == 'standard']
     variable_modules = [module for module in modules if module['import_type'] == 'variable']
 
-    return fn_code, local_modules, selective_import_modules, standard_import_modules, variable_modules
+    return fn_code, fn_name, local_modules, selective_import_modules, standard_import_modules, variable_modules

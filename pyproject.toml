@@ -24,4 +24,4 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-naptha = "cli:cli"
+naptha = "naptha_sdk.cli:cli"

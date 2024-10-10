@@ -149,12 +149,11 @@ async def write_storage(naptha, storage_input, ipfs=False, publish_to_ipns=False
     except Exception as err:
         print(f"Error: {err}")
 
-
 async def main():
-    hub_url = os.getenv("HUB_URL")
     public_key = get_public_key(os.getenv("PRIVATE_KEY")) if os.getenv("PRIVATE_KEY") else None
     hub_username = os.getenv("HUB_USER")
     hub_password = os.getenv("HUB_PASS")
+    hub_url = os.getenv("HUB_URL")
 
     naptha = Naptha()
 
@@ -176,6 +175,7 @@ async def main():
     run_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
     run_parser.add_argument("-n", "--worker_nodes", help="Worker nodes to take part in agent runs.")
     run_parser.add_argument("-f", "--file", help="YAML file with agent run parameters")
+
     # Read storage commands
     read_storage_parser = subparsers.add_parser("read_storage", help="Read from storage.")
     read_storage_parser.add_argument("-id", "--agent_run_id", help="Agent run ID to read from")
@@ -192,11 +192,14 @@ async def main():
     # Signup command
     signup_parser = subparsers.add_parser("signup", help="Sign up a new user.")
 
+    # Publish command
+    publish_parser = subparsers.add_parser("publish", help="Publish agents.")
+
     async with naptha as naptha:
         args = parser.parse_args()
         if args.command == "signup":
             _, user_id = await user_setup_flow(hub_url, public_key)
-        elif args.command in ["nodes", "agents", "run", "read_storage", "write_storage"]:
+        elif args.command in ["nodes", "agents", "run", "read_storage", "write_storage", "publish"]:
             if not naptha.hub.is_authenticated:
                 if not hub_username or not hub_password:
                     print("Please set HUB_USER and HUB_PASS environment variables or sign up first (run naptha signup).")
@@ -258,6 +261,8 @@ async def main():
                 await read_storage(naptha, args.agent_run_id, args.output_dir, args.ipfs)
             elif args.command == "write_storage":
                 await write_storage(naptha, args.storage_input, args.ipfs, args.publish_to_ipns, args.update_ipns_name)
+            elif args.command == "publish":
+                await naptha.publish_agents()
         else:
             parser.print_help()
 

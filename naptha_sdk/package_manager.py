@@ -14,7 +14,8 @@ import zipfile
 logger = get_logger(__name__)
 
 IPFS_GATEWAY_URL="/dns/provider.akash.pro/tcp/31832/http"
-AGENT_DIR = "naptha_agents"
+AGENT_DIR = "agent_pkgs"
+
 # Certain packages cause issues with dependencies and can be slow to resolve, better to specify ranges
 PACKAGE_VERSIONS = {
     "crewai": "^0.41.1",
@@ -34,55 +35,43 @@ def is_std_lib(module_name):
         return False
 
 def add_dependencies_to_pyproject(package_name, packages):
-    start_time = time.time()
-
+    # Adds dependencies with wildcard versioning
     with open(f"{AGENT_DIR}/{package_name}/pyproject.toml", 'r', encoding='utf-8') as file:
         data = tomlkit.parse(file.read())
 
     dependencies = data['tool']['poetry']['dependencies']
     dependencies["python"] = ">=3.10,<3.13"
     dependencies["naptha-sdk"] = {
-        "git": "https://github.com/NapthaAI/naptha-sdk.git"
+        "git": "https://github.com/NapthaAI/naptha-sdk.git",
+        "branch": "feat/cli-improvements"
     }
 
-    with open(f"{AGENT_DIR}/{package_name}/pyproject.toml", 'w', encoding='utf-8') as file:
-        file.write(tomlkit.dumps(data))
-
-    packages_to_add = {}
+    packages_to_add = []
     for package in packages:
         curr_package = package['module'].split('.')[0]
         if curr_package not in packages_to_add and not is_std_lib(curr_package):
-            # Check the PACKAGE_VERSIONS dictionary for the version
-            packages_to_add[curr_package] = PACKAGE_VERSIONS.get(curr_package, "")
+            dependencies[curr_package] = PACKAGE_VERSIONS.get(curr_package, "*")
+    dependencies["python-dotenv"] = "*"
 
-    original_dir = os.getcwd()
-    os.chdir(f"{AGENT_DIR}/{package_name}")
+    # Serialize the TOML data and write it back to the file
+    with open(f"{AGENT_DIR}/{package_name}/pyproject.toml", 'w', encoding='utf-8') as file:
+        file.write(tomlkit.dumps(data))
 
-    for package, version in packages_to_add.items():
-        subprocess.run(["poetry", "add", f"{package}{version}"])
-    subprocess.run(["poetry", "add", "python-dotenv"])
-
-    os.chdir(original_dir)
-
-    end_time = time.time()
-    logger.info(f"Time taken to add dependencies: {end_time - start_time:.2f} seconds")
-
-
-def render_agent_code(agent_name, agent_code, local_modules, selective_import_modules, standard_import_modules, variable_modules):
+def render_agent_code(agent_name, agent_code, obj_name, local_modules, selective_import_modules, standard_import_modules, variable_modules):
     # Add the imports for installed modules (e.g. crewai)
     content = ''
 
     for module in standard_import_modules:
-        line = f'import {module['name']} \n'
+        line = f'import {module["name"]} \n'
         content += line
 
     for module in selective_import_modules:
-        line = f'from {module['module']} import {module['name']} \n'
+        line = f'from {module["module"]} import {module["name"]} \n'
         content += line
 
     for module in variable_modules:
-        if module['module']:
-            content += f"from {module['module']} import {module['name']} \n"
+        if module["module"]:
+            content += f'from {module["module"]} import {module["name"]} \n'
 
     # Add the naptha imports and logger setup
     naptha_imports = f'''from crewai import Task
@@ -112,7 +101,7 @@ load_dotenv()
 
     # Define the new function signature
     content += f'''def run(inputs: InputSchema, *args, **kwargs):
-    {agent_name}_0 = {agent_name}()
+    {agent_name}_0 = {obj_name}()
 
     task = Task(
         description=inputs.description,
@@ -191,13 +180,16 @@ def git_add_commit(agent_name):
     subprocess.run(["git", "-C", f"{AGENT_DIR}/{agent_name}", "commit", "-m", "Initial commit"])
     subprocess.run(["git", "-C", f"{AGENT_DIR}/{agent_name}", "tag", "-f", "v0.1"])
 
-def add_files_to_package(agent_name, code, user_id):
+def write_code_to_package(agent_name, code):
     package_path = f'{AGENT_DIR}/{agent_name}'
     code_path = os.path.join(package_path, agent_name, 'run.py')
 
     os.makedirs(os.path.dirname(code_path), exist_ok=True)
     with open(code_path, 'w') as file:
         file.write(code)
+
+def add_files_to_package(agent_name, user_id):
+    package_path = f'{AGENT_DIR}/{agent_name}'
 
     # Generate schema and component yaml
     generate_schema(agent_name)
@@ -207,8 +199,6 @@ def add_files_to_package(agent_name, code, user_id):
     env_example_path = os.path.join(package_path, '.env.example')
     with open(env_example_path, 'w') as env_file:
         env_file.write('OPENAI_API_KEY=\n')
-
-    return package_path
 
 def zip_dir(directory_path: str) -> None:
     """
@@ -228,7 +218,7 @@ async def write_to_ipfs(file_path):
     try:
         logger.info(f"Writing file to IPFS: {file_path}")
         if not IPFS_GATEWAY_URL:
-            return (500, {"message": "IPFS_GATEWAY_URL not found in environment"})
+            return (500, {"message": "IPFS_GATEWAY_URL not found"})
         
         client = ipfshttpclient.connect(IPFS_GATEWAY_URL)
         with tempfile.NamedTemporaryFile(mode="wb", delete=False) as tmpfile:
@@ -262,3 +252,28 @@ async def publish_ipfs_package(agent_name):
     logger.info(f"Response: {response}")
     return success, response
 
+# Function to sort modules based on dependencies
+def sort_modules(modules, dependencies):
+    sorted_modules = []
+    unsorted_modules = modules.copy()
+
+    while unsorted_modules:
+        for mod in unsorted_modules:
+            mod_deps = dependencies[mod['name']]
+            if all(dep in [m['name'] for m in sorted_modules] for dep in mod_deps):
+                sorted_modules.append(mod)
+                unsorted_modules.remove(mod)
+                break
+
+    return sorted_modules
+
+# Define a function to extract dependencies from the source code
+def extract_dependencies(module, modules):
+    dependencies = []
+    for mod in modules:
+        if mod['name'] != module['name']:
+            # Use a negative lookahead to exclude matches within quotes
+            pattern = r'\b' + re.escape(mod['name']) + r'\b(?=([^"\']*["\'][^"\']*["\'])*[^"\']*$)'
+            if re.search(pattern, module['source']):
+                dependencies.append(mod['name'])
+    return dependencies
