@@ -70,11 +70,27 @@ class Naptha:
         path = Path.cwd() / AGENT_DIR
         agents = [item.name for item in path.iterdir() if item.is_dir()]
 
+        agent = agents[0]
         for agent in agents:
             git_add_commit(agent)
-            success, response = await publish_ipfs_package(agent)
+            _, response = await publish_ipfs_package(agent)
             logger.info(f"Published Agent: {agent}")
         
+            # Register agent with hub
+            async with self.hub:
+                _, _, user_id = await self.hub.signin(self.hub_username, os.getenv("HUB_PASS"))
+                agent_config = {
+                    "id": f"agent:{agent}",
+                    "name": agent,
+                    "description": agent,
+                    "author": self.hub.user_id,
+                    "url": f'ipfs://{response["ipfs_hash"]}',
+                    "type": "package",
+                    "version": "0.1"
+                }
+                logger.info(f"Registering Agent {agent_config}")
+                agent = await self.hub.create_or_update_agent(agent_config)
+
         end_time = time.time()
         total_time = end_time - start_time
         logger.info(f"Total time taken to publish {len(agents)} agents: {total_time:.2f} seconds")

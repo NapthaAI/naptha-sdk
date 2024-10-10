@@ -138,7 +138,6 @@ class Hub:
         return await self.surrealdb.update("agent", agent_config)
 
     async def create_or_update_agent(self, agent_config: Dict) -> Tuple[bool, Optional[Dict]]:
-        print("Agent id: ", agent_config.get('id'))
         list_agents = await self.list_agents(agent_config.get('id'))
         if not list_agents:
             return await self.surrealdb.create("agent", agent_config)
