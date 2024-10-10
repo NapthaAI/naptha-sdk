@@ -13,8 +13,8 @@ import zipfile
 
 logger = get_logger(__name__)
 
-IPFS_GATEWAY_URL="/dns/provider.akash.pro/tcp/31832/http"
-AGENT_DIR = "agent_pkgs"
+from naptha_sdk.config import AGENT_DIR, IPFS_GATEWAY_URL
+
 # Certain packages cause issues with dependencies and can be slow to resolve, better to specify ranges
 PACKAGE_VERSIONS = {
     "crewai": "^0.41.1",
@@ -255,7 +255,7 @@ async def write_to_ipfs(file_path):
     try:
         logger.info(f"Writing file to IPFS: {file_path}")
         if not IPFS_GATEWAY_URL:
-            return (500, {"message": "IPFS_GATEWAY_URL not found in environment"})
+            return (500, {"message": "IPFS_GATEWAY_URL not found"})
         
         client = ipfshttpclient.connect(IPFS_GATEWAY_URL)
         with tempfile.NamedTemporaryFile(mode="wb", delete=False) as tmpfile:
