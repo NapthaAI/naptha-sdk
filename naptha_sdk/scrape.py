@@ -99,6 +99,7 @@ def get_obj_dependencies(context_globals, fn_code, processed=None):
 
 def scrape_func(func, variables):
     fn_code = inspect.getsource(func)
+    fn_name = func.__name__
     fn_code = "\n".join(line for line in fn_code.splitlines() if not line.strip().startswith("@"))
 
     used_variables = []
@@ -163,4 +164,4 @@ def scrape_func(func, variables):
     standard_import_modules = [module for module in modules if module['import_type'] == 'standard']
     variable_modules = [module for module in modules if module['import_type'] == 'variable']
 
-    return fn_code, local_modules, selective_import_modules, standard_import_modules, variable_modules
+    return fn_code, fn_name, local_modules, selective_import_modules, standard_import_modules, variable_modules
