@@ -162,6 +162,7 @@ def scrape_func(func, variables):
                     class_info['import_needed'] = False
                 modules.append(class_info)
 
+    modules = [module for module in modules if module['name'] != 'logger']
     local_modules = [module for module in modules if module['is_local']]
     module_dependencies = {mod['name']: extract_dependencies(mod, local_modules) for mod in local_modules}
     local_modules = sort_modules(local_modules, module_dependencies) # Sort local modules based on dependencies
