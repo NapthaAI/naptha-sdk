@@ -107,7 +107,7 @@ class Naptha:
         asyncio.run(self.connect_publish())
 
 
-def agent(name, worker_node_url):
+def agent(name):
     def decorator(func):
         frame = inspect.currentframe()
         caller_frame = frame.f_back
@@ -120,7 +120,11 @@ def agent(name, worker_node_url):
         add_dependencies_to_pyproject(name, selective_import_modules + standard_import_modules)
         add_files_to_package(name, os.getenv("HUB_USER"))
 
-        asyncio.run(Naptha().create_agent(name))
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            asyncio.ensure_future(Naptha().create_agent(name))
+        else:
+            loop.run_until_complete(Naptha().create_agent(name))
 
         return func
     return decorator

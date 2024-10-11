@@ -3,8 +3,8 @@ import inspect
 from naptha_sdk.package_manager import sort_modules, extract_dependencies
 import os
 from pathlib import Path
-import re
 import sys
+from typing import TypeVar
 import yaml
 
 def is_local_module(module):
@@ -44,6 +44,7 @@ def scrape_init(file_path):
         tree = ast.parse(file.read(), filename=file_path)
 
     variables = []
+    unique_variables = {}
 
     for node in ast.walk(tree):
         if isinstance(node, ast.Assign):
@@ -54,9 +55,13 @@ def scrape_init(file_path):
                         if node.value.keywords:
                             data['keywords'] = [kw.arg for kw in node.value.keywords]
                             data['values'] = [extract_value(kw.value) for kw in node.value.keywords]
+                        unique_variables[data['target']] = data
                     elif isinstance(node.value, ast.Constant):
                         data = {"type": "constant", "target": target.id, "value": node.value.value}
-                    variables.append(data)
+                        unique_variables[data['target']] = data
+
+    # Convert the dictionary values back to a list
+    variables = list(unique_variables.values())
 
     return variables
 
@@ -91,8 +96,11 @@ def get_obj_dependencies(context_globals, fn_code, processed=None):
                         'is_local': is_local
                     }
                     if is_local:
-                        obj_info['source'] = inspect.getsource(obj)
-                        modules.extend(get_obj_dependencies(module.__dict__, obj_info['source'], processed))
+                        if isinstance(obj, TypeVar):
+                            obj_info['source'] = ""
+                        else:
+                            obj_info['source'] = inspect.getsource(obj)
+                            modules.extend(get_obj_dependencies(module.__dict__, obj_info['source'], processed))
                     modules.append(obj_info)
 
     return modules
@@ -134,9 +142,6 @@ def scrape_func(func, variables):
                 modules.append(class_info)
 
         elif used_variable['type'] == 'call':
-            # if the class is already in modules, skip it
-            if any(module['name'] == used_variable['cls_name'] for module in modules):
-                continue
             # If the variable's class is not in modules, add it
             var_class = context_globals.get(used_variable['cls_name'])
             if var_class and inspect.isclass(var_class):
@@ -155,8 +160,11 @@ def scrape_func(func, variables):
                         line += f"{kw}={value}, "
                 line += ")\n"
                 class_info['source'] = line
+                if any(module['name'] == used_variable['cls_name'] for module in modules):
+                    class_info['import_needed'] = False
                 modules.append(class_info)
 
+    modules = [module for module in modules if module['name'] != 'logger']
     local_modules = [module for module in modules if module['is_local']]
     module_dependencies = {mod['name']: extract_dependencies(mod, local_modules) for mod in local_modules}
     local_modules = sort_modules(local_modules, module_dependencies) # Sort local modules based on dependencies
