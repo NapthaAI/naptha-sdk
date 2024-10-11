@@ -73,8 +73,8 @@ def render_agent_code(agent_name, agent_code, obj_name, local_modules, selective
         if module["module"] and module["import_needed"]:
             content += f'from {module["module"]} import {module["name"]} \n'
 
-    if "crewai" in selective_import_modules:
-        content += "from crewai import Task"
+    if any('crewai' in module['module'] for module in selective_import_modules):
+        content += "from crewai import Task\n"
 
     # Add the naptha imports and logger setup
     naptha_imports = f'''from dotenv import load_dotenv
