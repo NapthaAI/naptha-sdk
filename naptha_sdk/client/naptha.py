@@ -107,7 +107,7 @@ class Naptha:
         asyncio.run(self.connect_publish())
 
 
-def agent(name, worker_node_url):
+def agent(name):
     def decorator(func):
         frame = inspect.currentframe()
         caller_frame = frame.f_back
