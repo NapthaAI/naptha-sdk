@@ -140,9 +140,6 @@ def scrape_func(func, variables):
                 modules.append(class_info)
 
         elif used_variable['type'] == 'call':
-            # if the class is already in modules, skip it
-            if any(module['name'] == used_variable['cls_name'] for module in modules):
-                continue
             # If the variable's class is not in modules, add it
             var_class = context_globals.get(used_variable['cls_name'])
             if var_class and inspect.isclass(var_class):
@@ -161,6 +158,8 @@ def scrape_func(func, variables):
                         line += f"{kw}={value}, "
                 line += ")\n"
                 class_info['source'] = line
+                if any(module['name'] == used_variable['cls_name'] for module in modules):
+                    class_info['import_needed'] = False
                 modules.append(class_info)
 
     local_modules = [module for module in modules if module['is_local']]

@@ -70,7 +70,7 @@ def render_agent_code(agent_name, agent_code, obj_name, local_modules, selective
         content += line
 
     for module in variable_modules:
-        if module["module"]:
+        if module["module"] and module["import_needed"]:
             content += f'from {module["module"]} import {module["name"]} \n'
 
     # Add the naptha imports and logger setup
@@ -86,11 +86,12 @@ load_dotenv()
 '''
     content += naptha_imports
 
-    for module in variable_modules:
-        content += module['source'] + "\n"
 
     # Add the source code for the local modules 
     for module in local_modules:
+        content += module['source'] + "\n"
+
+    for module in variable_modules:
         content += module['source'] + "\n"
 
     # Convert class method to function
