@@ -3,8 +3,8 @@ import inspect
 from naptha_sdk.package_manager import sort_modules, extract_dependencies
 import os
 from pathlib import Path
-import re
 import sys
+from typing import TypeVar
 import yaml
 
 def is_local_module(module):
@@ -55,11 +55,10 @@ def scrape_init(file_path):
                         if node.value.keywords:
                             data['keywords'] = [kw.arg for kw in node.value.keywords]
                             data['values'] = [extract_value(kw.value) for kw in node.value.keywords]
+                        unique_variables[data['target']] = data
                     elif isinstance(node.value, ast.Constant):
                         data = {"type": "constant", "target": target.id, "value": node.value.value}
-                    
-                    # Use the 'target' as the key to ensure uniqueness
-                    unique_variables[data['target']] = data
+                        unique_variables[data['target']] = data
 
     # Convert the dictionary values back to a list
     variables = list(unique_variables.values())
@@ -97,8 +96,11 @@ def get_obj_dependencies(context_globals, fn_code, processed=None):
                         'is_local': is_local
                     }
                     if is_local:
-                        obj_info['source'] = inspect.getsource(obj)
-                        modules.extend(get_obj_dependencies(module.__dict__, obj_info['source'], processed))
+                        if isinstance(obj, TypeVar):
+                            obj_info['source'] = ""
+                        else:
+                            obj_info['source'] = inspect.getsource(obj)
+                            modules.extend(get_obj_dependencies(module.__dict__, obj_info['source'], processed))
                     modules.append(obj_info)
 
     return modules
