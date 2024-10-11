@@ -43,7 +43,7 @@ def add_dependencies_to_pyproject(package_name, packages):
     dependencies["python"] = ">=3.10,<3.13"
     dependencies["naptha-sdk"] = {
         "git": "https://github.com/NapthaAI/naptha-sdk.git",
-        "branch": "feat/cli-improvements"
+        "branch": "feat/run-agent-tools"
     }
 
     packages_to_add = []
@@ -100,16 +100,14 @@ load_dotenv()
     content += textwrap.dedent(agent_code) + "\n\n"
 
     # Define the new function signature
-    content += f'''def run(inputs: InputSchema, *args, **kwargs):
+    content += f"""def run(inputs: InputSchema, *args, **kwargs):
     {agent_name}_0 = {obj_name}()
 
-    task = Task(
-        description=inputs.description,
-        expected_output=inputs.expected_output,
-        agent={agent_name}_0,
-    )
+    tool_input_class = globals().get(inputs.tool_input_type)
+    tool_input = tool_input_class(**inputs.tool_input_value)
+    method = getattr({agent_name}_0, inputs.tool_name, None)
 
-    return {agent_name}_0.execute_task(task)
+    return method(tool_input)
 
 if __name__ == "__main__":
     from naptha_sdk.utils import load_yaml
@@ -118,12 +116,12 @@ if __name__ == "__main__":
     cfg_path = "{agent_name}/component.yaml"
     cfg = load_yaml(cfg_path)
 
-    inputs = {{"description": "Do something", "expected_output": "Some output"}}
+    inputs = {{"tool_name": "execute_task", "tool_input_value": {{"description": "What is the market cap of AMZN?", "expected_output": "The market cap of AMZN"}}, "tool_input_type": "Task"}}
     inputs = InputSchema(**inputs)
 
     response = run(inputs)
     print(response)
-'''
+"""
     
     return content
 
@@ -168,8 +166,9 @@ def generate_schema(agent_name):
     schema_code = '''from pydantic import BaseModel
 
 class InputSchema(BaseModel):
-    description: str
-    expected_output: str
+    tool_name: str
+    tool_input_value: dict
+    tool_input_type: str
 '''
 
     with open(f'{AGENT_DIR}/{agent_name}/{agent_name}/schemas.py', 'w') as file:
