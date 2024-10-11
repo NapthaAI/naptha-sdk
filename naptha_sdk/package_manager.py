@@ -117,7 +117,8 @@ if __name__ == "__main__":
     cfg_path = "{agent_name}/component.yaml"
     cfg = load_yaml(cfg_path)
 
-    inputs = {{"tool_name": "execute_task", "tool_input_value": {{"description": "What is the market cap of AMZN?", "expected_output": "The market cap of AMZN"}}, "tool_input_type": "Task"}}
+    # You will likely need to change the inputs dict
+    inputs = {{"tool_name": "execute_task", "tool_input_type": "Task", "tool_input_value": {{"description": "What is the market cap of AMZN?", "expected_output": "The market cap of AMZN"}}}}
     inputs = InputSchema(**inputs)
 
     response = run(inputs)
@@ -168,8 +169,8 @@ def generate_schema(agent_name):
 
 class InputSchema(BaseModel):
     tool_name: str
-    tool_input_value: dict
     tool_input_type: str
+    tool_input_value: dict
 '''
 
     with open(f'{AGENT_DIR}/{agent_name}/{agent_name}/schemas.py', 'w') as file:
