@@ -44,6 +44,7 @@ def scrape_init(file_path):
         tree = ast.parse(file.read(), filename=file_path)
 
     variables = []
+    unique_variables = {}
 
     for node in ast.walk(tree):
         if isinstance(node, ast.Assign):
@@ -56,7 +57,12 @@ def scrape_init(file_path):
                             data['values'] = [extract_value(kw.value) for kw in node.value.keywords]
                     elif isinstance(node.value, ast.Constant):
                         data = {"type": "constant", "target": target.id, "value": node.value.value}
-                    variables.append(data)
+                    
+                    # Use the 'target' as the key to ensure uniqueness
+                    unique_variables[data['target']] = data
+
+    # Convert the dictionary values back to a list
+    variables = list(unique_variables.values())
 
     return variables
 
