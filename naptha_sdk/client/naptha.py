@@ -119,7 +119,7 @@ def agent(name):
         init_agent_package(name)
         write_code_to_package(name, agent_code)
         add_dependencies_to_pyproject(name, selective_import_modules + standard_import_modules)
-        add_files_to_package(name, os.getenv("HUB_USER"))
+        add_files_to_package(name, params, os.getenv("HUB_USER"))
 
         loop = asyncio.get_event_loop()
         if loop.is_running():

@@ -106,14 +106,22 @@ def get_obj_dependencies(context_globals, fn_code, processed=None):
     return modules
 
 def scrape_func_params(func):
-    # Extract func parameter names and default values
+    # Extract func parameter names, default values, and type annotations
     sig = inspect.signature(func)
     params = {}
     for param_name, param in sig.parameters.items():
-        if param.default is param.empty:
-            params[param_name] = None
-        else:
-            params[param_name] = param.default
+        if param_name != "self":
+            param_info = {
+                'value': None if param.default is param.empty else param.default,
+                'type': None
+            }
+            
+            # Get type annotation if available
+            if param.annotation is not param.empty:
+                param_info['type'] = param.annotation
+            
+            params[param_name] = param_info
+    
     return params
 
 def scrape_func(func, variables):

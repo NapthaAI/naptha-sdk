@@ -3,10 +3,10 @@ import ipfshttpclient
 from naptha_sdk.utils import get_logger
 import os
 import re
+from pydantic import BaseModel
 import subprocess
 import tempfile
 import textwrap
-import time
 import tomlkit
 import yaml
 import zipfile
@@ -102,8 +102,7 @@ load_dotenv()
 
     content += textwrap.dedent(agent_code) + "\n\n"
 
-    param_str = ", ".join(f"{key}={value}" if value is not None else key
-                            for key, value in params.items())
+    param_str = ", ".join(f"inputs.{name}" for name, info in params.items())
 
     # Define the new function signature
     content += f"""def run(inputs: InputSchema, *args, **kwargs):
@@ -169,7 +168,7 @@ def generate_component_yaml(agent_name, user_id):
     with open(f'{AGENT_DIR}/{agent_name}/{agent_name}/component.yaml', 'w') as file:
         yaml.dump(component, file, default_flow_style=False)
 
-def generate_schema(agent_name):
+def generate_schema(agent_name, params):
     schema_code = '''from pydantic import BaseModel
 
 class InputSchema(BaseModel):
@@ -177,6 +176,18 @@ class InputSchema(BaseModel):
     tool_input_type: str
     tool_input_value: dict
 '''
+
+    for name, info in params.items():
+        if info['value'] is None:
+            if issubclass(info["type"], BaseModel):
+                schema_code += f'    {name}: dict\n'
+            else:
+                schema_code += f'    {name}: {info["type"].__name__}\n'
+        else:
+            if issubclass(info["type"], BaseModel):
+                schema_code += f'    {name}: dict = {info["value"]}\n'
+            else:
+                schema_code += f'    {name}: {info["type"].__name__} = {info["value"]}\n'
 
     with open(f'{AGENT_DIR}/{agent_name}/{agent_name}/schemas.py', 'w') as file:
         file.write(schema_code)
@@ -194,11 +205,11 @@ def write_code_to_package(agent_name, code):
     with open(code_path, 'w') as file:
         file.write(code)
 
-def add_files_to_package(agent_name, user_id):
+def add_files_to_package(agent_name, params, user_id):
     package_path = f'{AGENT_DIR}/{agent_name}'
 
     # Generate schema and component yaml
-    generate_schema(agent_name)
+    generate_schema(agent_name, params)
     generate_component_yaml(agent_name, user_id)
 
     # Create .env.example file
