@@ -176,9 +176,9 @@ def scrape_func(func, variables):
                 if 'keywords' in used_variable:
                     for kw, value in zip(used_variable['keywords'], used_variable['values']):
                         if isinstance(value, str):
-                            line += f"{kw}='{value}', "
+                            line += f'{kw}="{value}", '
                         else:
-                            line += f"{kw}={value}, "
+                            line += f'{kw}={value}, '
                 line += ")\n"
                 class_info['source'] = line
                 if any(module['name'] == used_variable['cls_name'] for module in modules):
