@@ -105,11 +105,24 @@ def get_obj_dependencies(context_globals, fn_code, processed=None):
 
     return modules
 
+def scrape_func_params(func):
+    # Extract func parameter names and default values
+    sig = inspect.signature(func)
+    params = []
+    for param_name, param in sig.parameters.items():
+        if param.default is param.empty:
+            params.append(param_name)
+        else:
+            params.append(f"{param_name}={param.default}")
+    param_str = ", ".join(params)
+    return param_str
+
 def scrape_func(func, variables):
     fn_code = inspect.getsource(func)
     fn_name = func.__name__
     fn_code = "\n".join(line for line in fn_code.splitlines() if not line.strip().startswith("@"))
 
+    # check which variables are used in the function
     used_variables = []
     for variable in variables:
         if variable['target'] in fn_code:
