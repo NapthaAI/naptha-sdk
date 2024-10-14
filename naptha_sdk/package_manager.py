@@ -57,7 +57,7 @@ def add_dependencies_to_pyproject(package_name, packages):
     with open(f"{AGENT_DIR}/{package_name}/pyproject.toml", 'w', encoding='utf-8') as file:
         file.write(tomlkit.dumps(data))
 
-def render_agent_code(agent_name, agent_code, obj_name, local_modules, selective_import_modules, standard_import_modules, variable_modules, param_str):
+def render_agent_code(agent_name, agent_code, obj_name, local_modules, selective_import_modules, standard_import_modules, variable_modules, params):
     # Add the imports for installed modules (e.g. crewai)
     content = ''
 
@@ -101,6 +101,9 @@ load_dotenv()
     agent_code = agent_code.replace('self', '')
 
     content += textwrap.dedent(agent_code) + "\n\n"
+
+    param_str = ", ".join(f"{key}={value}" if value is not None else key
+                            for key, value in params.items())
 
     # Define the new function signature
     content += f"""def run(inputs: InputSchema, *args, **kwargs):
