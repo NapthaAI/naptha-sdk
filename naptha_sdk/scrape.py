@@ -173,11 +173,12 @@ def scrape_func(func, variables):
                     'is_local': False
                 }
                 line = f"{used_variable['target']} = {used_variable['cls_name']}("
-                for kw, value in zip(used_variable['keywords'], used_variable['values']):
-                    if isinstance(value, str):
-                        line += f"{kw}='{value}', "
-                    else:
-                        line += f"{kw}={value}, "
+                if 'keywords' in used_variable:
+                    for kw, value in zip(used_variable['keywords'], used_variable['values']):
+                        if isinstance(value, str):
+                            line += f"{kw}='{value}', "
+                        else:
+                            line += f"{kw}={value}, "
                 line += ")\n"
                 class_info['source'] = line
                 if any(module['name'] == used_variable['cls_name'] for module in modules):
