@@ -114,8 +114,8 @@ def agent(name):
         instantiation_file = caller_frame.f_code.co_filename
         variables = scrape_init(instantiation_file)
         params = scrape_func_params(func)
-        agent_code, obj_name, local_modules, selective_import_modules, standard_import_modules, variable_modules = scrape_func(func, variables)
-        agent_code = render_agent_code(name, agent_code, obj_name, local_modules, selective_import_modules, standard_import_modules, variable_modules, params)
+        agent_code, obj_name, local_modules, selective_import_modules, standard_import_modules, variable_modules, union_modules = scrape_func(func, variables)
+        agent_code = render_agent_code(name, agent_code, obj_name, local_modules, selective_import_modules, standard_import_modules, variable_modules, union_modules, params)
         init_agent_package(name)
         write_code_to_package(name, agent_code)
         add_dependencies_to_pyproject(name, selective_import_modules + standard_import_modules)

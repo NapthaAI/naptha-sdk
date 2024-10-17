@@ -57,7 +57,7 @@ def add_dependencies_to_pyproject(package_name, packages):
     with open(f"{AGENT_DIR}/{package_name}/pyproject.toml", 'w', encoding='utf-8') as file:
         file.write(tomlkit.dumps(data))
 
-def render_agent_code(agent_name, agent_code, obj_name, local_modules, selective_import_modules, standard_import_modules, variable_modules, params):
+def render_agent_code(agent_name, agent_code, obj_name, local_modules, selective_import_modules, standard_import_modules, variable_modules, union_modules, params):
     # Add the imports for installed modules (e.g. crewai)
     content = ''
 
@@ -76,6 +76,9 @@ def render_agent_code(agent_name, agent_code, obj_name, local_modules, selective
     if any('crewai' in module['module'] for module in selective_import_modules):
         content += "from crewai import Task\n"
 
+    for module in union_modules:
+        content += module['source']
+
     # Add the naptha imports and logger setup
     naptha_imports = f'''from dotenv import load_dotenv
 from {agent_name}.schemas import InputSchema
@@ -87,7 +90,9 @@ load_dotenv()
 
 '''
     content += naptha_imports
-
+    for module in selective_import_modules:
+        if 'source' in module and module['source']:
+            content += module['source'] + "\n"
 
     # Add the source code for the local modules 
     for module in local_modules:
