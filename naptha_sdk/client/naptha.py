@@ -5,7 +5,7 @@ from naptha_sdk.client.hub import Hub
 from naptha_sdk.client.node import Node
 from naptha_sdk.client.services import Services
 from naptha_sdk.package_manager import AGENT_DIR, add_files_to_package, add_dependencies_to_pyproject, git_add_commit, init_agent_package, publish_ipfs_package, render_agent_code, write_code_to_package
-from naptha_sdk.scrape import scrape_init, scrape_func
+from naptha_sdk.scrape import scrape_init, scrape_func, scrape_func_params
 from naptha_sdk.user import get_public_key
 from naptha_sdk.utils import get_logger
 import os
@@ -113,12 +113,13 @@ def agent(name):
         caller_frame = frame.f_back
         instantiation_file = caller_frame.f_code.co_filename
         variables = scrape_init(instantiation_file)
-        agent_code, obj_name, local_modules, selective_import_modules, standard_import_modules, variable_modules = scrape_func(func, variables)
-        agent_code = render_agent_code(name, agent_code, obj_name, local_modules, selective_import_modules, standard_import_modules, variable_modules)
+        params = scrape_func_params(func)
+        agent_code, obj_name, local_modules, selective_import_modules, standard_import_modules, variable_modules, union_modules = scrape_func(func, variables)
+        agent_code = render_agent_code(name, agent_code, obj_name, local_modules, selective_import_modules, standard_import_modules, variable_modules, union_modules, params)
         init_agent_package(name)
         write_code_to_package(name, agent_code)
         add_dependencies_to_pyproject(name, selective_import_modules + standard_import_modules)
-        add_files_to_package(name, os.getenv("HUB_USER"))
+        add_files_to_package(name, params, os.getenv("HUB_USER"))
 
         loop = asyncio.get_event_loop()
         if loop.is_running():

@@ -4,6 +4,7 @@ from naptha_sdk.package_manager import sort_modules, extract_dependencies
 import os
 from pathlib import Path
 import sys
+import typing
 from typing import TypeVar
 import yaml
 
@@ -70,14 +71,29 @@ def get_obj_dependencies(context_globals, fn_code, processed=None):
         processed = set()
 
     modules = []
+    variables = []
     for name, obj in context_globals.items():
         if name in fn_code and obj not in processed:
+            print("name", name, "obj", obj, type(obj), type(obj).__name__)
             if name.startswith("__"):
                 continue
 
             processed.add(obj)  # Add the current object to the set of processed objects
 
-            if inspect.ismodule(obj):
+            if "Union" in type(obj).__name__:
+                print("Union", obj.__args__)
+                args_str = ', '.join(arg.__name__ if hasattr(arg, '__name__') else str(arg) for arg in obj.__args__)
+                variables.append({"type": "union", "target": name, "value": f"Union[{args_str}]"})
+                for arg in obj.__args__:
+                    if inspect.isclass(arg):
+                        obj_info = {
+                            'name': arg.__name__,
+                            'module': arg.__module__,
+                            'import_type': "selective",
+                            'is_local': False
+                        }
+                        modules.append(obj_info)
+            elif inspect.ismodule(obj):
                 obj_info = {
                     'name': name,
                     'module': obj.__name__,
@@ -100,16 +116,38 @@ def get_obj_dependencies(context_globals, fn_code, processed=None):
                             obj_info['source'] = ""
                         else:
                             obj_info['source'] = inspect.getsource(obj)
-                            modules.extend(get_obj_dependencies(module.__dict__, obj_info['source'], processed))
+                            new_modules, new_variables = get_obj_dependencies(module.__dict__, obj_info['source'], processed)
+                            modules.extend(new_modules)
+                            variables.extend(new_variables)
                     modules.append(obj_info)
 
-    return modules
+    return modules, variables
+
+def scrape_func_params(func):
+    # Extract func parameter names, default values, and type annotations
+    sig = inspect.signature(func)
+    params = {}
+    for param_name, param in sig.parameters.items():
+        if param_name != "self":
+            param_info = {
+                'value': None if param.default is param.empty else param.default,
+                'type': None
+            }
+            
+            # Get type annotation if available
+            if param.annotation is not param.empty:
+                param_info['type'] = param.annotation
+            
+            params[param_name] = param_info
+    
+    return params
 
 def scrape_func(func, variables):
     fn_code = inspect.getsource(func)
     fn_name = func.__name__
     fn_code = "\n".join(line for line in fn_code.splitlines() if not line.strip().startswith("@"))
 
+    # check which variables are used in the function
     used_variables = []
     for variable in variables:
         if variable['target'] in fn_code:
@@ -121,7 +159,8 @@ def scrape_func(func, variables):
         module = sys.modules[func.__module__]
         context_globals = module.__dict__
 
-    modules = get_obj_dependencies(context_globals, fn_code)
+    modules, new_variables = get_obj_dependencies(context_globals, fn_code)
+    used_variables.extend(new_variables)
 
     # Deal with variables from the main file
     for used_variable in used_variables:
@@ -140,7 +179,16 @@ def scrape_func(func, variables):
                 }
                 class_info['source'] = line
                 modules.append(class_info)
-
+        elif used_variable['type'] == 'union':
+            line = f"{used_variable['target']} = {used_variable['value']}\n"
+            class_info = {
+                'name': used_variable['target'],
+                'module': None,
+                'import_type': "union",
+                'is_local': False
+            }
+            class_info['source'] = line
+            modules.append(class_info)
         elif used_variable['type'] == 'call':
             # If the variable's class is not in modules, add it
             var_class = context_globals.get(used_variable['cls_name'])
@@ -153,11 +201,12 @@ def scrape_func(func, variables):
                     'is_local': False
                 }
                 line = f"{used_variable['target']} = {used_variable['cls_name']}("
-                for kw, value in zip(used_variable['keywords'], used_variable['values']):
-                    if isinstance(value, str):
-                        line += f"{kw}='{value}', "
-                    else:
-                        line += f"{kw}={value}, "
+                if 'keywords' in used_variable:
+                    for kw, value in zip(used_variable['keywords'], used_variable['values']):
+                        if isinstance(value, str):
+                            line += f'{kw}="{value}", '
+                        else:
+                            line += f'{kw}={value}, '
                 line += ")\n"
                 class_info['source'] = line
                 if any(module['name'] == used_variable['cls_name'] for module in modules):
@@ -171,5 +220,6 @@ def scrape_func(func, variables):
     selective_import_modules = [module for module in modules if not module['is_local'] and module['import_type'] == 'selective']
     standard_import_modules = [module for module in modules if module['import_type'] == 'standard']
     variable_modules = [module for module in modules if module['import_type'] == 'variable']
+    union_modules = [module for module in modules if module['import_type'] == 'union']
 
-    return fn_code, fn_name, local_modules, selective_import_modules, standard_import_modules, variable_modules
+    return fn_code, fn_name, local_modules, selective_import_modules, standard_import_modules, variable_modules, union_modules

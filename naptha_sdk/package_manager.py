@@ -3,10 +3,10 @@ import ipfshttpclient
 from naptha_sdk.utils import get_logger
 import os
 import re
+from pydantic import BaseModel
 import subprocess
 import tempfile
 import textwrap
-import time
 import tomlkit
 import yaml
 import zipfile
@@ -57,7 +57,7 @@ def add_dependencies_to_pyproject(package_name, packages):
     with open(f"{AGENT_DIR}/{package_name}/pyproject.toml", 'w', encoding='utf-8') as file:
         file.write(tomlkit.dumps(data))
 
-def render_agent_code(agent_name, agent_code, obj_name, local_modules, selective_import_modules, standard_import_modules, variable_modules):
+def render_agent_code(agent_name, agent_code, obj_name, local_modules, selective_import_modules, standard_import_modules, variable_modules, union_modules, params):
     # Add the imports for installed modules (e.g. crewai)
     content = ''
 
@@ -76,6 +76,9 @@ def render_agent_code(agent_name, agent_code, obj_name, local_modules, selective
     if any('crewai' in module['module'] for module in selective_import_modules):
         content += "from crewai import Task\n"
 
+    for module in union_modules:
+        content += module['source']
+
     # Add the naptha imports and logger setup
     naptha_imports = f'''from dotenv import load_dotenv
 from {agent_name}.schemas import InputSchema
@@ -87,7 +90,9 @@ load_dotenv()
 
 '''
     content += naptha_imports
-
+    for module in selective_import_modules:
+        if 'source' in module and module['source']:
+            content += module['source'] + "\n"
 
     # Add the source code for the local modules 
     for module in local_modules:
@@ -102,9 +107,11 @@ load_dotenv()
 
     content += textwrap.dedent(agent_code) + "\n\n"
 
+    param_str = ", ".join(f"inputs.{name}" for name, info in params.items())
+
     # Define the new function signature
     content += f"""def run(inputs: InputSchema, *args, **kwargs):
-    {agent_name}_0 = {obj_name}()
+    {agent_name}_0 = {obj_name}({param_str})
 
     tool_input_class = globals().get(inputs.tool_input_type)
     tool_input = tool_input_class(**inputs.tool_input_value)
@@ -166,7 +173,7 @@ def generate_component_yaml(agent_name, user_id):
     with open(f'{AGENT_DIR}/{agent_name}/{agent_name}/component.yaml', 'w') as file:
         yaml.dump(component, file, default_flow_style=False)
 
-def generate_schema(agent_name):
+def generate_schema(agent_name, params):
     schema_code = '''from pydantic import BaseModel
 
 class InputSchema(BaseModel):
@@ -174,6 +181,18 @@ class InputSchema(BaseModel):
     tool_input_type: str
     tool_input_value: dict
 '''
+
+    for name, info in params.items():
+        if info['value'] is None:
+            if issubclass(info["type"], BaseModel):
+                schema_code += f'    {name}: dict\n'
+            else:
+                schema_code += f'    {name}: {info["type"].__name__}\n'
+        else:
+            if issubclass(info["type"], BaseModel):
+                schema_code += f'    {name}: dict = {info["value"]}\n'
+            else:
+                schema_code += f'    {name}: {info["type"].__name__} = {info["value"]}\n'
 
     with open(f'{AGENT_DIR}/{agent_name}/{agent_name}/schemas.py', 'w') as file:
         file.write(schema_code)
@@ -191,11 +210,11 @@ def write_code_to_package(agent_name, code):
     with open(code_path, 'w') as file:
         file.write(code)
 
-def add_files_to_package(agent_name, user_id):
+def add_files_to_package(agent_name, params, user_id):
     package_path = f'{AGENT_DIR}/{agent_name}'
 
     # Generate schema and component yaml
-    generate_schema(agent_name)
+    generate_schema(agent_name, params)
     generate_component_yaml(agent_name, user_id)
 
     # Create .env.example file
