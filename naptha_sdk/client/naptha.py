@@ -5,6 +5,7 @@ from naptha_sdk.client.hub import Hub
 from naptha_sdk.client.node import Node
 from naptha_sdk.client.services import Services
 from naptha_sdk.package_manager import AGENT_DIR, add_files_to_package, add_dependencies_to_pyproject, git_add_commit, init_agent_package, publish_ipfs_package, render_agent_code, write_code_to_package
+from naptha_sdk.schemas import User
 from naptha_sdk.scrape import scrape_init, scrape_func, scrape_func_params
 from naptha_sdk.user import get_public_key
 from naptha_sdk.utils import get_logger
@@ -21,6 +22,7 @@ class Naptha:
 
     def __init__(self):
         self.public_key = get_public_key(os.getenv("PRIVATE_KEY")) if os.getenv("PRIVATE_KEY") else None
+        self.user = User(id=f"user:{self.public_key}")
         self.hub_username = os.getenv("HUB_USER", None)
         self.hub_url = os.getenv("HUB_URL", None)
         self.node_url = os.getenv("NODE_URL", None)
