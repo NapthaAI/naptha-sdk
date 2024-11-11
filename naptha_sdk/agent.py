@@ -13,6 +13,7 @@ class Agent:
         cfg,
         task_engine_cls,
         node_cls,
+        **kwargs
     ):
         self.name = name
         self.fn = fn
