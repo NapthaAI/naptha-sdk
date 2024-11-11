@@ -95,3 +95,6 @@ class AgentRunInput(BaseModel):
                 if isinstance(value, datetime):
                     model_dict['parent_runs'][i][key] = value.isoformat()
         return model_dict
+    
+class User(BaseModel):
+    id: str

@@ -175,6 +175,7 @@ def generate_component_yaml(agent_name, user_id):
 
 def generate_schema(agent_name, params):
     schema_code = '''from pydantic import BaseModel
+from typing import Any
 
 class InputSchema(BaseModel):
     tool_name: str
@@ -183,13 +184,22 @@ class InputSchema(BaseModel):
 '''
 
     for name, info in params.items():
+        print("INFO", name, info)
         if info['value'] is None:
-            if issubclass(info["type"], BaseModel):
+            if 'List' in str(info['type']):
+                schema_code += f'    {name}: list\n'
+            elif info['type'] is None:
+                schema_code += f'    {name}: Any\n'
+            elif issubclass(info["type"], BaseModel):
                 schema_code += f'    {name}: dict\n'
             else:
                 schema_code += f'    {name}: {info["type"].__name__}\n'
         else:
-            if issubclass(info["type"], BaseModel):
+            if 'List' in str(info['type']):
+                schema_code += f'    {name}: list = {info["value"]}\n'
+            elif info['type'] is None:
+                schema_code += f'    {name}: Any = {info["value"]}\n'
+            elif issubclass(info["type"], BaseModel):
                 schema_code += f'    {name}: dict = {info["value"]}\n'
             else:
                 schema_code += f'    {name}: {info["type"].__name__} = {info["value"]}\n'

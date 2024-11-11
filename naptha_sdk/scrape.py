@@ -93,6 +93,8 @@ def get_obj_dependencies(context_globals, fn_code, processed=None):
                             'is_local': False
                         }
                         modules.append(obj_info)
+            elif isinstance(obj, (int, str, float, bool)):
+                variables.append({"type": "constant", "target": name, "value": f"{obj}"})
             elif inspect.ismodule(obj):
                 obj_info = {
                     'name': name,
@@ -165,20 +167,30 @@ def scrape_func(func, variables):
     # Deal with variables from the main file
     for used_variable in used_variables:
         if used_variable['type'] == 'constant':
-            cwd = Path.cwd()
-            full_path = Path(f"src/{cwd.name}/{used_variable['value']}")
-            if full_path.exists():
-                with open(full_path, 'r') as file:
-                    yaml_data = yaml.safe_load(file)
-                line = f"{used_variable['target']} = {yaml_data}\n"
+            if isinstance(used_variable['value'], str) and used_variable['value'].endswith('.yaml'):
+                cwd = Path.cwd()
+                full_path = Path(f"src/{cwd.name}/{used_variable['value']}")
+                if full_path.exists():
+                    with open(full_path, 'r') as file:
+                        yaml_data = yaml.safe_load(file)
+                    line = f"{used_variable['target']} = {yaml_data}\n"
+                    class_info = {
+                        'name': used_variable['target'],
+                        'module': None,
+                        'import_type': "variable",
+                        'is_local': False
+                    }
+                    class_info['source'] = line
+            else:
+                line = f"{used_variable['target']} = {used_variable['value']}\n"
                 class_info = {
                     'name': used_variable['target'],
                     'module': None,
                     'import_type': "variable",
-                    'is_local': False
+                    'is_local': False,
+                    'source': line
                 }
-                class_info['source'] = line
-                modules.append(class_info)
+            modules.append(class_info)
         elif used_variable['type'] == 'union':
             line = f"{used_variable['target']} = {used_variable['value']}\n"
             class_info = {
