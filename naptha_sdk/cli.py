@@ -85,6 +85,33 @@ async def list_agents(naptha):
     print(tabulate(table_data, headers=headers, tablefmt="grid"))
     print(f"\nTotal agents: {len(agents)}")
 
+async def list_personas(naptha):
+    personas = await naptha.hub.list_personas()
+    
+    if not personas:
+        print("No personas found.")
+        return
+
+    headers = ["Name", "ID", "Version", "Author", "Description", "URL"]
+    table_data = []
+
+    for persona in personas:
+        # Wrap the description text
+        wrapped_description = '\n'.join(wrap(persona['description'], width=50))
+        
+        row = [
+            persona['name'],
+            persona['id'],
+            persona['version'],
+            persona['author'],
+            wrapped_description,
+            persona['url']
+        ]
+        table_data.append(row)
+
+    print(tabulate(table_data, headers=headers, tablefmt="grid"))
+    print(f"\nTotal personas: {len(personas)}")
+
 async def create_agent(naptha, agent_config):
     print(f"Agent Config: {agent_config}")
     agent = await naptha.hub.create_agent(agent_config)
@@ -169,6 +196,10 @@ async def main():
     agents_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
     agents_parser.add_argument('-d', '--delete', action='store_true', help='Delete a agent')
 
+    # Persona commands
+    personas_parser = subparsers.add_parser("personas", help="List available personas.")
+    personas_parser.add_argument('persona_name', nargs='?', help='Optional persona name')
+
     # Run command
     run_parser = subparsers.add_parser("run", help="Execute run command.")
     run_parser.add_argument("agent", help="Select the agent to run")
@@ -199,7 +230,7 @@ async def main():
         args = parser.parse_args()
         if args.command == "signup":
             _, user_id = await user_setup_flow(hub_url, public_key)
-        elif args.command in ["nodes", "agents", "run", "read_storage", "write_storage", "publish"]:
+        elif args.command in ["nodes", "agents", "personas", "run", "read_storage", "write_storage", "publish"]:
             if not naptha.hub.is_authenticated:
                 if not hub_username or not hub_password:
                     print("Please set HUB_USER and HUB_PASS environment variables or sign up first (run naptha signup).")
@@ -238,6 +269,8 @@ async def main():
                         await create_agent(naptha, agent_config)
                 else:
                     print("Invalid command.")
+            elif args.command == "personas":
+                await list_personas(naptha)
             elif args.command == "run":
                 if hasattr(args, 'parameters') and args.parameters is not None:
                     try:
