@@ -13,6 +13,8 @@ class Task:
         cfg,
         task_engine_cls,
         node_cls,
+        *args,
+        **kwargs
     ):
         self.name = name
         self.fn = fn
