@@ -127,6 +127,7 @@ async def run(
     parameters=None, 
     worker_nodes=None,
     yaml_file=None, 
+    personas_urls=None
 ):   
     if yaml_file and parameters:
         raise ValueError("Cannot pass both yaml_file and parameters")
@@ -139,8 +140,10 @@ async def run(
         "agent_name": agent_name,
         'worker_nodes': worker_nodes,
         "agent_run_params": parameters,
+        "personas_urls": personas_urls
     }
-    
+    print(f"Agent run input: {agent_run_input}")
+
     user = await naptha.node.check_user(user_input={"public_key": naptha.hub.public_key})
 
     if user['is_registered'] == True:
@@ -205,6 +208,7 @@ async def main():
     run_parser.add_argument("agent", help="Select the agent to run")
     run_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
     run_parser.add_argument("-n", "--worker_nodes", help="Worker nodes to take part in agent runs.")
+    run_parser.add_argument("-u", "--personas_urls", help="Personas URLs to install before running the agent")
     run_parser.add_argument("-f", "--file", help="YAML file with agent run parameters")
 
     # Read storage commands
@@ -284,12 +288,19 @@ async def main():
                 else:
                     parsed_params = None
                 
+                # parse worker nodes
                 if hasattr(args, 'worker_nodes') and args.worker_nodes is not None:
                     worker_nodes = args.worker_nodes.split(',')
                 else:
                     worker_nodes = None
-                
-                await run(naptha, args.agent, user_id, parsed_params, worker_nodes, args.file)
+
+                # parse personas urls
+                if hasattr(args, 'personas_urls') and args.personas_urls is not None:
+                    personas_urls = args.personas_urls.split(',')
+                else:
+                    personas_urls = None
+                print(f"Personas URLs: {personas_urls}")
+                await run(naptha, args.agent, user_id, parsed_params, worker_nodes, args.file, personas_urls)
             elif args.command == "read_storage":
                 await read_storage(naptha, args.agent_run_id, args.output_dir, args.ipfs)
             elif args.command == "write_storage":

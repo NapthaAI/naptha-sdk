@@ -54,6 +54,7 @@ class AgentRun(BaseModel):
     input_schema_ipfs_hash: Optional[str] = None
     agent_source_url: Optional[str] = None
     agent_version: Optional[str] = None
+    personas_urls: Optional[list[str]] = None
 
     class Config:
         allow_mutation = True
@@ -87,6 +88,7 @@ class AgentRunInput(BaseModel):
     parent_runs: List['AgentRun'] = []
     agent_source_url: Optional[str] = None
     agent_version: Optional[str] = None
+    personas_urls: Optional[list[str]] = None
 
     def model_dict(self):
         model_dict = self.dict()
