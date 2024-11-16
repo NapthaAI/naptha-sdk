@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.user import get_public_key
-from naptha_sdk.schemas import AgentRun
+from naptha_sdk.schemas import AgentConfig, AgentDeployment
 import os
 import shlex
 import time
@@ -135,11 +135,17 @@ async def run(
     if yaml_file:
         parameters = load_yaml_to_dict(yaml_file)
 
+    agent_deployment = AgentDeployment(
+        name=agent_name, 
+        module={"name": agent_name}, 
+        worker_node_url=worker_nodes, 
+        agent_config=AgentConfig(persona_module={"url": personas_urls})
+    )
+
     agent_run_input = {
         'consumer_id': user_id,
-        "agent_name": agent_name,
-        'worker_nodes': worker_nodes,
-        "agent_run_params": parameters,
+        "inputs": parameters,
+        "agent_deployment": agent_deployment.model_dump(),
         "personas_urls": personas_urls
     }
     print(f"Agent run input: {agent_run_input}")

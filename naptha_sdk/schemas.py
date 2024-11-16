@@ -31,6 +31,7 @@ class AgentConfig(BaseModel):
     llm_config: Optional[LLMConfig] = None
     persona_module: Optional[Union[Dict, BaseModel]] = None
     system_prompt: Optional[Union[Dict, BaseModel]] = None
+
 class OrchestratorConfig(BaseModel):
     config_name: str
     max_rounds: str
@@ -41,7 +42,7 @@ class EnvironmentConfig(BaseModel):
 
 class AgentDeployment(BaseModel):
     name: str
-    module: str
+    module: Dict
     worker_node_url: Optional[str] = None
     agent_config: Optional[AgentConfig] = None
 

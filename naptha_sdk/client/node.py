@@ -113,9 +113,7 @@ class Node:
         current_results_len = 0
         while True:
             agent_run = await self.check_agent_run(agent_run)
-            output = f"{agent_run.status} {agent_run.agent_run_type} {agent_run.agent_name}"
-            if len(agent_run.child_runs) > 0:
-                output += f", agent {len(agent_run.child_runs)} {agent_run.child_runs[-1].agent_name} (node: {agent_run.child_runs[-1].worker_nodes[0]})"
+            output = f"{agent_run.status} {agent_run.agent_deployment.module['type']} {agent_run.agent_deployment.module['name']}"
             print(output)
 
             if len(agent_run.results) > current_results_len:
