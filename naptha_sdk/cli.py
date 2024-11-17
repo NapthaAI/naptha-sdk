@@ -125,7 +125,7 @@ async def run(
     agent_name, 
     user_id,
     parameters=None, 
-    worker_nodes=None,
+    worker_nodes="http://localhost:7001",
     yaml_file=None, 
     personas_urls=None
 ):   
@@ -298,7 +298,7 @@ async def main():
                 if hasattr(args, 'worker_nodes') and args.worker_nodes is not None:
                     worker_nodes = args.worker_nodes.split(',')
                 else:
-                    worker_nodes = None
+                    worker_nodes = "http://localhost:7001"
 
                 # parse personas urls
                 if hasattr(args, 'personas_urls') and args.personas_urls is not None:

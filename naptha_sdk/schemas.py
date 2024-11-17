@@ -43,13 +43,13 @@ class EnvironmentConfig(BaseModel):
 class AgentDeployment(BaseModel):
     name: str
     module: Dict
-    worker_node_url: Optional[str] = None
+    worker_node_url: Optional[str] = "http://localhost:7001"
     agent_config: Optional[AgentConfig] = None
 
 class OrchestratorDeployment(BaseModel):
     name: str
     module: str
-    orchestrator_node_url: str
+    orchestrator_node_url: Optional[str] = "http://localhost:7001"
     orchestrator_config: Optional[OrchestratorConfig] = None
 
 class EnvironmentDeployment(BaseModel):
