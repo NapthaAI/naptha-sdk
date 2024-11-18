@@ -85,6 +85,33 @@ async def list_agents(naptha):
     print(tabulate(table_data, headers=headers, tablefmt="grid"))
     print(f"\nTotal agents: {len(agents)}")
 
+async def list_orchestrators(naptha):
+    orchestrators = await naptha.hub.list_orchestrators()
+    
+    if not orchestrators:
+        print("No orchestrators found.")
+        return
+
+    headers = ["Name", "ID", "Type", "Version", "Author", "Description"]
+    table_data = []
+
+    for orchestrator in orchestrators:
+        # Wrap the description text
+        wrapped_description = '\n'.join(wrap(orchestrator['description'], width=50))
+        
+        row = [
+            orchestrator['name'],
+            orchestrator['id'],
+            orchestrator['type'],
+            orchestrator['version'],
+            orchestrator['author'],
+            wrapped_description
+        ]
+        table_data.append(row)
+
+    print(tabulate(table_data, headers=headers, tablefmt="grid"))
+    print(f"\nTotal orchestrators: {len(orchestrators)}")
+
 async def list_personas(naptha):
     personas = await naptha.hub.list_personas()
     
@@ -119,6 +146,14 @@ async def create_agent(naptha, agent_config):
         print(f"Agent created: {agent}")
     elif isinstance(agent, list):
         print(f"Agent created: {agent[0]}")
+
+async def create_orchestrator(naptha, orchestrator_config):
+    print(f"Orchestrator Config: {orchestrator_config}")
+    orchestrator = await naptha.hub.create_orchestrator(orchestrator_config)
+    if isinstance(orchestrator, dict):
+        print(f"Orchestrator created: {orchestrator}")
+    elif isinstance(orchestrator, list):
+        print(f"Orchestrator created: {orchestrator[0]}")
 
 async def run(
     naptha, 
@@ -205,6 +240,12 @@ async def main():
     agents_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
     agents_parser.add_argument('-d', '--delete', action='store_true', help='Delete a agent')
 
+    # Orchestrator commands
+    orchestrators_parser = subparsers.add_parser("orchestrators", help="List available orchestrators.")
+    orchestrators_parser.add_argument('orchestrator_name', nargs='?', help='Optional orchestrator name')
+    orchestrators_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
+    orchestrators_parser.add_argument('-d', '--delete', action='store_true', help='Delete an orchestrator')
+
     # Persona commands
     personas_parser = subparsers.add_parser("personas", help="List available personas.")
     personas_parser.add_argument('persona_name', nargs='?', help='Optional persona name')
@@ -240,7 +281,7 @@ async def main():
         args = parser.parse_args()
         if args.command == "signup":
             _, user_id = await user_setup_flow(hub_url, public_key)
-        elif args.command in ["nodes", "agents", "personas", "run", "read_storage", "write_storage", "publish"]:
+        elif args.command in ["nodes", "agents", "orchestrators", "personas", "run", "read_storage", "write_storage", "publish"]:
             if not naptha.hub.is_authenticated:
                 if not hub_username or not hub_password:
                     print("Please set HUB_USER and HUB_PASS environment variables or sign up first (run naptha signup).")
@@ -277,6 +318,36 @@ async def main():
                             "version": parsed_params['version'],
                         }
                         await create_agent(naptha, agent_config)
+                else:
+                    print("Invalid command.")
+            elif args.command == "orchestrators":
+                if not args.orchestrator_name:
+                    await list_orchestrators(naptha)
+                elif args.delete and len(args.orchestrator_name.split()) == 1:
+                    await naptha.hub.delete_orchestrator(args.orchestrator_name)
+                elif len(args.orchestrator_name.split()) == 1:
+                    if hasattr(args, 'parameters') and args.parameters is not None:
+                        params = shlex.split(args.parameters)
+                        parsed_params = {}
+                        for param in params:
+                            key, value = param.split('=')
+                            parsed_params[key] = value
+
+                        required_parameters = ['description', 'url', 'type', 'version']
+                        if not all(param in parsed_params for param in required_parameters):
+                            print(f"Missing one or more of the following required parameters: {required_parameters}")
+                            return
+                            
+                        orchestrator_config = {
+                            "id": f"orchestrator:{args.orchestrator_name}",
+                            "name": args.orchestrator_name,
+                            "description": parsed_params['description'],
+                            "author": naptha.hub.user_id,
+                            "url": parsed_params['url'],
+                            "type": parsed_params['type'],
+                            "version": parsed_params['version'],
+                        }
+                        await create_orchestrator(naptha, orchestrator_config)
                 else:
                     print("Invalid command.")
             elif args.command == "personas":
