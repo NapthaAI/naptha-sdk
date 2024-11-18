@@ -105,7 +105,7 @@ naptha run hello_world_agent -p "firstname=sam surname=altman"
 Try an agent that uses the local LLM running on your node:
 
 ```bash
-naptha run simple_chat_agent -p "prompt='what is an ai agent?'"
+naptha run simple_chat_agent -p "tool_name='chat' tool_input_data='what is an ai agent?'"
 ```
 
 You can also run agents from docker images:
