@@ -16,10 +16,10 @@ class LLMClientType(str, Enum):
 
 class LLMConfig(BaseModel):
     config_name: Optional[str] = "llm_config"
-    client: LLMClientType
+    client: Optional[LLMClientType] = None
     model: Optional[str] = None
-    max_tokens: int = 400
-    temperature: float = 0
+    max_tokens: Optional[int] = 400
+    temperature: Optional[float] = 0
     api_base: Optional[str] = None
 
 class AgentModuleType(str, Enum):
@@ -28,17 +28,17 @@ class AgentModuleType(str, Enum):
 
 class AgentConfig(BaseModel):
     config_name: Optional[str] = "agent_config"
-    llm_config: Optional[LLMConfig] = None
+    llm_config: Optional[LLMConfig] = LLMConfig()
     persona_module: Optional[Union[Dict, BaseModel]] = None
     system_prompt: Optional[Union[Dict, BaseModel]] = {'role': 'system', 'content': 'You are a helpful assistant.'}
 
 class OrchestratorConfig(BaseModel):
-    config_name: str
-    max_rounds: int
+    config_name: Optional[str] = "orchestrator_config"
+    max_rounds: Optional[int] = 5
 
 class EnvironmentConfig(BaseModel):
-    config_name: str
-    environment_type: str
+    config_name: Optional[str] = "environment_config"
+    environment_type: Optional[str] = None
 
 class DataGenerationConfig(BaseModel):
     save_outputs: bool = False
@@ -47,22 +47,22 @@ class DataGenerationConfig(BaseModel):
     save_inputs_location: str = "node"
 
 class AgentDeployment(BaseModel):
-    name: str
-    module: Dict
+    name: Optional[str] = "agent_deployment"
+    module: Optional[Dict] = None
     worker_node_url: Optional[str] = "http://localhost:7001"
-    agent_config: Optional[AgentConfig] = None
+    agent_config: Optional[AgentConfig] = AgentConfig()
     data_generation_config: Optional[DataGenerationConfig] = DataGenerationConfig()
 
 class OrchestratorDeployment(BaseModel):
-    name: str
-    module: str
+    name: Optional[str] = "orchestrator_deployment"
+    module: Dict
     orchestrator_node_url: Optional[str] = "http://localhost:7001"
-    orchestrator_config: Optional[OrchestratorConfig] = None
+    orchestrator_config: Optional[OrchestratorConfig] = OrchestratorConfig()
 
 class EnvironmentDeployment(BaseModel):
-    name: str
+    name: Optional[str] = "environment_deployment"
     environment_node_url: str
-    environment_config: Optional[EnvironmentConfig] = None
+    environment_config: Optional[EnvironmentConfig] = EnvironmentConfig()
 
 class DockerParams(BaseModel):
     docker_image: str
@@ -131,14 +131,6 @@ class AgentRunInput(BaseModel):
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
     agent_deployment: AgentDeployment
     orchestrator_runs: List['OrchestratorRun'] = []
-
-    def model_dict(self):
-        model_dict = self.dict()
-        for i, orchestrator_run in enumerate(model_dict['orchestrator_runs']):
-            for key, value in orchestrator_run.items():
-                if isinstance(value, datetime):
-                    model_dict['orchestrator_runs'][i][key] = value.isoformat()
-        return model_dict
     
 class OrchestratorRunInput(BaseModel):
     consumer_id: str
