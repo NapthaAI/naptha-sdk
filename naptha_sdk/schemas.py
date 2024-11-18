@@ -34,17 +34,24 @@ class AgentConfig(BaseModel):
 
 class OrchestratorConfig(BaseModel):
     config_name: str
-    max_rounds: str
+    max_rounds: int
 
 class EnvironmentConfig(BaseModel):
     config_name: str
     environment_type: str
+
+class DataGenerationConfig(BaseModel):
+    save_outputs: bool = False
+    save_outputs_location: str = "node"
+    save_inputs: bool = False
+    save_inputs_location: str = "node"
 
 class AgentDeployment(BaseModel):
     name: str
     module: Dict
     worker_node_url: Optional[str] = "http://localhost:7001"
     agent_config: Optional[AgentConfig] = None
+    data_generation_config: Optional[DataGenerationConfig] = DataGenerationConfig()
 
 class OrchestratorDeployment(BaseModel):
     name: str
@@ -86,7 +93,7 @@ class DockerParams(BaseModel):
 
 class AgentRun(BaseModel):
     consumer_id: str
-    inputs: Optional[Union[Dict, DockerParams]] = None
+    inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
     agent_deployment: AgentDeployment
     orchestrator_runs: List['OrchestratorRun'] = []
     status: str = "pending"
@@ -121,7 +128,7 @@ class AgentRun(BaseModel):
 
 class AgentRunInput(BaseModel):
     consumer_id: str
-    inputs: Optional[Union[Dict, DockerParams]] = None
+    inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
     agent_deployment: AgentDeployment
     orchestrator_runs: List['OrchestratorRun'] = []
 
@@ -135,17 +142,17 @@ class AgentRunInput(BaseModel):
     
 class OrchestratorRunInput(BaseModel):
     consumer_id: str
-    inputs: Optional[Dict] = None
+    inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
     orchestrator_deployment: OrchestratorDeployment
     agent_deployments: List[AgentDeployment]
-    environment_deployment: Optional[EnvironmentDeployment] = None
+    environment_deployments: Optional[List[EnvironmentDeployment]] = None
 
 class OrchestratorRun(BaseModel):
     consumer_id: str
-    inputs: Optional[Dict] = None
+    inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
     orchestrator_deployment: OrchestratorDeployment
     agent_deployments: List[AgentDeployment]
-    environment_deployment: Optional[EnvironmentDeployment] = None
+    environment_deployments: Optional[List[EnvironmentDeployment]] = None
     status: str = "pending"
     error: bool = False
     id: Optional[str] = None
