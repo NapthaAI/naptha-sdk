@@ -8,7 +8,7 @@ def load_llm_configs(llm_configs_path):
         llm_configs = json.loads(file.read())
     return [LLMConfig(**config) for config in llm_configs]
 
-def load_agent_deployments(agent_deployments_path):
+def load_agent_deployments(agent_deployments_path, load_persona_data=True):
     with open(agent_deployments_path, "r") as file:
         agent_deployments = json.loads(file.read())
 
@@ -20,9 +20,9 @@ def load_agent_deployments(agent_deployments_path):
         llm_config = next(config for config in llm_configs if config.config_name == config_name)
         deployment["agent_config"]["llm_config"] = llm_config   
 
-        # Load persona
-        persona_data = load_persona(deployment["agent_config"]["persona_module"]["url"])
-        deployment["agent_config"]["persona_module"]["data"] = persona_data
+        if load_persona_data:
+            persona_data = load_persona(deployment["agent_config"]["persona_module"]["url"])
+            deployment["agent_config"]["persona_module"]["data"] = persona_data
 
     return [AgentDeployment(**deployment) for deployment in agent_deployments]
 
