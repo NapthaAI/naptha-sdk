@@ -156,7 +156,6 @@ class Node:
             orchestrator_run = await self.check_orchestrator_run(orchestrator_run)
             output = f"{orchestrator_run.status} {orchestrator_run.orchestrator_deployment.module['type']} {orchestrator_run.orchestrator_deployment.module['name']}"
             print(output)
-
             if len(orchestrator_run.results) > current_results_len:
                 print("Output: ", orchestrator_run.results[-1])
                 current_results_len += 1
@@ -183,6 +182,10 @@ class Node:
     async def check_agent_run(self, agent_run: AgentRun) -> AgentRun:
         assert self.server_type == 'http', "check_agent_run should only be called for HTTP server type"
         return await self.check_agent_run_http(agent_run)
+
+    async def check_orchestrator_run(self, orchestrator_run: OrchestratorRun) -> OrchestratorRun:
+        assert self.server_type == 'http', "check_orchestrator_run should only be called for HTTP server type"
+        return await self.check_orchestrator_run_http(orchestrator_run)
 
     async def update_agent_run(self, agent_run: AgentRun):
         assert self.server_type == 'http', "check_agent_run should only be called for HTTP server type"
@@ -328,10 +331,25 @@ class Node:
         try:
             async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
                 response = await client.post(
-                    f"{self.node_url}/agent/check", json=agent_run.model_dict()
+                    f"{self.node_url}/agent/check", json=agent_run.model_dump()
                 )
                 response.raise_for_status()
             return AgentRun(**json.loads(response.text))
+        except HTTPStatusError as e:
+            logger.info(f"HTTP error occurred: {e}")
+            raise  
+        except Exception as e:
+            logger.info(f"An unexpected error occurred: {e}")
+            logger.info(f"Full traceback: {traceback.format_exc()}")
+
+    async def check_orchestrator_run_http(self, orchestrator_run: OrchestratorRun) -> OrchestratorRun:
+        try:
+            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+                response = await client.post(
+                    f"{self.node_url}/orchestrator/check", json=orchestrator_run.model_dump()
+                )
+                response.raise_for_status()
+            return OrchestratorRun(**json.loads(response.text))
         except HTTPStatusError as e:
             logger.info(f"HTTP error occurred: {e}")
             raise  
@@ -343,7 +361,7 @@ class Node:
         try:
             async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
                 response = await client.post(
-                    f"{self.node_url}/monitor/create_agent_run", json=agent_run_input.model_dict()
+                    f"{self.node_url}/monitor/create_agent_run", json=agent_run_input.model_dump()
                 )
                 response.raise_for_status()
             return AgentRun(**json.loads(response.text))
@@ -358,7 +376,7 @@ class Node:
         try:
             async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
                 response = await client.post(
-                    f"{self.node_url}/monitor/update_agent_run", json=agent_run.model_dict()
+                    f"{self.node_url}/monitor/update_agent_run", json=agent_run.model_dump()
                 )
                 response.raise_for_status()
             return AgentRun(**json.loads(response.text))
