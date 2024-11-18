@@ -4,10 +4,9 @@ from dotenv import load_dotenv
 from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.user import get_public_key
-from naptha_sdk.schemas import AgentConfig, AgentDeployment
+from naptha_sdk.schemas import AgentConfig, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, OrchestratorRunInput
 import os
 import shlex
-import time
 import yaml
 import json
 from tabulate import tabulate
@@ -165,10 +164,11 @@ async def create_persona(naptha, persona_config):
 
 async def run(
     naptha, 
-    agent_name, 
+    module_name, 
     user_id,
     parameters=None, 
-    worker_nodes="http://localhost:7001",
+    worker_node_urls="http://localhost:7001",
+    environment_node_urls=["postgresql://naptha:naptha@localhost:3002/naptha"],
     yaml_file=None, 
     personas_urls=None
 ):   
@@ -178,20 +178,10 @@ async def run(
     if yaml_file:
         parameters = load_yaml_to_dict(yaml_file)
 
-    agent_deployment = AgentDeployment(
-        name=agent_name, 
-        module={"name": agent_name}, 
-        worker_node_url=worker_nodes, 
-        agent_config=AgentConfig(persona_module={"url": personas_urls})
-    )
-
-    agent_run_input = {
-        'consumer_id': user_id,
-        "inputs": parameters,
-        "agent_deployment": agent_deployment.model_dump(),
-        "personas_urls": personas_urls
-    }
-    print(f"Agent run input: {agent_run_input}")
+    if "orchestrator:" in module_name:
+        is_orchestrator = True
+    else:
+        is_orchestrator = False
 
     user = await naptha.node.check_user(user_input={"public_key": naptha.hub.public_key})
 
@@ -202,15 +192,63 @@ async def run(
         user = await naptha.node.register_user(user_input=user)
         print(f"User registered: {user}.")
 
-    print("Running...")
-    agent_run = await naptha.node.run_agent(agent_run_input)
+    if not is_orchestrator:
+        print("Running Agent...")
+        agent_deployment = AgentDeployment(
+            name=module_name, 
+            module={"name": module_name}, 
+            worker_node_url=worker_node_urls, 
+            agent_config=AgentConfig(persona_module={"url": personas_urls})
+        )
 
-    if agent_run.status == 'completed':
-        print("Agent run completed successfully.")
-        print("Results: ", agent_run.results)
+        agent_run_input = {
+            'consumer_id': user_id,
+            "inputs": parameters,
+            "agent_deployment": agent_deployment.model_dump(),
+            "personas_urls": personas_urls
+        }
+        print(f"Agent run input: {agent_run_input}")
+
+        agent_run = await naptha.node.run_agent(agent_run_input)
+
+        if agent_run.status == 'completed':
+            print("Agent run completed successfully.")
+            print("Results: ", agent_run.results)
+        else:
+            print("Agent run failed.")
+            print(agent_run.error_message)
     else:
-        print("Agent run failed.")
-        print(agent_run.error_message)
+        print("Running Orchestrator...")
+        agent_deployments = []
+        for worker_node_url in worker_node_urls:
+            agent_deployments.append(AgentDeployment(worker_node_url=worker_node_url))
+
+        environment_deployments = []
+        for environment_node_url in environment_node_urls:
+            environment_deployments.append(EnvironmentDeployment(environment_node_url=environment_node_url))
+
+        orchestrator_deployment = OrchestratorDeployment(
+            name=module_name, 
+            module={"name": module_name}, 
+            orchestrator_node_url=os.getenv("NODE_URL")
+        )
+
+        orchestrator_run_input = OrchestratorRunInput(
+            consumer_id=user_id,
+            inputs=parameters,
+            orchestrator_deployment=orchestrator_deployment,
+            agent_deployments=agent_deployments,
+            environment_deployments=environment_deployments
+        )
+
+        orchestrator_run = await naptha.node.run_orchestrator(orchestrator_run_input)
+
+        if orchestrator_run.status == 'completed':
+            print("Orchestrator run completed successfully.")
+            print("Results: ", orchestrator_run.results)
+        else:
+            print("Orchestrator run failed.")
+            print(orchestrator_run.error_message)
 
 async def read_storage(naptha, hash_or_name, output_dir='./files', ipfs=False):
     """Read from storage, IPFS, or IPNS."""
@@ -265,6 +303,7 @@ async def main():
     run_parser.add_argument("agent", help="Select the agent to run")
     run_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
     run_parser.add_argument("-n", "--worker_nodes", help="Worker nodes to take part in agent runs.")
+    run_parser.add_argument("-e", "--environment_nodes", help="Environment nodes to store data during agent runs.")
     run_parser.add_argument("-u", "--personas_urls", help="Personas URLs to install before running the agent")
     run_parser.add_argument("-f", "--file", help="YAML file with agent run parameters")
 
@@ -404,9 +443,15 @@ async def main():
                 
                 # parse worker nodes
                 if hasattr(args, 'worker_nodes') and args.worker_nodes is not None:
-                    worker_nodes = args.worker_nodes.split(',')
+                    worker_node_urls = args.worker_nodes.split(',')
                 else:
-                    worker_nodes = "http://localhost:7001"
+                    worker_node_urls = "http://localhost:7001"
+
+                # parse environment nodes 
+                if hasattr(args, 'environment_nodes') and args.environment_nodes is not None:
+                    environment_node_urls = args.environment_nodes.split(',')
+                else:
+                    environment_node_urls = ["postgresql://naptha:naptha@localhost:3002/naptha"]
 
                 # parse personas urls
                 if hasattr(args, 'personas_urls') and args.personas_urls is not None:
@@ -414,7 +459,7 @@ async def main():
                 else:
                     personas_urls = None
                 print(f"Personas URLs: {personas_urls}")
-                await run(naptha, args.agent, user_id, parsed_params, worker_nodes, args.file, personas_urls)
+                await run(naptha, args.agent, user_id, parsed_params, worker_node_urls, environment_node_urls, args.file, personas_urls)
             elif args.command == "read_storage":
                 await read_storage(naptha, args.agent_run_id, args.output_dir, args.ipfs)
             elif args.command == "write_storage":

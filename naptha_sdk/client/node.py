@@ -1,9 +1,9 @@
 from datetime import datetime
 from httpx import HTTPStatusError, RemoteProtocolError
-from naptha_sdk.schemas import AgentRun, AgentRunInput
+from naptha_sdk.schemas import AgentRun, AgentRunInput, OrchestratorRun, OrchestratorRunInput
 from naptha_sdk.utils import get_logger
 from pathlib import Path
-from typing import Dict, Optional, Any, List, Tuple
+from typing import Dict, Optional, Any, List, Tuple, Union
 import httpx
 import json
 import os
@@ -133,6 +133,47 @@ class Node:
             print(agent_run.error_message)
         return agent_run
 
+    async def run_orchestrator(self, orchestrator_run_input: OrchestratorRunInput) -> OrchestratorRun:
+        if self.server_type == 'http':
+            result = await self.run_orchestrator_and_poll(orchestrator_run_input)
+        elif self.server_type == 'ws':
+            result = await self.run_orchestrator_ws(orchestrator_run_input)
+        else:
+            raise ValueError("Invalid server type")
+        
+        if result is None:
+            raise ValueError("run_orchestrator returned None")
+        
+        return result
+
+    async def run_orchestrator_and_poll(self, orchestrator_run_input: OrchestratorRunInput) -> OrchestratorRun:
+        assert self.server_type == 'http', "run_orchestrator_and_poll should only be called for HTTP server type"
+        orchestrator_run = await self.run_orchestrator_http(orchestrator_run_input)
+        print(f"Orchestrator run started: {orchestrator_run}")
+
+        current_results_len = 0
+        while True:
+            orchestrator_run = await self.check_orchestrator_run(orchestrator_run)
+            output = f"{orchestrator_run.status} {orchestrator_run.orchestrator_deployment.module['type']} {orchestrator_run.orchestrator_deployment.module['name']}"
+            print(output)
+
+            if len(orchestrator_run.results) > current_results_len:
+                print("Output: ", orchestrator_run.results[-1])
+                current_results_len += 1
+
+            if orchestrator_run.status == 'completed':
+                break
+            if orchestrator_run.status == 'error':
+                break
+
+            time.sleep(3)
+
+        if orchestrator_run.status == 'completed':
+            print(orchestrator_run.results)
+        else:
+            print(orchestrator_run.error_message)
+        return orchestrator_run
+
     async def create_agent_run(self, agent_run_input: AgentRunInput) -> AgentRun:
         assert self.server_type == 'http', "create_agent_run should only be called for HTTP server type"
         logger.info(f"Creating agent run with input: {agent_run_input}")
@@ -221,42 +262,59 @@ class Node:
         logger.info(f"Register user response: {response}")
         return response
 
-    async def run_agent_http(self, agent_run_input: AgentRunInput) -> Dict[str, Any]:
+    async def _run_http(self, run_input: Union[AgentRunInput, OrchestratorRunInput], run_type: str) -> Union[AgentRun, OrchestratorRun]:
         """
-        Run a agent on a node
+        Generic method to run either an agent or orchestrator on a node
+        
+        Args:
+            run_input: Either AgentRunInput or OrchestratorRunInput
+            run_type: Either 'agent' or 'orchestrator'
         """
-        print("Running agent...")
+        print(f"Running {run_type}...")
+        print(f"Run input: {run_input}")
         print(f"Node URL: {self.node_url}")
 
-        endpoint = self.node_url + "/agent/run"
+        endpoint = f"{self.node_url}/{run_type}/run"
         
-        if isinstance(agent_run_input, dict):
-            agent_run_input = AgentRunInput(**agent_run_input)
+        # Convert dict to appropriate input type if needed
+        input_class = AgentRunInput if run_type == 'agent' else OrchestratorRunInput
+        if isinstance(run_input, dict):
+            run_input = input_class(**run_input)
 
         try:
             async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
                 headers = {
-                    'Content-Type': 'application/json', 
-                    'Authorization': f'Bearer {self.access_token}',  
+                    'Content-Type': 'application/json',
+                    'Authorization': f'Bearer {self.access_token}',
                 }
                 response = await client.post(
-                    endpoint, 
-                    json=agent_run_input.model_dict(),
+                    endpoint,
+                    json=run_input.model_dump(),
                     headers=headers
                 )
                 response.raise_for_status()
-            return AgentRun(**json.loads(response.text))
+                
+                # Convert response to appropriate return type
+                return_class = AgentRun if run_type == 'agent' else OrchestratorRun
+                return return_class(**json.loads(response.text))
         except HTTPStatusError as e:
             logger.info(f"HTTP error occurred: {e}")
-            raise  
+            raise
         except RemoteProtocolError as e:
-            error_msg = f"Run agent failed to connect to the server at {self.node_url}. Please check if the server URL is correct and the server is running. Error details: {str(e)}"
+            error_msg = f"Run {run_type} failed to connect to the server at {self.node_url}. Please check if the server URL is correct and the server is running. Error details: {str(e)}"
             logger.error(error_msg)
-            raise 
+            raise
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
             raise
 
+    async def run_agent_http(self, agent_run_input: AgentRunInput) -> AgentRun:
+        """Run an agent on a node"""
+        return await self._run_http(agent_run_input, 'agent')
+
+    async def run_orchestrator_http(self, orchestrator_run_input: OrchestratorRunInput) -> OrchestratorRun:
+        """Run an orchestrator on a node"""
+        return await self._run_http(orchestrator_run_input, 'orchestrator')
     async def run_agent_ws(self, agent_run_input: AgentRunInput) -> AgentRun:
         response = await self.send_receive_ws(agent_run_input, "run_agent")
         
