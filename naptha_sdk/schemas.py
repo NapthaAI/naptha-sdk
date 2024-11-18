@@ -30,7 +30,7 @@ class AgentConfig(BaseModel):
     config_name: Optional[str] = "agent_config"
     llm_config: Optional[LLMConfig] = None
     persona_module: Optional[Union[Dict, BaseModel]] = None
-    system_prompt: Optional[Union[Dict, BaseModel]] = None
+    system_prompt: Optional[Union[Dict, BaseModel]] = {'role': 'system', 'content': 'You are a helpful assistant.'}
 
 class OrchestratorConfig(BaseModel):
     config_name: str
@@ -121,7 +121,7 @@ class AgentRun(BaseModel):
 
 class AgentRunInput(BaseModel):
     consumer_id: str
-    inputs: Optional[Union[BaseModel, Dict, DockerParams]] = None
+    inputs: Optional[Union[Dict, DockerParams]] = None
     agent_deployment: AgentDeployment
     orchestrator_runs: List['OrchestratorRun'] = []
 
