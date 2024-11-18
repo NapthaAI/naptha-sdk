@@ -155,6 +155,14 @@ async def create_orchestrator(naptha, orchestrator_config):
     elif isinstance(orchestrator, list):
         print(f"Orchestrator created: {orchestrator[0]}")
 
+async def create_persona(naptha, persona_config):
+    print(f"Persona Config: {persona_config}")
+    persona = await naptha.hub.create_persona(persona_config)
+    if isinstance(persona, dict):
+        print(f"Persona created: {persona}")
+    elif isinstance(persona, list):
+        print(f"Persona created: {persona[0]}")
+
 async def run(
     naptha, 
     agent_name, 
@@ -249,6 +257,8 @@ async def main():
     # Persona commands
     personas_parser = subparsers.add_parser("personas", help="List available personas.")
     personas_parser.add_argument('persona_name', nargs='?', help='Optional persona name')
+    personas_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
+    personas_parser.add_argument('-d', '--delete', action='store_true', help='Delete a persona')
 
     # Run command
     run_parser = subparsers.add_parser("run", help="Execute run command.")
@@ -351,7 +361,34 @@ async def main():
                 else:
                     print("Invalid command.")
             elif args.command == "personas":
-                await list_personas(naptha)
+                if not args.persona_name:
+                    await list_personas(naptha)
+                elif args.delete and len(args.persona_name.split()) == 1:
+                    await naptha.hub.delete_persona(args.persona_name)
+                elif len(args.persona_name.split()) == 1:
+                    if hasattr(args, 'parameters') and args.parameters is not None:
+                        params = shlex.split(args.parameters)
+                        parsed_params = {}
+                        for param in params:
+                            key, value = param.split('=')
+                            parsed_params[key] = value
+
+                        required_parameters = ['description', 'url', 'version']
+                        if not all(param in parsed_params for param in required_parameters):
+                            print(f"Missing one or more of the following required parameters: {required_parameters}")
+                            return
+                            
+                        persona_config = {
+                            "id": f"persona:{args.persona_name}",
+                            "name": args.persona_name,
+                            "description": parsed_params['description'],
+                            "author": naptha.hub.user_id,
+                            "url": parsed_params['url'],
+                            "version": parsed_params['version'],
+                        }
+                        await create_persona(naptha, persona_config)
+                else:
+                    print("Invalid command.")
             elif args.command == "run":
                 if hasattr(args, 'parameters') and args.parameters is not None:
                     try:

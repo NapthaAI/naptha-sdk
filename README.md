@@ -134,7 +134,7 @@ For each orchestrator, you will see a url where you can check out the code.
 naptha orchestrators orchestrator_name -p "description='Orchestrator description' url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg' type='package' version='0.1'" 
 ```
 
-### Delete a Agent Orchestrator
+### Delete an Agent Orchestrator
 
 ```bash
 naptha orchestrators -d orchestrator_name
@@ -161,7 +161,31 @@ Tesla faces growing competition and softening demand, impacting its stock price 
 '" --worker_nodes "http://node.naptha.ai:7001"
 ```
 
-### Interact with Node Storage
+## Personas
+
+### Interact with the Persona Hub
+
+You can also use the CLI to explore available personas that you can use with agents:
+
+```bash
+naptha personas
+```
+
+For each persona, you will see a url where you can check out the data.
+
+### Create a New Persona
+
+```bash
+naptha personas persona_name -p "description='Persona description' url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg' version='0.1'" 
+```
+
+### Delete a Persona
+
+```bash
+naptha personas -d persona_name
+```
+
+## Interact with Node Storage
 
 After the agent runs finish, you can download the file from the node using:
 

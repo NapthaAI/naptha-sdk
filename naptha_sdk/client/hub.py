@@ -155,6 +155,17 @@ class Hub:
             print("Failed to delete orchestrator")
         return success
 
+    async def delete_persona(self, persona_id: str) -> Tuple[bool, Optional[Dict]]:
+        if ":" not in persona_id:
+            persona_id = f"persona:{persona_id}".strip()
+        print(f"Deleting persona: {persona_id}")
+        success = await self.surrealdb.delete(persona_id)
+        if success:
+            print("Deleted persona")
+        else:
+            print("Failed to delete persona")
+        return success
+
     async def create_agent(self, agent_config: Dict) -> Tuple[bool, Optional[Dict]]:
         if not agent_config.get('id'):
             return await self.surrealdb.create("agent", agent_config)
@@ -166,6 +177,12 @@ class Hub:
             return await self.surrealdb.create("orchestrator", orchestrator_config)
         else:
             return await self.surrealdb.create(orchestrator_config.pop('id'), orchestrator_config)
+
+    async def create_persona(self, persona_config: Dict) -> Tuple[bool, Optional[Dict]]:
+        if not persona_config.get('id'):
+            return await self.surrealdb.create("persona", persona_config)
+        else:
+            return await self.surrealdb.create(persona_config.pop('id'), persona_config)
 
     async def update_agent(self, agent_config: Dict) -> Tuple[bool, Optional[Dict]]:
         return await self.surrealdb.update("agent", agent_config)
