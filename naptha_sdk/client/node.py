@@ -1,5 +1,5 @@
 from httpx import HTTPStatusError, RemoteProtocolError
-from naptha_sdk.schemas import AgentRun, AgentRunInput, OrchestratorRun, OrchestratorRunInput
+from naptha_sdk.schemas import AgentRun, AgentRunInput, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, OrchestratorRunInput
 from naptha_sdk.utils import get_logger
 from pathlib import Path
 from typing import Dict, Optional, Any, List, Tuple, Union
@@ -59,31 +59,64 @@ class Node:
             print(agent_run.error_message)
         return agent_run
 
-    async def run_orchestrator_and_poll(self, orchestrator_run_input: OrchestratorRunInput) -> OrchestratorRun:
-        orchestrator_run = await self.run_orchestrator(orchestrator_run_input)
-        print(f"Orchestrator run started: {orchestrator_run}")
+    async def _run_and_poll(self, run_input: Union[AgentRunInput, OrchestratorRunInput, Dict], run_type: str) -> Union[AgentRun, OrchestratorRun, Dict]:
+        """Generic method to run and poll either an agent, orchestrator, or environment.
+        
+        Args:
+            run_input: Either AgentRunInput, OrchestratorRunInput, or environment dict
+            run_type: Either 'agent', 'orchestrator', or 'environment'
+        """
+
+        # Start the run
+        run = await getattr(self, f'run_{run_type}')(run_input)
+        print(f"{run_type.title()} run started: {run}")
 
         current_results_len = 0
         while True:
-            orchestrator_run = await self.check_orchestrator_run(orchestrator_run)
-            output = f"{orchestrator_run.status} {orchestrator_run.orchestrator_deployment.module['type']} {orchestrator_run.orchestrator_deployment.module['name']}"
+            # Check run status
+            run = await getattr(self, f'check_{run_type}_run')(run)
+            
+            if run_type == 'environment':
+                output = f"Status: {run['status']}"
+            else:
+                output = f"{run.status} {getattr(run, f'{run_type}_deployment').module['type']} {getattr(run, f'{run_type}_deployment').module['name']}"
             print(output)
-            if len(orchestrator_run.results) > current_results_len:
-                print("Output: ", orchestrator_run.results[-1])
+
+            # Handle results differently for environment vs agent/orchestrator
+            if run_type == 'environment':
+                results = run.get('results', [])
+                status = run['status']
+            else:
+                results = run.results
+                status = run.status
+
+            if len(results) > current_results_len:
+                print("Output: ", results[-1])
                 current_results_len += 1
 
-            if orchestrator_run.status == 'completed':
-                break
-            if orchestrator_run.status == 'error':
+            if status in ['completed', 'error']:
                 break
 
             time.sleep(3)
 
-        if orchestrator_run.status == 'completed':
-            print(orchestrator_run.results)
+        if status == 'completed':
+            print(results)
         else:
-            print(orchestrator_run.error_message)
-        return orchestrator_run
+            error_msg = run.get('error_message', '') if run_type == 'environment' else run.error_message
+            print(error_msg)
+        return run
+
+    async def run_agent_and_poll(self, agent_run_input: AgentRunInput) -> AgentRun:
+        """Run an agent and poll for results until completion."""
+        return await self._run_and_poll(agent_run_input, 'agent')
+
+    async def run_orchestrator_and_poll(self, orchestrator_run_input: OrchestratorRunInput) -> OrchestratorRun:
+        """Run an orchestrator and poll for results until completion."""
+        return await self._run_and_poll(orchestrator_run_input, 'orchestrator')
+
+    async def run_environment_and_poll(self, environment_input: EnvironmentRunInput) -> EnvironmentRun:
+        """Run an environment and poll for results until completion."""
+        return await self._run_and_poll(environment_input, 'environment')
 
     async def check_user(self, user_input: Dict[str, Any]) -> Dict[str, Any]:
         """

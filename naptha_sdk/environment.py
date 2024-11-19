@@ -1,17 +1,21 @@
 import json
 import psycopg2
 import logging
-from naptha_sdk.schemas import EnvironmentRunInput
-from typing import List, Dict, Any
+from naptha_sdk.client.node import Node
+from naptha_sdk.schemas import AgentRun, EnvironmentRunInput, OrchestratorRun
+from typing import Any, Dict, List, Union
 
 
 logger = logging.getLogger(__name__)
 
 
 class Environment:
-    def __init__(self, db_url: str):
-        self.db_url = db_url
-        self.conn = psycopg2.connect(db_url)
+    def __init__(self, module_run: Union[OrchestratorRun, AgentRun]):
+        self.module_run = module_run
+        self.environment_deployment = module_run.environment_deployment
+        self.db_url = self.environment_deployment.environment_node_url
+        self.environment_node = Node(self.environment_deployment.environment_node_url)
+        self.conn = psycopg2.connect(self.db_url)
         self.cursor = self.conn.cursor()
         self.create_table()
 
@@ -97,9 +101,9 @@ class Environment:
         logger.info(f"Running environment on environment node {self.environment_node.node_url}")
 
         environment_run_input = EnvironmentRunInput(
-            consumer_id=self.orchestrator_run.consumer_id,
+            consumer_id=self.module_run.consumer_id,
             inputs=kwargs,
-            agent_deployment=self.orchestrator_run.agent_deployments[self.agent_index].model_dump(),
+            agent_deployment=self.module_run.agent_deployment.model_dump(),
         )
 
         environment_run = await self.environment_node.run_environment_and_poll(environment_run_input=environment_run_input)

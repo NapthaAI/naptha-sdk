@@ -162,3 +162,19 @@ class EnvironmentRunInput(BaseModel):
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
     environment_deployment: EnvironmentDeployment
     orchestrator_runs: List['OrchestratorRun'] = []
+
+class EnvironmentRun(BaseModel):
+    consumer_id: str
+    inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
+    environment_deployment: EnvironmentDeployment
+    orchestrator_runs: List['OrchestratorRun'] = []
+    status: str = "pending"
+    error: bool = False
+    id: Optional[str] = None
+    results: list[str] = []
+    error_message: Optional[str] = None
+    created_time: Optional[str] = None
+    start_processing_time: Optional[str] = None
+    completed_time: Optional[str] = None
+    duration: Optional[float] = None
+    input_schema_ipfs_hash: Optional[str] = None
