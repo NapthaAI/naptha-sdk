@@ -31,7 +31,12 @@ def load_orchestrator_deployments(orchestrator_deployments_path):
         orchestrator_deployments = json.loads(file.read())
     return [OrchestratorDeployment(**deployment) for deployment in orchestrator_deployments]
 
-def load_environment_deployments(environment_deployments_path):
+def load_environment_deployments(environment_deployments_path, config_schema=None):
     with open(environment_deployments_path, "r") as file:
         environment_deployments = json.loads(file.read())
+    
+    if config_schema:
+        for deployment in environment_deployments:
+            deployment["environment_config"] = config_schema
+
     return [EnvironmentDeployment(**deployment) for deployment in environment_deployments]
