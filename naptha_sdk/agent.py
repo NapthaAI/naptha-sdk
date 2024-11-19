@@ -8,6 +8,8 @@ class Agent:
     def __init__(self, 
         orchestrator_run, 
         agent_index,
+        *args,
+        **kwargs
     ):
         self.orchestrator_run = orchestrator_run
         self.agent_index = agent_index
