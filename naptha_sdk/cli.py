@@ -111,6 +111,33 @@ async def list_orchestrators(naptha):
     print(tabulate(table_data, headers=headers, tablefmt="grid"))
     print(f"\nTotal orchestrators: {len(orchestrators)}")
 
+async def list_environments(naptha):
+    environments = await naptha.hub.list_environments()
+    
+    if not environments:
+        print("No environments found.")
+        return
+
+    headers = ["Name", "ID", "Type", "Version", "Author", "Description"]
+    table_data = []
+
+    for environment in environments:
+        # Wrap the description text
+        wrapped_description = '\n'.join(wrap(environment['description'], width=50))
+        
+        row = [
+            environment['name'],
+            environment['id'],
+            environment['type'],
+            environment['version'],
+            environment['author'],
+            wrapped_description
+        ]
+        table_data.append(row)
+
+    print(tabulate(table_data, headers=headers, tablefmt="grid"))
+    print(f"\nTotal environments: {len(environments)}")
+
 async def list_personas(naptha):
     personas = await naptha.hub.list_personas()
     
@@ -153,6 +180,14 @@ async def create_orchestrator(naptha, orchestrator_config):
         print(f"Orchestrator created: {orchestrator}")
     elif isinstance(orchestrator, list):
         print(f"Orchestrator created: {orchestrator[0]}")
+
+async def create_environment(naptha, environment_config):
+    print(f"Environment Config: {environment_config}")
+    environment = await naptha.hub.create_environment(environment_config)
+    if isinstance(environment, dict):
+        print(f"Environment created: {environment}")
+    elif isinstance(environment, list):
+        print(f"Environment created: {environment[0]}")
 
 async def create_persona(naptha, persona_config):
     print(f"Persona Config: {persona_config}")
@@ -278,6 +313,12 @@ async def main():
     orchestrators_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
     orchestrators_parser.add_argument('-d', '--delete', action='store_true', help='Delete an orchestrator')
 
+    # Environment commands
+    environments_parser = subparsers.add_parser("environments", help="List available environments.")
+    environments_parser.add_argument('environment_name', nargs='?', help='Optional environment name')
+    environments_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
+    environments_parser.add_argument('-d', '--delete', action='store_true', help='Delete an environment')
+
     # Persona commands
     personas_parser = subparsers.add_parser("personas", help="List available personas.")
     personas_parser.add_argument('persona_name', nargs='?', help='Optional persona name')
@@ -316,7 +357,7 @@ async def main():
         args = parser.parse_args()
         if args.command == "signup":
             _, user_id = await user_setup_flow(hub_url, public_key)
-        elif args.command in ["nodes", "agents", "orchestrators", "personas", "run", "read_storage", "write_storage", "publish"]:
+        elif args.command in ["nodes", "agents", "orchestrators", "environments", "personas", "run", "read_storage", "write_storage", "publish"]:
             if not naptha.hub.is_authenticated:
                 if not hub_username or not hub_password:
                     print("Please set HUB_USER and HUB_PASS environment variables or sign up first (run naptha signup).")
@@ -383,6 +424,36 @@ async def main():
                             "version": parsed_params['version'],
                         }
                         await create_orchestrator(naptha, orchestrator_config)
+                else:
+                    print("Invalid command.")
+            elif args.command == "environments":
+                if not args.environment_name:
+                    await list_environments(naptha)
+                elif args.delete and len(args.environment_name.split()) == 1:
+                    await naptha.hub.delete_environment(args.environment_name)
+                elif len(args.environment_name.split()) == 1:
+                    if hasattr(args, 'parameters') and args.parameters is not None:
+                        params = shlex.split(args.parameters)
+                        parsed_params = {}
+                        for param in params:
+                            key, value = param.split('=')
+                            parsed_params[key] = value
+
+                        required_parameters = ['description', 'url', 'type', 'version']
+                        if not all(param in parsed_params for param in required_parameters):
+                            print(f"Missing one or more of the following required parameters: {required_parameters}")
+                            return
+                            
+                        environment_config = {
+                            "id": f"environment:{args.environment_name}",
+                            "name": args.environment_name,
+                            "description": parsed_params['description'],
+                            "author": naptha.hub.user_id,
+                            "url": parsed_params['url'],
+                            "type": parsed_params['type'],
+                            "version": parsed_params['version'],
+                        }
+                        await create_environment(naptha, environment_config)
                 else:
                     print("Invalid command.")
             elif args.command == "personas":
