@@ -1,6 +1,7 @@
+import json
 import psycopg2
 import logging
-import json
+from naptha_sdk.schemas import EnvironmentRunInput
 from typing import List, Dict, Any
 
 
@@ -91,3 +92,16 @@ class Environment:
         except Exception as e:
             logger.error(f"Error retrieving simulation: {str(e)}")
             raise
+
+    async def call_environment_func(self, *args, **kwargs):
+        logger.info(f"Running environment on environment node {self.environment_node.node_url}")
+
+        environment_run_input = EnvironmentRunInput(
+            consumer_id=self.orchestrator_run.consumer_id,
+            inputs=kwargs,
+            agent_deployment=self.orchestrator_run.agent_deployments[self.agent_index].model_dump(),
+        )
+
+        environment_run = await self.environment_node.run_environment_and_poll(environment_run_input=environment_run_input)
+        return environment_run
+
