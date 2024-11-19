@@ -313,8 +313,15 @@ def extract_dependencies(module, modules):
                 dependencies.append(mod['name'])
     return dependencies
 
+async def load_input_schema(repo_name):
+    """Loads the input schema"""
+    result = subprocess.run(["poetry", "install", repo_name], check=True, capture_output=True, text=True)
+    schemas_module = importlib.import_module(f"{repo_name}.schemas")
+    input_schema = getattr(schemas_module, "InputSchema")
+    return input_schema
+
 def load_persona(persona_url):
-    """Load persona from a JSON file in a git repository."""
+    """Load persona from a JSON or YAML file in a git repository."""
     try:
         # Clone the repo
         repo_name = persona_url.split('/')[-1]
@@ -327,19 +334,32 @@ def load_persona(persona_url):
             
         _ = Repo.clone_from(persona_url, to_path=str(repo_path))
         
-        # Get list of JSON files in repo using pathlib
-        json_files = list(repo_path.rglob("*.json"))
-                
-        if not json_files:
-            logger.error(f"No JSON files found in repository {repo_name}")
+        # Look for files in data subdirectory
+        data_dir = repo_path / repo_name / "data"
+        if not data_dir.exists():
+            logger.error(f"No data directory found in repository {repo_name}")
             return None
             
-        # Load the first JSON file found
-        persona_file = json_files[0]
-        with persona_file.open('r') as f:
-            persona_data = json.load(f)
+        # Get first file in data dir
+        data_files = list(data_dir.iterdir())
+        if not data_files:
+            logger.error(f"No files found in data directory of repository {repo_name}")
+            return None
             
-        return persona_data
+        persona_file = data_files[0]
+        
+        # Load based on file extension
+        with persona_file.open('r') as f:
+            if persona_file.suffix == '.json':
+                persona_data = json.load(f)
+            elif persona_file.suffix in ['.yml', '.yaml']:
+                persona_data = yaml.safe_load(f)
+            else:
+                logger.error(f"Unsupported file type {persona_file.suffix} in {repo_name}")
+                return None
+            
+        input_schema = load_input_schema(repo_name)
+        return persona_data, input_schema
         
     except Exception as e:
         logger.error(f"Error loading persona from {persona_url}: {e}")
