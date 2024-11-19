@@ -156,3 +156,9 @@ class OrchestratorRun(BaseModel):
     duration: Optional[float] = None
     agent_runs: List['AgentRun'] = []
     input_schema_ipfs_hash: Optional[str] = None
+
+class EnvironmentRunInput(BaseModel):
+    consumer_id: str
+    inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
+    environment_deployment: EnvironmentDeployment
+    orchestrator_runs: List['OrchestratorRun'] = []
