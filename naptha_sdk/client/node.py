@@ -14,6 +14,10 @@ import traceback
 import uuid
 import websockets
 import zipfile
+import grpc 
+from naptha_sdk.client import grpc_server_pb2_grpc
+from naptha_sdk.client import grpc_server_pb2
+from google.protobuf import struct_pb2
 
 logger = get_logger(__name__)
 HTTP_TIMEOUT = 300
@@ -28,7 +32,7 @@ class Node:
         elif self.node_url.startswith('http://'):
             self.server_type = 'http'
         else:
-            raise ValueError("Invalid node_url protocol. Must start with 'ws://' or 'http://'")
+            self.server_type = 'grpc'
         self.connections = {}
 
         # at least one of node_url and indirect_node_id must be set
@@ -76,6 +80,8 @@ class Node:
             return await self.check_user_http(user_input)
         elif self.server_type == 'ws':
             return await self.check_user_ws(user_input)
+        elif self.server_type == 'grpc':
+            return await self.check_user_grpc(user_input)
         else:
             raise ValueError("Invalid server type")
 
@@ -84,6 +90,8 @@ class Node:
             result = await self.register_user_http(user_input)
         elif self.server_type == 'ws':
             result = await self.register_user_ws(user_input)
+        elif self.server_type == 'grpc':
+            result = await self.register_user_grpc(user_input)
         else:
             raise ValueError("Invalid server type")
         
@@ -97,6 +105,8 @@ class Node:
             result = await self.run_agent_and_poll(agent_run_input)
         elif self.server_type == 'ws':
             result = await self.run_agent_ws(agent_run_input)
+        elif self.server_type == 'grpc':
+            result = await self.run_agent_grpc(agent_run_input)
         else:
             raise ValueError("Invalid server type")
         
@@ -231,6 +241,82 @@ class Node:
         response = await self.send_receive_ws(user_input, "check_user")
         logger.info(f"Check user response: {response}")
         return response
+
+    async def check_user_grpc(self, user_input: Dict[str, str]):
+        async with grpc.aio.insecure_channel(self.node_url) as channel:
+            stub = grpc_server_pb2_grpc.GrpcServerStub(channel)
+            request = grpc_server_pb2.CheckUserRequest(
+                user_id=user_input.get('user_id', ''),
+                public_key=user_input.get('public_key', '')
+            )
+            response = await stub.CheckUser(request)
+            return {
+                'is_registered': response.is_registered,
+                'user_id': response.user_id
+            }
+
+    async def register_user_grpc(self, user_input: Dict[str, str]):
+        async with grpc.aio.insecure_channel(self.node_url) as channel:
+            stub = grpc_server_pb2_grpc.GrpcServerStub(channel)
+            request = grpc_server_pb2.RegisterUserRequest(
+                public_key=user_input.get('public_key', '')
+            )
+            response = await stub.RegisterUser(request)
+            return {
+                'id': response.id,
+                'public_key': response.public_key,
+                'created_at': response.created_at
+            }
+
+    async def run_agent_grpc(self, agent_run_input: AgentRunInput):
+        async with grpc.aio.insecure_channel(self.node_url) as channel:
+            stub = grpc_server_pb2_grpc.GrpcServerStub(channel)
+            
+            # Convert input data to Struct
+            input_struct = struct_pb2.Struct()
+            if agent_run_input.inputs:
+                if isinstance(agent_run_input.inputs, dict):
+                    input_data = agent_run_input.inputs.dict() if hasattr(agent_run_input.inputs, 'dict') else agent_run_input.inputs
+                    input_struct.update(input_data)
+            
+            # Create agent module and deployment
+            agent_module = grpc_server_pb2.AgentModule(
+                name=agent_run_input.agent_deployment.module['name']
+            )
+            
+            agent_deployment = grpc_server_pb2.AgentDeployment(
+                name=agent_run_input.agent_deployment.name,
+                module=agent_module,
+                worker_node_url=agent_run_input.agent_deployment.worker_node_url
+            )
+            
+            # Create request
+            request = grpc_server_pb2.AgentRunInput(
+                consumer_id=agent_run_input.consumer_id,
+                agent_deployment=agent_deployment,
+                input_struct=input_struct
+            )
+            
+            final_response = None
+            async for response in stub.RunAgent(request):
+                final_response = response
+                
+            return AgentRun(
+                consumer_id=agent_run_input.consumer_id,
+                inputs=agent_run_input.inputs,
+                agent_deployment=agent_run_input.agent_deployment,
+                orchestrator_runs=[],
+                status=final_response.status,
+                error=final_response.status == "error",
+                id=final_response.id,
+                results=list(final_response.results),
+                error_message=final_response.error_message,
+                created_time=final_response.created_time,
+                start_processing_time=final_response.start_processing_time,
+                completed_time=final_response.completed_time,
+                duration=final_response.duration,
+                input_schema_ipfs_hash=final_response.input_schema_ipfs_hash
+            )
 
     async def register_user_http(self, user_input: Dict[str, Any]) -> Dict[str, Any]:
         """
