@@ -95,6 +95,7 @@ class AgentRun(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
     agent_deployment: AgentDeployment
+    environment_deployments: Optional[List[EnvironmentDeployment]] = None
     orchestrator_runs: List['OrchestratorRun'] = []
     status: str = "pending"
     error: bool = False
@@ -130,6 +131,7 @@ class AgentRunInput(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
     agent_deployment: AgentDeployment
+    environment_deployments: Optional[List[EnvironmentDeployment]] = None
     orchestrator_runs: List['OrchestratorRun'] = []
     
 class OrchestratorRunInput(BaseModel):

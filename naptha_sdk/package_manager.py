@@ -313,11 +313,10 @@ def extract_dependencies(module, modules):
                 dependencies.append(mod['name'])
     return dependencies
 
-async def load_input_schema(repo_name):
+def load_input_schema(repo_name):
     """Loads the input schema"""
-    result = subprocess.run(["poetry", "install", repo_name], check=True, capture_output=True, text=True)
     schemas_module = importlib.import_module(f"{repo_name}.schemas")
-    input_schema = getattr(schemas_module, "InputSchema")
+    input_schema = getattr(schemas_module, "Persona")
     return input_schema
 
 def load_persona(persona_url):
@@ -358,6 +357,8 @@ def load_persona(persona_url):
                 logger.error(f"Unsupported file type {persona_file.suffix} in {repo_name}")
                 return None
             
+        subprocess.run(["poetry", "add", f"git+{persona_url}"], check=True, capture_output=True, text=True)
+
         input_schema = load_input_schema(repo_name)
         return persona_data, input_schema
         

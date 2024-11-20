@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class Environment:
     def __init__(self, module_run: Union[OrchestratorRun, AgentRun]):
         self.module_run = module_run
-        self.environment_deployment = module_run.environment_deployment
+        self.environment_deployment = module_run.environment_deployments[0]
         self.db_url = self.environment_deployment.environment_node_url
         self.environment_node = Node(self.environment_deployment.environment_node_url)
         self.conn = psycopg2.connect(self.db_url)
