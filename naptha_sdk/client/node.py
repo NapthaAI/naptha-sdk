@@ -66,8 +66,11 @@ class Node:
         client_id = await self.connect_ws(action)
         
         try:
-            message = json.dumps(data)
-            await self.connections[client_id].send(message)
+            if isinstance(data, AgentRunInput) or isinstance(data, OrchestratorRunInput):
+                message = data.model_dump()
+            else:
+                message = data
+            await self.connections[client_id].send(json.dumps(message))
             
             response = await self.connections[client_id].recv()
             return json.loads(response)
