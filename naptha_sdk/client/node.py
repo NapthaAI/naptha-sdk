@@ -408,6 +408,7 @@ class Node:
     async def run_orchestrator_http(self, orchestrator_run_input: OrchestratorRunInput) -> OrchestratorRun:
         """Run an orchestrator on a node"""
         return await self._run_http(orchestrator_run_input, 'orchestrator')
+    
     async def run_agent_ws(self, agent_run_input: AgentRunInput) -> AgentRun:
         response = await self.send_receive_ws(agent_run_input, "run_agent")
         
@@ -415,6 +416,15 @@ class Node:
             return AgentRun(**response['data'])
         else:
             logger.error(f"Error running agent: {response['message']}")
+            raise Exception(response['message'])
+
+    async def run_orchestrator_ws(self, orchestrator_run_input: OrchestratorRunInput) -> OrchestratorRun:
+        response = await self.send_receive_ws(orchestrator_run_input, "run_orchestrator")
+        
+        if response['status'] == 'success':
+            return OrchestratorRun(**response['data'])
+        else:
+            logger.error(f"Error running orchestrator: {response['message']}")
             raise Exception(response['message'])
 
     async def check_agent_run_http(self, agent_run: AgentRun) -> AgentRun:
