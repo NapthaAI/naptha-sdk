@@ -24,6 +24,6 @@ class Agent:
             inputs=kwargs,
             agent_deployment=self.orchestrator_run.agent_deployments[self.agent_index].model_dump(),
         )
-
+        
         agent_run = await self.worker_node.run_agent(agent_run_input)
         return agent_run
