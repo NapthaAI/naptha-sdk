@@ -25,5 +25,10 @@ class Agent:
             agent_deployment=self.orchestrator_run.agent_deployments[self.agent_index].model_dump(),
         )
 
-        agent_run = await self.worker_node.run_agent_and_poll(agent_run_input=agent_run_input)
+        if self.worker_node.server_type == 'grpc':
+            agent_run = await self.worker_node.run_agent_grpc(agent_run_input=agent_run_input)
+        elif self.worker_node.server_type == 'http':
+            agent_run = await self.worker_node.run_agent_and_poll(agent_run_input=agent_run_input)
+        else:
+            raise ValueError(f"Invalid server type: {self.worker_node.server_type}")
         return agent_run
