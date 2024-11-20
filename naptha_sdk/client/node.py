@@ -18,7 +18,7 @@ import grpc
 from naptha_sdk.client import grpc_server_pb2_grpc
 from naptha_sdk.client import grpc_server_pb2
 from google.protobuf import struct_pb2
-
+from google.protobuf.json_format import MessageToDict
 logger = get_logger(__name__)
 HTTP_TIMEOUT = 300
 
@@ -151,6 +151,8 @@ class Node:
             result = await self.run_orchestrator_and_poll(orchestrator_run_input)
         elif self.server_type == 'ws':
             result = await self.run_orchestrator_ws(orchestrator_run_input)
+        elif self.server_type == 'grpc':
+            result = await self.run_orchestrator_grpc(orchestrator_run_input)
         else:
             raise ValueError("Invalid server type")
         
@@ -253,10 +255,9 @@ class Node:
                 public_key=user_input.get('public_key', '')
             )
             response = await stub.CheckUser(request)
-            return {
-                'is_registered': response.is_registered,
-                'user_id': response.user_id
-            }
+
+            print("BBBBB", response)
+            return MessageToDict(response, preserving_proto_field_name=True)
 
     async def register_user_grpc(self, user_input: Dict[str, str]):
         async with grpc.aio.insecure_channel(self.node_url) as channel:
@@ -275,6 +276,10 @@ class Node:
         async with grpc.aio.insecure_channel(self.node_url) as channel:
             stub = grpc_server_pb2_grpc.GrpcServerStub(channel)
             
+            # Convert dict to appropriate input type if needed
+            if isinstance(agent_run_input, dict):
+                agent_run_input = AgentRunInput(**agent_run_input)
+
             # Convert input data to Struct
             input_struct = struct_pb2.Struct()
             if agent_run_input.inputs:
