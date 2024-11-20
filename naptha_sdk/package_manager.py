@@ -1,7 +1,10 @@
+from git import Repo
 import importlib.util
 import ipfshttpclient
+import json
 from naptha_sdk.utils import get_logger
 import os
+from pathlib import Path
 import re
 from pydantic import BaseModel
 import subprocess
@@ -309,3 +312,36 @@ def extract_dependencies(module, modules):
             if re.search(pattern, module['source']):
                 dependencies.append(mod['name'])
     return dependencies
+
+def load_persona(persona_url):
+    """Load persona from a JSON file in a git repository."""
+    try:
+        # Clone the repo
+        repo_name = persona_url.split('/')[-1]
+        repo_path = Path(f"{AGENT_DIR}/{repo_name}")
+        
+        # Remove existing repo if it exists
+        if repo_path.exists():
+            import shutil
+            shutil.rmtree(repo_path)
+            
+        _ = Repo.clone_from(persona_url, to_path=str(repo_path))
+        
+        # Get list of JSON files in repo using pathlib
+        json_files = list(repo_path.rglob("*.json"))
+                
+        if not json_files:
+            logger.error(f"No JSON files found in repository {repo_name}")
+            return None
+            
+        # Load the first JSON file found
+        persona_file = json_files[0]
+        with persona_file.open('r') as f:
+            persona_data = json.load(f)
+            
+        return persona_data
+        
+    except Exception as e:
+        logger.error(f"Error loading persona from {persona_url}: {e}")
+        return None
+    

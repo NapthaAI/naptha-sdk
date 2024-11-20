@@ -71,9 +71,11 @@ naptha nodes
 
 Make note of a Node ID for running a workflow below.
 
-### Check out available Agents
+## Agents
 
-Agents can be workflows, agents or multi-agent systems. Agents typically involve one or more LLMs, along with humans in the loop. You can also use the CLI to explore available agents that you can run on a node:
+### Interact with the Agent Hub
+
+You can also use the CLI to explore available agents that you can run on a node:
 
 ```bash
 naptha agents
@@ -99,33 +101,58 @@ Now you've found a node and a agent you'd like to run, so let's run it locally! 
 
 ```bash
 # usage: naptha run <agent_name> <agent args>
-naptha run hello_world_agent -p "firstname=sam surname=altman"
+naptha run agent:hello_world_agent -p "firstname=sam surname=altman"
 ```
 
 Try an agent that uses the local LLM running on your node:
 
 ```bash
-naptha run simple_chat_agent -p "prompt='what is an ai agent?'"
+naptha run agent:simple_chat_agent -p "tool_name='chat' tool_input_data='what is an ai agent?'"
 ```
 
 You can also run agents from docker images:
 
 ```bash
-naptha run docker_hello_world -f ./example_yamls/docker_hello_world.yml
+naptha run agent:docker_hello_world -f ./example_yamls/docker_hello_world.yml
 ```
 
-### Run Multi-Agent Networks across several Nodes
+## Agent Orchestrators
+
+### Interact with the Agent Orchestrator Hub
+
+You can also use the CLI to explore available agent orchestrators that you can run on a network of nodes:
 
 ```bash
-naptha run multiagent_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --worker_nodes "http://node.naptha.ai:7001,http://node1.naptha.ai:7001"
+naptha orchestrators
+```
+
+For each orchestrator, you will see a url where you can check out the code.
+
+### Create a New Agent Orchestrator
+
+```bash
+naptha orchestrators orchestrator_name -p "description='Orchestrator description' url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg' type='package' version='0.1'" 
+```
+
+### Delete an Agent Orchestrator
+
+```bash
+naptha orchestrators -d orchestrator_name
+```
+
+### Run an Agent Orchestrator across a network of Nodes
+
+```bash
+naptha run orchestrator:multiagent_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --worker_nodes "http://node.naptha.ai:7001,http://node1.naptha.ai:7001" --environment_nodes "postgresql://naptha:naptha@localhost:3002/naptha"
+```
+
+
+```bash
+naptha run orchestrator:babyagi -p "objective='Research the history of football'" --worker_nodes "http://node.naptha.ai:7001,http://node1.naptha.ai:7001"
 ```
 
 ```bash
-naptha run babyagi -p "objective='Research the history of football'" --worker_nodes "http://node.naptha.ai:7001,http://node1.naptha.ai:7001"
-```
-
-```bash
-naptha run multiagent_debate -p "initial_claim='Teslas price will exceed $250 in 2 weeks.' max_rounds=2 context='Teslas current price is $207, and recent innovations and strong Q2 results will drive the price up.
+naptha run orchestrator:multiagent_debate -p "initial_claim='Teslas price will exceed $250 in 2 weeks.' max_rounds=2 context='Teslas current price is $207, and recent innovations and strong Q2 results will drive the price up.
 
 News Summary 1:
 Tesla stock was lower to start a new week of trading, falling as investors worry about global growth. Shares of the electric-vehicle giant were down 7.3% in premarket trading Monday at $192.33. Stocks around the world were falling as investors fretted that weak economic data signal a recession ahead. Despite positive comments from CEO Elon Musk about Tesla’s sales, the stock has fallen about 16% this year and is struggling to overcome negative global investor sentiment.
@@ -135,7 +162,31 @@ Tesla faces growing competition and softening demand, impacting its stock price 
 '" --worker_nodes "http://node.naptha.ai:7001"
 ```
 
-### Interact with Node Storage
+## Personas
+
+### Interact with the Persona Hub
+
+You can also use the CLI to explore available personas that you can use with agents:
+
+```bash
+naptha personas
+```
+
+For each persona, you will see a url where you can check out the data.
+
+### Create a New Persona
+
+```bash
+naptha personas persona_name -p "description='Persona description' url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg' version='0.1'" 
+```
+
+### Delete a Persona
+
+```bash
+naptha personas -d persona_name
+```
+
+## Interact with Node Storage
 
 After the agent runs finish, you can download the file from the node using:
 

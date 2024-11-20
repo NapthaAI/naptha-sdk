@@ -1,9 +1,9 @@
 from datetime import datetime
 from httpx import HTTPStatusError, RemoteProtocolError
-from naptha_sdk.schemas import AgentRun, AgentRunInput
+from naptha_sdk.schemas import AgentRun, AgentRunInput, OrchestratorRun, OrchestratorRunInput
 from naptha_sdk.utils import get_logger
 from pathlib import Path
-from typing import Dict, Optional, Any, List, Tuple
+from typing import Dict, Optional, Any, List, Tuple, Union
 import httpx
 import json
 import os
@@ -14,7 +14,11 @@ import traceback
 import uuid
 import websockets
 import zipfile
-
+import grpc 
+from naptha_sdk.client import grpc_server_pb2_grpc
+from naptha_sdk.client import grpc_server_pb2
+from google.protobuf import struct_pb2
+from google.protobuf.json_format import MessageToDict
 logger = get_logger(__name__)
 HTTP_TIMEOUT = 300
 
@@ -28,7 +32,7 @@ class Node:
         elif self.node_url.startswith('http://'):
             self.server_type = 'http'
         else:
-            raise ValueError("Invalid node_url protocol. Must start with 'ws://' or 'http://'")
+            self.server_type = 'grpc'
         self.connections = {}
 
         # at least one of node_url and indirect_node_id must be set
@@ -62,8 +66,11 @@ class Node:
         client_id = await self.connect_ws(action)
         
         try:
-            message = json.dumps(data)
-            await self.connections[client_id].send(message)
+            if isinstance(data, AgentRunInput) or isinstance(data, OrchestratorRunInput):
+                message = data.model_dump()
+            else:
+                message = data
+            await self.connections[client_id].send(json.dumps(message))
             
             response = await self.connections[client_id].recv()
             return json.loads(response)
@@ -76,6 +83,8 @@ class Node:
             return await self.check_user_http(user_input)
         elif self.server_type == 'ws':
             return await self.check_user_ws(user_input)
+        elif self.server_type == 'grpc':
+            return await self.check_user_grpc(user_input)
         else:
             raise ValueError("Invalid server type")
 
@@ -84,6 +93,8 @@ class Node:
             result = await self.register_user_http(user_input)
         elif self.server_type == 'ws':
             result = await self.register_user_ws(user_input)
+        elif self.server_type == 'grpc':
+            result = await self.register_user_grpc(user_input)
         else:
             raise ValueError("Invalid server type")
         
@@ -97,6 +108,8 @@ class Node:
             result = await self.run_agent_and_poll(agent_run_input)
         elif self.server_type == 'ws':
             result = await self.run_agent_ws(agent_run_input)
+        elif self.server_type == 'grpc':
+            result = await self.run_agent_grpc(agent_run_input)
         else:
             raise ValueError("Invalid server type")
         
@@ -113,9 +126,7 @@ class Node:
         current_results_len = 0
         while True:
             agent_run = await self.check_agent_run(agent_run)
-            output = f"{agent_run.status} {agent_run.agent_run_type} {agent_run.agent_name}"
-            if len(agent_run.child_runs) > 0:
-                output += f", agent {len(agent_run.child_runs)} {agent_run.child_runs[-1].agent_name} (node: {agent_run.child_runs[-1].worker_nodes[0]})"
+            output = f"{agent_run.status} {agent_run.agent_deployment.module['type']} {agent_run.agent_deployment.module['name']}"
             print(output)
 
             if len(agent_run.results) > current_results_len:
@@ -135,6 +146,48 @@ class Node:
             print(agent_run.error_message)
         return agent_run
 
+    async def run_orchestrator(self, orchestrator_run_input: OrchestratorRunInput) -> OrchestratorRun:
+        if self.server_type == 'http':
+            result = await self.run_orchestrator_and_poll(orchestrator_run_input)
+        elif self.server_type == 'ws':
+            result = await self.run_orchestrator_ws(orchestrator_run_input)
+        elif self.server_type == 'grpc':
+            result = await self.run_orchestrator_grpc(orchestrator_run_input)
+        else:
+            raise ValueError("Invalid server type")
+        
+        if result is None:
+            raise ValueError("run_orchestrator returned None")
+        
+        return result
+
+    async def run_orchestrator_and_poll(self, orchestrator_run_input: OrchestratorRunInput) -> OrchestratorRun:
+        assert self.server_type == 'http', "run_orchestrator_and_poll should only be called for HTTP server type"
+        orchestrator_run = await self.run_orchestrator_http(orchestrator_run_input)
+        print(f"Orchestrator run started: {orchestrator_run}")
+
+        current_results_len = 0
+        while True:
+            orchestrator_run = await self.check_orchestrator_run(orchestrator_run)
+            output = f"{orchestrator_run.status} {orchestrator_run.orchestrator_deployment.module['type']} {orchestrator_run.orchestrator_deployment.module['name']}"
+            print(output)
+            if len(orchestrator_run.results) > current_results_len:
+                print("Output: ", orchestrator_run.results[-1])
+                current_results_len += 1
+
+            if orchestrator_run.status == 'completed':
+                break
+            if orchestrator_run.status == 'error':
+                break
+
+            time.sleep(3)
+
+        if orchestrator_run.status == 'completed':
+            print(orchestrator_run.results)
+        else:
+            print(orchestrator_run.error_message)
+        return orchestrator_run
+
     async def create_agent_run(self, agent_run_input: AgentRunInput) -> AgentRun:
         assert self.server_type == 'http', "create_agent_run should only be called for HTTP server type"
         logger.info(f"Creating agent run with input: {agent_run_input}")
@@ -144,6 +197,10 @@ class Node:
     async def check_agent_run(self, agent_run: AgentRun) -> AgentRun:
         assert self.server_type == 'http', "check_agent_run should only be called for HTTP server type"
         return await self.check_agent_run_http(agent_run)
+
+    async def check_orchestrator_run(self, orchestrator_run: OrchestratorRun) -> OrchestratorRun:
+        assert self.server_type == 'http', "check_orchestrator_run should only be called for HTTP server type"
+        return await self.check_orchestrator_run_http(orchestrator_run)
 
     async def update_agent_run(self, agent_run: AgentRun):
         assert self.server_type == 'http', "check_agent_run should only be called for HTTP server type"
@@ -190,6 +247,86 @@ class Node:
         logger.info(f"Check user response: {response}")
         return response
 
+    async def check_user_grpc(self, user_input: Dict[str, str]):
+        async with grpc.aio.insecure_channel(self.node_url) as channel:
+            stub = grpc_server_pb2_grpc.GrpcServerStub(channel)
+            request = grpc_server_pb2.CheckUserRequest(
+                user_id=user_input.get('user_id', ''),
+                public_key=user_input.get('public_key', '')
+            )
+            response = await stub.CheckUser(request)
+
+            print("BBBBB", response)
+            return MessageToDict(response, preserving_proto_field_name=True)
+
+    async def register_user_grpc(self, user_input: Dict[str, str]):
+        async with grpc.aio.insecure_channel(self.node_url) as channel:
+            stub = grpc_server_pb2_grpc.GrpcServerStub(channel)
+            request = grpc_server_pb2.RegisterUserRequest(
+                public_key=user_input.get('public_key', '')
+            )
+            response = await stub.RegisterUser(request)
+            return {
+                'id': response.id,
+                'public_key': response.public_key,
+                'created_at': response.created_at
+            }
+
+    async def run_agent_grpc(self, agent_run_input: AgentRunInput):
+        async with grpc.aio.insecure_channel(self.node_url) as channel:
+            stub = grpc_server_pb2_grpc.GrpcServerStub(channel)
+            
+            # Convert dict to appropriate input type if needed
+            if isinstance(agent_run_input, dict):
+                agent_run_input = AgentRunInput(**agent_run_input)
+
+            # Convert input data to Struct
+            input_struct = struct_pb2.Struct()
+            if agent_run_input.inputs:
+                if isinstance(agent_run_input.inputs, dict):
+                    input_data = agent_run_input.inputs.dict() if hasattr(agent_run_input.inputs, 'dict') else agent_run_input.inputs
+                    input_struct.update(input_data)
+            
+            # Create agent module and deployment
+            agent_module = grpc_server_pb2.AgentModule(
+                name=agent_run_input.agent_deployment.module['name']
+            )
+            
+            agent_deployment = grpc_server_pb2.AgentDeployment(
+                name=agent_run_input.agent_deployment.name,
+                module=agent_module,
+                worker_node_url=agent_run_input.agent_deployment.worker_node_url
+            )
+            
+            # Create request
+            request = grpc_server_pb2.AgentRunInput(
+                consumer_id=agent_run_input.consumer_id,
+                agent_deployment=agent_deployment,
+                input_struct=input_struct
+            )
+            
+            final_response = None
+            async for response in stub.RunAgent(request):
+                final_response = response
+                logger.info(f"Got response: {final_response}")
+                
+            return AgentRun(
+                consumer_id=agent_run_input.consumer_id,
+                inputs=agent_run_input.inputs,
+                agent_deployment=agent_run_input.agent_deployment,
+                orchestrator_runs=[],
+                status=final_response.status,
+                error=final_response.status == "error",
+                id=final_response.id,
+                results=list(final_response.results),
+                error_message=final_response.error_message,
+                created_time=final_response.created_time,
+                start_processing_time=final_response.start_processing_time,
+                completed_time=final_response.completed_time,
+                duration=final_response.duration,
+                input_schema_ipfs_hash=final_response.input_schema_ipfs_hash
+            )
+
     async def register_user_http(self, user_input: Dict[str, Any]) -> Dict[str, Any]:
         """
         Register a user on a node
@@ -223,42 +360,60 @@ class Node:
         logger.info(f"Register user response: {response}")
         return response
 
-    async def run_agent_http(self, agent_run_input: AgentRunInput) -> Dict[str, Any]:
+    async def _run_http(self, run_input: Union[AgentRunInput, OrchestratorRunInput], run_type: str) -> Union[AgentRun, OrchestratorRun]:
         """
-        Run a agent on a node
+        Generic method to run either an agent or orchestrator on a node
+        
+        Args:
+            run_input: Either AgentRunInput or OrchestratorRunInput
+            run_type: Either 'agent' or 'orchestrator'
         """
-        print("Running agent...")
+        print(f"Running {run_type}...")
+        print(f"Run input: {run_input}")
         print(f"Node URL: {self.node_url}")
 
-        endpoint = self.node_url + "/agent/run"
+        endpoint = f"{self.node_url}/{run_type}/run"
         
-        if isinstance(agent_run_input, dict):
-            agent_run_input = AgentRunInput(**agent_run_input)
+        # Convert dict to appropriate input type if needed
+        input_class = AgentRunInput if run_type == 'agent' else OrchestratorRunInput
+        if isinstance(run_input, dict):
+            run_input = input_class(**run_input)
 
         try:
             async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
                 headers = {
-                    'Content-Type': 'application/json', 
-                    'Authorization': f'Bearer {self.access_token}',  
+                    'Content-Type': 'application/json',
+                    'Authorization': f'Bearer {self.access_token}',
                 }
                 response = await client.post(
-                    endpoint, 
-                    json=agent_run_input.model_dict(),
+                    endpoint,
+                    json=run_input.model_dump(),
                     headers=headers
                 )
                 response.raise_for_status()
-            return AgentRun(**json.loads(response.text))
+                
+                # Convert response to appropriate return type
+                return_class = AgentRun if run_type == 'agent' else OrchestratorRun
+                return return_class(**json.loads(response.text))
         except HTTPStatusError as e:
             logger.info(f"HTTP error occurred: {e}")
-            raise  
+            raise
         except RemoteProtocolError as e:
-            error_msg = f"Run agent failed to connect to the server at {self.node_url}. Please check if the server URL is correct and the server is running. Error details: {str(e)}"
+            error_msg = f"Run {run_type} failed to connect to the server at {self.node_url}. Please check if the server URL is correct and the server is running. Error details: {str(e)}"
             logger.error(error_msg)
-            raise 
+            raise
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
             raise
 
+    async def run_agent_http(self, agent_run_input: AgentRunInput) -> AgentRun:
+        """Run an agent on a node"""
+        return await self._run_http(agent_run_input, 'agent')
+
+    async def run_orchestrator_http(self, orchestrator_run_input: OrchestratorRunInput) -> OrchestratorRun:
+        """Run an orchestrator on a node"""
+        return await self._run_http(orchestrator_run_input, 'orchestrator')
+    
     async def run_agent_ws(self, agent_run_input: AgentRunInput) -> AgentRun:
         response = await self.send_receive_ws(agent_run_input, "run_agent")
         
@@ -268,14 +423,38 @@ class Node:
             logger.error(f"Error running agent: {response['message']}")
             raise Exception(response['message'])
 
+    async def run_orchestrator_ws(self, orchestrator_run_input: OrchestratorRunInput) -> OrchestratorRun:
+        response = await self.send_receive_ws(orchestrator_run_input, "run_orchestrator")
+        
+        if response['status'] == 'success':
+            return OrchestratorRun(**response['data'])
+        else:
+            logger.error(f"Error running orchestrator: {response['message']}")
+            raise Exception(response['message'])
+
     async def check_agent_run_http(self, agent_run: AgentRun) -> AgentRun:
         try:
             async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
                 response = await client.post(
-                    f"{self.node_url}/agent/check", json=agent_run.model_dict()
+                    f"{self.node_url}/agent/check", json=agent_run.model_dump()
                 )
                 response.raise_for_status()
             return AgentRun(**json.loads(response.text))
+        except HTTPStatusError as e:
+            logger.info(f"HTTP error occurred: {e}")
+            raise  
+        except Exception as e:
+            logger.info(f"An unexpected error occurred: {e}")
+            logger.info(f"Full traceback: {traceback.format_exc()}")
+
+    async def check_orchestrator_run_http(self, orchestrator_run: OrchestratorRun) -> OrchestratorRun:
+        try:
+            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+                response = await client.post(
+                    f"{self.node_url}/orchestrator/check", json=orchestrator_run.model_dump()
+                )
+                response.raise_for_status()
+            return OrchestratorRun(**json.loads(response.text))
         except HTTPStatusError as e:
             logger.info(f"HTTP error occurred: {e}")
             raise  
@@ -287,7 +466,7 @@ class Node:
         try:
             async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
                 response = await client.post(
-                    f"{self.node_url}/monitor/create_agent_run", json=agent_run_input.model_dict()
+                    f"{self.node_url}/monitor/create_agent_run", json=agent_run_input.model_dump()
                 )
                 response.raise_for_status()
             return AgentRun(**json.loads(response.text))
@@ -302,7 +481,7 @@ class Node:
         try:
             async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
                 response = await client.post(
-                    f"{self.node_url}/monitor/update_agent_run", json=agent_run.model_dict()
+                    f"{self.node_url}/monitor/update_agent_run", json=agent_run.model_dump()
                 )
                 response.raise_for_status()
             return AgentRun(**json.loads(response.text))
