@@ -300,6 +300,7 @@ class Node:
             final_response = None
             async for response in stub.RunAgent(request):
                 final_response = response
+                logger.info(f"Got response: {final_response}")
                 
             return AgentRun(
                 consumer_id=agent_run_input.consumer_id,
