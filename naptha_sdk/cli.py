@@ -209,14 +209,7 @@ async def run(
         }
         print(f"Agent run input: {agent_run_input}")
 
-        agent_run = await naptha.node.run_agent(agent_run_input)
-
-        if agent_run.status == 'completed':
-            print("Agent run completed successfully.")
-            print("Results: ", agent_run.results)
-        else:
-            print("Agent run failed.")
-            print(agent_run.error_message)
+        agent_run = await naptha.node.run_agent_and_poll(agent_run_input)
     else:
         print("Running Orchestrator...")
         agent_deployments = []
@@ -241,14 +234,7 @@ async def run(
             environment_deployments=environment_deployments
         )
 
-        orchestrator_run = await naptha.node.run_orchestrator(orchestrator_run_input)
-
-        if orchestrator_run.status == 'completed':
-            print("Orchestrator run completed successfully.")
-            print("Results: ", orchestrator_run.results)
-        else:
-            print("Orchestrator run failed.")
-            print(orchestrator_run.error_message)
+        orchestrator_run = await naptha.node.run_orchestrator_and_poll(orchestrator_run_input)
 
 async def read_storage(naptha, hash_or_name, output_dir='./files', ipfs=False):
     """Read from storage, IPFS, or IPNS."""
