@@ -61,6 +61,7 @@ class OrchestratorDeployment(BaseModel):
 
 class EnvironmentDeployment(BaseModel):
     name: Optional[str] = "environment_deployment"
+    module: Optional[Dict] = None
     environment_node_url: str
     environment_config: Optional[EnvironmentConfig] = EnvironmentConfig()
 

@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.user import get_public_key
-from naptha_sdk.schemas import AgentConfig, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, OrchestratorRunInput
+from naptha_sdk.schemas import AgentConfig, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput
 import os
 import shlex
 import yaml
@@ -203,7 +203,7 @@ async def run(
     user_id,
     parameters=None, 
     worker_node_urls="http://localhost:7001",
-    environment_node_urls=["postgresql://naptha:naptha@localhost:3002/naptha"],
+    environment_node_urls=["http://localhost:7001"],
     yaml_file=None, 
     personas_urls=None
 ):   
@@ -214,9 +214,13 @@ async def run(
         parameters = load_yaml_to_dict(yaml_file)
 
     if "orchestrator:" in module_name:
-        is_orchestrator = True
+        module_type = "orchestrator"
+    elif "agent:" in module_name:
+        module_type = "agent" 
+    elif "environment:" in module_name:
+        module_type = "environment"
     else:
-        is_orchestrator = False
+        module_type = "agent" # Default to agent for backwards compatibility
 
     user = await naptha.node.check_user(user_input={"public_key": naptha.hub.public_key})
 
@@ -227,7 +231,7 @@ async def run(
         user = await naptha.node.register_user(user_input=user)
         print(f"User registered: {user}.")
 
-    if not is_orchestrator:
+    if module_type == "agent":
         print("Running Agent...")
         agent_deployment = AgentDeployment(
             name=module_name, 
@@ -245,7 +249,8 @@ async def run(
         print(f"Agent run input: {agent_run_input}")
 
         agent_run = await naptha.node.run_agent_and_poll(agent_run_input)
-    else:
+
+    elif module_type == "orchestrator":
         print("Running Orchestrator...")
         agent_deployments = []
         for worker_node_url in worker_node_urls:
@@ -271,6 +276,22 @@ async def run(
 
         orchestrator_run = await naptha.node.run_orchestrator_and_poll(orchestrator_run_input)
 
+    elif module_type == "environment":
+        print("Running Environment...")
+
+        environment_deployment = EnvironmentDeployment(
+            name=module_name, 
+            module={"name": module_name}, 
+            environment_node_url=environment_node_urls[0]
+        )
+
+        environment_run_input = EnvironmentRunInput(
+            inputs=parameters,
+            environment_deployment=environment_deployment,
+            consumer_id=user_id,
+        )
+        environment_run = await naptha.node.run_environment_and_poll(environment_run_input)
+        
 async def read_storage(naptha, hash_or_name, output_dir='./files', ipfs=False):
     """Read from storage, IPFS, or IPNS."""
     try:

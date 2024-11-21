@@ -32,34 +32,7 @@ class Node:
         self.access_token = None
         logger.info(f"Node URL: {node_url}")
 
-    async def run_agent_and_poll(self, agent_run_input: AgentRunInput) -> AgentRun:
-        agent_run = await self.run_agent(agent_run_input)
-        print(f"Agent run started: {agent_run}")
-
-        current_results_len = 0
-        while True:
-            agent_run = await self.check_agent_run(agent_run)
-            output = f"{agent_run.status} {agent_run.agent_deployment.module['type']} {agent_run.agent_deployment.module['name']}"
-            print(output)
-
-            if len(agent_run.results) > current_results_len:
-                print("Output: ", agent_run.results[-1])
-                current_results_len += 1
-
-            if agent_run.status == 'completed':
-                break
-            if agent_run.status == 'error':
-                break
-
-            time.sleep(3)
-
-        if agent_run.status == 'completed':
-            print(agent_run.results)
-        else:
-            print(agent_run.error_message)
-        return agent_run
-
-    async def _run_and_poll(self, run_input: Union[AgentRunInput, OrchestratorRunInput, Dict], run_type: str) -> Union[AgentRun, OrchestratorRun, Dict]:
+    async def _run_and_poll(self, run_input: Union[AgentRunInput, EnvironmentRunInput, OrchestratorRunInput, Dict], run_type: str) -> Union[AgentRun, EnvironmentRun, OrchestratorRun, Dict]:
         """Generic method to run and poll either an agent, orchestrator, or environment.
         
         Args:
@@ -174,13 +147,13 @@ class Node:
             logger.info(f"An unexpected error occurred: {e}")
             raise
 
-    async def _run_module(self, run_input: Union[AgentRunInput, OrchestratorRunInput], run_type: str) -> Union[AgentRun, OrchestratorRun]:
+    async def _run_module(self, run_input: Union[AgentRunInput, OrchestratorRunInput, EnvironmentRunInput], run_type: str) -> Union[AgentRun, OrchestratorRun, EnvironmentRun]:
         """
-        Generic method to run either an agent or orchestrator on a node
+        Generic method to run either an agent, orchestrator, or environment on a node
         
         Args:
-            run_input: Either AgentRunInput or OrchestratorRunInput
-            run_type: Either 'agent' or 'orchestrator'
+            run_input: Either AgentRunInput, OrchestratorRunInput, or EnvironmentRunInput
+            run_type: Either 'agent', 'orchestrator', or 'environment'
         """
         print(f"Running {run_type}...")
         print(f"Run input: {run_input}")
@@ -189,7 +162,12 @@ class Node:
         endpoint = f"{self.node_url}/{run_type}/run"
         
         # Convert dict to appropriate input type if needed
-        input_class = AgentRunInput if run_type == 'agent' else OrchestratorRunInput
+        input_class = {
+            'agent': AgentRunInput,
+            'orchestrator': OrchestratorRunInput,
+            'environment': EnvironmentRunInput
+        }[run_type]
+        
         if isinstance(run_input, dict):
             run_input = input_class(**run_input)
 
@@ -207,7 +185,11 @@ class Node:
                 response.raise_for_status()
                 
                 # Convert response to appropriate return type
-                return_class = AgentRun if run_type == 'agent' else OrchestratorRun
+                return_class = {
+                    'agent': AgentRun,
+                    'orchestrator': OrchestratorRun,
+                    'environment': EnvironmentRun
+                }[run_type]
                 return return_class(**json.loads(response.text))
         except HTTPStatusError as e:
             logger.info(f"HTTP error occurred: {e}")
@@ -227,6 +209,10 @@ class Node:
     async def run_orchestrator(self, orchestrator_run_input: OrchestratorRunInput) -> OrchestratorRun:
         """Run an orchestrator on a node"""
         return await self._run_module(orchestrator_run_input, 'orchestrator')
+    
+    async def run_environment(self, environment_run_input: EnvironmentRunInput) -> EnvironmentRun:
+        """Run an environment on a node"""
+        return await self._run_module(environment_run_input, 'environment')
 
     async def check_agent_run(self, agent_run: AgentRun) -> AgentRun:
         try:
