@@ -125,6 +125,14 @@ class Hub:
             orchestrator = await self.surrealdb.query("SELECT * FROM orchestrator WHERE id=$orchestrator_name;", {"orchestrator_name": orchestrator_name})
             return orchestrator[0]['result']
 
+    async def list_environments(self, environment_name=None) -> List:
+        if not environment_name:
+            environments = await self.surrealdb.query("SELECT * FROM environment;")
+            return environments[0]['result']
+        else:
+            environment = await self.surrealdb.query("SELECT * FROM environment WHERE id=$environment_name;", {"environment_name": environment_name})
+            return environment[0]['result']
+
     async def list_personas(self, persona_name=None) -> List:
         if not persona_name:
             personas = await self.surrealdb.query("SELECT * FROM persona;")
@@ -155,6 +163,17 @@ class Hub:
             print("Failed to delete orchestrator")
         return success
 
+    async def delete_environment(self, environment_id: str) -> Tuple[bool, Optional[Dict]]:
+        if ":" not in environment_id:
+            environment_id = f"environment:{environment_id}".strip()
+        print(f"Deleting environment: {environment_id}")
+        success = await self.surrealdb.delete(environment_id)
+        if success:
+            print("Deleted environment")
+        else:
+            print("Failed to delete environment")
+        return success
+
     async def delete_persona(self, persona_id: str) -> Tuple[bool, Optional[Dict]]:
         if ":" not in persona_id:
             persona_id = f"persona:{persona_id}".strip()
@@ -177,6 +196,12 @@ class Hub:
             return await self.surrealdb.create("orchestrator", orchestrator_config)
         else:
             return await self.surrealdb.create(orchestrator_config.pop('id'), orchestrator_config)
+
+    async def create_environment(self, environment_config: Dict) -> Tuple[bool, Optional[Dict]]:
+        if not environment_config.get('id'):
+            return await self.surrealdb.create("environment", environment_config)
+        else:
+            return await self.surrealdb.create(environment_config.pop('id'), environment_config)
 
     async def create_persona(self, persona_config: Dict) -> Tuple[bool, Optional[Dict]]:
         if not persona_config.get('id'):

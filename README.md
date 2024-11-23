@@ -89,7 +89,7 @@ For each agent, you will see a url where you can check out the code.
 naptha agents agent_name -p "description='Agent description' url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg' type='package' version='0.1'" 
 ```
 
-### Delete a Agent
+### Delete an Agent
 
 ```bash
 naptha agents -d agent_name
@@ -160,6 +160,42 @@ Tesla stock was lower to start a new week of trading, falling as investors worry
 News Summary 2:
 Tesla faces growing competition and softening demand, impacting its stock price which is trading 43% below its all-time high. The company’s profitability is declining, with earnings per share shrinking 46% year-over-year in Q2 2024. Despite recent price cuts and a plan to produce a low-cost EV model, sales growth has decelerated. Tesla is also involved in autonomous self-driving software, humanoid robots, and solar energy, but these segments may take years to significantly impact revenue.
 '" --worker_nodes "http://node.naptha.ai:7001"
+```
+
+## Environment Modules
+
+Environment modules in Naptha provide shared state and communication infrastructure for multi-agent workflows. They act as a common space where agents can interact, share information, and maintain persistent state across workflow executions. Think of them as the "world" or "environment" in which agents operate and communicate.
+
+For example, an environment module might:
+- Maintain a shared conversation history for a group chat
+- Store and manage a knowledge base that multiple agents can read from and write to
+- Provide a shared task queue for coordinating work between agents
+- Manage game state for multi-agent simulations
+
+### Interact with the Environment Hub
+
+You can also use the CLI to explore available environments that you can use with orchestrators:
+
+```bash
+naptha environments
+```
+
+### Create a New Environment Module
+
+```bash
+naptha environments environment_name -p "description='Environment description' url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg' type='package' version='0.1' entrypoint='run.py'" 
+```
+
+### Delete an Environment Module
+
+```bash
+naptha environments -d environment_name
+```
+
+### Run an Environment Module
+
+```bash
+naptha run environment:groupchat -p "function_name='get_global_state' function_input_data=None"
 ```
 
 ## Personas

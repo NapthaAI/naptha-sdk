@@ -61,6 +61,7 @@ class OrchestratorDeployment(BaseModel):
 
 class EnvironmentDeployment(BaseModel):
     name: Optional[str] = "environment_deployment"
+    module: Optional[Dict] = None
     environment_node_url: str
     environment_config: Optional[EnvironmentConfig] = EnvironmentConfig()
 
@@ -95,6 +96,7 @@ class AgentRun(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
     agent_deployment: AgentDeployment
+    environment_deployments: Optional[List[EnvironmentDeployment]] = None
     orchestrator_runs: List['OrchestratorRun'] = []
     status: str = "pending"
     error: bool = False
@@ -130,6 +132,7 @@ class AgentRunInput(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
     agent_deployment: AgentDeployment
+    environment_deployments: Optional[List[EnvironmentDeployment]] = None
     orchestrator_runs: List['OrchestratorRun'] = []
     
 class OrchestratorRunInput(BaseModel):
@@ -155,4 +158,26 @@ class OrchestratorRun(BaseModel):
     completed_time: Optional[str] = None
     duration: Optional[float] = None
     agent_runs: List['AgentRun'] = []
+    input_schema_ipfs_hash: Optional[str] = None
+
+class EnvironmentRunInput(BaseModel):
+    consumer_id: str
+    inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
+    environment_deployment: EnvironmentDeployment
+    orchestrator_runs: List['OrchestratorRun'] = []
+
+class EnvironmentRun(BaseModel):
+    consumer_id: str
+    inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
+    environment_deployment: EnvironmentDeployment
+    orchestrator_runs: List['OrchestratorRun'] = []
+    status: str = "pending"
+    error: bool = False
+    id: Optional[str] = None
+    results: list[str] = []
+    error_message: Optional[str] = None
+    created_time: Optional[str] = None
+    start_processing_time: Optional[str] = None
+    completed_time: Optional[str] = None
+    duration: Optional[float] = None
     input_schema_ipfs_hash: Optional[str] = None

@@ -1,5 +1,5 @@
 from httpx import HTTPStatusError, RemoteProtocolError
-from naptha_sdk.schemas import AgentRun, AgentRunInput, OrchestratorRun, OrchestratorRunInput
+from naptha_sdk.schemas import AgentRun, AgentRunInput, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, OrchestratorRunInput
 from naptha_sdk.utils import get_logger
 from pathlib import Path
 from typing import Dict, Optional, Any, List, Tuple, Union
@@ -32,58 +32,56 @@ class Node:
         self.access_token = None
         logger.info(f"Node URL: {node_url}")
 
-    async def run_agent_and_poll(self, agent_run_input: AgentRunInput) -> AgentRun:
-        agent_run = await self.run_agent(agent_run_input)
-        print(f"Agent run started: {agent_run}")
+    async def _run_and_poll(self, run_input: Union[AgentRunInput, EnvironmentRunInput, OrchestratorRunInput, Dict], module_type: str) -> Union[AgentRun, EnvironmentRun, OrchestratorRun, Dict]:
+        """Generic method to run and poll either an agent, orchestrator, or environment.
+        
+        Args:
+            run_input: Either AgentRunInput, OrchestratorRunInput, or environment dict
+            module_type: Either 'agent', 'orchestrator', or 'environment'
+        """
+
+        # Start the run
+        run = await getattr(self, f'run_{module_type}')(run_input)
+        print(f"{module_type.title()} run started: {run}")
 
         current_results_len = 0
         while True:
-            agent_run = await self.check_agent_run(agent_run)
-            output = f"{agent_run.status} {agent_run.agent_deployment.module['type']} {agent_run.agent_deployment.module['name']}"
+            # Check run status
+            run = await getattr(self, f'check_{module_type}_run')(run)
+            
+            output = f"{run.status} {getattr(run, f'{module_type}_deployment').module['type']} {getattr(run, f'{module_type}_deployment').module['name']}"
             print(output)
 
-            if len(agent_run.results) > current_results_len:
-                print("Output: ", agent_run.results[-1])
+            results = run.results
+            status = run.status
+
+            if len(results) > current_results_len:
+                print("Output: ", results[-1])
                 current_results_len += 1
 
-            if agent_run.status == 'completed':
-                break
-            if agent_run.status == 'error':
+            if status in ['completed', 'error']:
                 break
 
             time.sleep(3)
 
-        if agent_run.status == 'completed':
-            print(agent_run.results)
+        if status == 'completed':
+            print(results)
         else:
-            print(agent_run.error_message)
-        return agent_run
+            error_msg = run.error_message
+            print(error_msg)
+        return run
+
+    async def run_agent_and_poll(self, agent_run_input: AgentRunInput) -> AgentRun:
+        """Run an agent and poll for results until completion."""
+        return await self._run_and_poll(agent_run_input, 'agent')
 
     async def run_orchestrator_and_poll(self, orchestrator_run_input: OrchestratorRunInput) -> OrchestratorRun:
-        orchestrator_run = await self.run_orchestrator(orchestrator_run_input)
-        print(f"Orchestrator run started: {orchestrator_run}")
+        """Run an orchestrator and poll for results until completion."""
+        return await self._run_and_poll(orchestrator_run_input, 'orchestrator')
 
-        current_results_len = 0
-        while True:
-            orchestrator_run = await self.check_orchestrator_run(orchestrator_run)
-            output = f"{orchestrator_run.status} {orchestrator_run.orchestrator_deployment.module['type']} {orchestrator_run.orchestrator_deployment.module['name']}"
-            print(output)
-            if len(orchestrator_run.results) > current_results_len:
-                print("Output: ", orchestrator_run.results[-1])
-                current_results_len += 1
-
-            if orchestrator_run.status == 'completed':
-                break
-            if orchestrator_run.status == 'error':
-                break
-
-            time.sleep(3)
-
-        if orchestrator_run.status == 'completed':
-            print(orchestrator_run.results)
-        else:
-            print(orchestrator_run.error_message)
-        return orchestrator_run
+    async def run_environment_and_poll(self, environment_input: EnvironmentRunInput) -> EnvironmentRun:
+        """Run an environment and poll for results until completion."""
+        return await self._run_and_poll(environment_input, 'environment')
 
     async def check_user(self, user_input: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -141,22 +139,27 @@ class Node:
             logger.info(f"An unexpected error occurred: {e}")
             raise
 
-    async def _run_module(self, run_input: Union[AgentRunInput, OrchestratorRunInput], run_type: str) -> Union[AgentRun, OrchestratorRun]:
+    async def _run_module(self, run_input: Union[AgentRunInput, OrchestratorRunInput, EnvironmentRunInput], module_type: str) -> Union[AgentRun, OrchestratorRun, EnvironmentRun]:
         """
-        Generic method to run either an agent or orchestrator on a node
+        Generic method to run either an agent, orchestrator, or environment on a node
         
         Args:
-            run_input: Either AgentRunInput or OrchestratorRunInput
-            run_type: Either 'agent' or 'orchestrator'
+            run_input: Either AgentRunInput, OrchestratorRunInput, or EnvironmentRunInput
+            module_type: Either 'agent', 'orchestrator', or 'environment'
         """
-        print(f"Running {run_type}...")
+        print(f"Running {module_type}...")
         print(f"Run input: {run_input}")
         print(f"Node URL: {self.node_url}")
 
-        endpoint = f"{self.node_url}/{run_type}/run"
+        endpoint = f"{self.node_url}/{module_type}/run"
         
         # Convert dict to appropriate input type if needed
-        input_class = AgentRunInput if run_type == 'agent' else OrchestratorRunInput
+        input_class = {
+            'agent': AgentRunInput,
+            'orchestrator': OrchestratorRunInput,
+            'environment': EnvironmentRunInput
+        }[module_type]
+        
         if isinstance(run_input, dict):
             run_input = input_class(**run_input)
 
@@ -174,13 +177,17 @@ class Node:
                 response.raise_for_status()
                 
                 # Convert response to appropriate return type
-                return_class = AgentRun if run_type == 'agent' else OrchestratorRun
+                return_class = {
+                    'agent': AgentRun,
+                    'orchestrator': OrchestratorRun,
+                    'environment': EnvironmentRun
+                }[module_type]
                 return return_class(**json.loads(response.text))
         except HTTPStatusError as e:
             logger.info(f"HTTP error occurred: {e}")
             raise
         except RemoteProtocolError as e:
-            error_msg = f"Run {run_type} failed to connect to the server at {self.node_url}. Please check if the server URL is correct and the server is running. Error details: {str(e)}"
+            error_msg = f"Run {module_type} failed to connect to the server at {self.node_url}. Please check if the server URL is correct and the server is running. Error details: {str(e)}"
             logger.error(error_msg)
             raise
         except Exception as e:
@@ -194,36 +201,52 @@ class Node:
     async def run_orchestrator(self, orchestrator_run_input: OrchestratorRunInput) -> OrchestratorRun:
         """Run an orchestrator on a node"""
         return await self._run_module(orchestrator_run_input, 'orchestrator')
+    
+    async def run_environment(self, environment_run_input: EnvironmentRunInput) -> EnvironmentRun:
+        """Run an environment on a node"""
+        return await self._run_module(environment_run_input, 'environment')
 
-    async def check_agent_run(self, agent_run: AgentRun) -> AgentRun:
+    async def check_run(
+        self, 
+        module_run: Union[AgentRun, OrchestratorRun, EnvironmentRun], 
+        module_type: str
+    ) -> Union[AgentRun, OrchestratorRun, EnvironmentRun]:
+        """Generic method to check the status of a module run.
+        
+        Args:
+            module_run: Either AgentRun, OrchestratorRun, or EnvironmentRun object
+            module_type: Either 'agent', 'orchestrator', or 'environment'
+        """
         try:
             async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
                 response = await client.post(
-                    f"{self.node_url}/agent/check", json=agent_run.model_dump()
+                    f"{self.node_url}/{module_type}/check", 
+                    json=module_run.model_dump()
                 )
                 response.raise_for_status()
-            return AgentRun(**json.loads(response.text))
+            
+            return_class = {
+                'agent': AgentRun,
+                'orchestrator': OrchestratorRun,
+                'environment': EnvironmentRun
+            }[module_type]
+            return return_class(**json.loads(response.text))
         except HTTPStatusError as e:
             logger.info(f"HTTP error occurred: {e}")
             raise  
         except Exception as e:
             logger.info(f"An unexpected error occurred: {e}")
             logger.info(f"Full traceback: {traceback.format_exc()}")
+
+    # Update existing methods to use the new generic one
+    async def check_agent_run(self, agent_run: AgentRun) -> AgentRun:
+        return await self.check_run(agent_run, 'agent')
 
     async def check_orchestrator_run(self, orchestrator_run: OrchestratorRun) -> OrchestratorRun:
-        try:
-            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-                response = await client.post(
-                    f"{self.node_url}/orchestrator/check", json=orchestrator_run.model_dump()
-                )
-                response.raise_for_status()
-            return OrchestratorRun(**json.loads(response.text))
-        except HTTPStatusError as e:
-            logger.info(f"HTTP error occurred: {e}")
-            raise  
-        except Exception as e:
-            logger.info(f"An unexpected error occurred: {e}")
-            logger.info(f"Full traceback: {traceback.format_exc()}")
+        return await self.check_run(orchestrator_run, 'orchestrator')
+
+    async def check_environment_run(self, environment_run: EnvironmentRun) -> EnvironmentRun:
+        return await self.check_run(environment_run, 'environment')
 
     async def create_agent_run(self, agent_run_input: AgentRunInput) -> AgentRun:
         try:
