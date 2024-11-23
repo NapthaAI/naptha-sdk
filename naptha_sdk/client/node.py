@@ -49,19 +49,11 @@ class Node:
             # Check run status
             run = await getattr(self, f'check_{module_type}_run')(run)
             
-            if module_type == 'environment':
-                output = f"Status: {run['status']}"
-            else:
-                output = f"{run.status} {getattr(run, f'{module_type}_deployment').module['type']} {getattr(run, f'{module_type}_deployment').module['name']}"
+            output = f"{run.status} {getattr(run, f'{module_type}_deployment').module['type']} {getattr(run, f'{module_type}_deployment').module['name']}"
             print(output)
 
-            # Handle results differently for environment vs agent/orchestrator
-            if module_type == 'environment':
-                results = run.get('results', [])
-                status = run['status']
-            else:
-                results = run.results
-                status = run.status
+            results = run.results
+            status = run.status
 
             if len(results) > current_results_len:
                 print("Output: ", results[-1])
@@ -75,7 +67,7 @@ class Node:
         if status == 'completed':
             print(results)
         else:
-            error_msg = run.get('error_message', '') if module_type == 'environment' else run.error_message
+            error_msg = run.error_message
             print(error_msg)
         return run
 
