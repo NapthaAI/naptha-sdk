@@ -110,12 +110,6 @@ Try an agent that uses the local LLM running on your node:
 naptha run agent:simple_chat_agent -p "tool_name='chat' tool_input_data='what is an ai agent?'"
 ```
 
-You can also run agents from docker images:
-
-```bash
-naptha run agent:docker_hello_world -f ./example_yamls/docker_hello_world.yml
-```
-
 ## Agent Orchestrators
 
 ### Interact with the Agent Orchestrator Hub
@@ -195,7 +189,7 @@ naptha environments -d environment_name
 ### Run an Environment Module
 
 ```bash
-naptha run environment:groupchat -p "function_name='get_global_state' function_input_data=None"
+naptha run environment:groupchat -p "function_name='get_global_state'"
 ```
 
 ## Personas
@@ -241,64 +235,18 @@ naptha write_storage -i files/<filename>.jpg
 naptha write_storage -i files/<filename>.jpg --ipfs
 ```
 
-## Using the SDK non-interactively
-
-To use the SDK as part of a script, start with importing the hub and service subcomponents.
-```python
-import asyncio
-from naptha_sdk.client.naptha import Naptha
-from naptha_sdk.client.node import Node
-from naptha_sdk.task import Task as Agent
-from naptha_sdk.flow import Flow
-from naptha_sdk.user import generate_user
-import os
-```
-
-
-```python
-async def main():
-   naptha = Naptha(
-      hub_url="ws://node.naptha.ai:3001/rpc",
-      node_url="http://node.naptha.ai:7001",
-      public_key=get_public_key(os.getenv("PRIVATE_KEY")),
-      hub_username=os.getenv("HUB_USER"), 
-      hub_password=os.getenv("HUB_PASS"), 
-   )
-
-   async with naptha as naptha:
-         await naptha.hub.signin(hub_username, hub_password) 
-
-  flow_inputs = {"prompt": 'i would like to count up to ten, one number at a time. ill start. one.'}
-  worker_nodes = [Node("http://node.naptha.ai:7001"), Node("http://node1.naptha.ai:7001")]
-
-  agentnet = Flow(name="multiplayer_chat", user_id=naptha.user["id"], worker_nodes=worker_nodes, agent_run_params=flow_inputs)
-
-  agent1 = Agent(name="chat_initiator", fn="simple_chat_agent", worker_node=worker_nodes[0], orchestrator_node=naptha.node, flow_run=agentnet.flow_run)
-  agent2 = Agent(name="chat_receiver", fn="simple_chat_agent", worker_node=worker_nodes[1], orchestrator_node=naptha.node, flow_run=agentnet.flow_run)
-
-  response = await agent1(prompt=flow_inputs["prompt"])
-
-  for i in range(10):
-      response = await agent2(prompt=response)
-      response = await agent1(prompt=response)
-
-asyncio.run(await main())
-
-```
 
 # ***More examples and tutorials coming soon.***
 
 ### Create your own Agent
 
-Clone the [base template](https://huggingface.co/NapthaAI/template) for creating agent and flow agents, and follow the instructions in the readme for prototyping the agent. You can check out other examples of agents and networks at https://huggingface.co/NapthaAI.
+Clone the [base template](https://github.com/NapthaAI/module_template) for creating agent and flow agents, and follow the instructions in the readme for prototyping the agent. You can check out other examples of agents and networks at https://github.com/NapthaAI.
 
 Register your agent on the Naptha Hub (Coming Soon).
 
 # Run a Node
 
-You can run your own Naptha node, and earn rewards for running workflows. Follow the instructions at https://github.com/NapthaAI/node
-
-
+You can run your own Naptha node, and earn rewards for running workflows. Follow the instructions at https://github.com/NapthaAI/node (still private, please reach out if you'd like access).
 # Community
 
 ### Links
