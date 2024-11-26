@@ -189,7 +189,7 @@ naptha environments -d environment_name
 ### Run an Environment Module
 
 ```bash
-naptha run environment:groupchat -p "function_name='get_global_state'"
+naptha run environment:groupchat_environment -p "function_name='get_global_state'"
 ```
 
 ## Personas
