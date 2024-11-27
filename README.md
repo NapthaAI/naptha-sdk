@@ -110,6 +110,12 @@ Try an agent that uses the local LLM running on your node:
 naptha run agent:simple_chat_agent -p "tool_name='chat' tool_input_data='what is an ai agent?'"
 ```
 
+You can also run agents from docker images (if running your own node, make sure the DOCKER_JOBS=True in the config):
+
+```bash
+naptha run docker_hello_world -p "docker_image=hello-world"
+```
+
 ## Agent Orchestrators
 
 ### Interact with the Agent Orchestrator Hub
