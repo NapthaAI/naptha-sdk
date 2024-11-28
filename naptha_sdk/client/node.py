@@ -350,7 +350,79 @@ class Node:
             logger.info(f"An unexpected error occurred: {e}")
             logger.info(f"Full traceback: {traceback.format_exc()}")
             return {}
-        
+
+    async def create_table(self, table_name: str, schema: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+            response = await client.post(
+                f"{self.node_url}/local-db/create-table",
+                json={"table_name": table_name, "schema": schema}
+            )
+            response.raise_for_status()
+            return response.json()
+
+    async def add_row(self, table_name: str, data: Dict[str, Any], schema: Optional[Dict[str, Dict[str, Any]]] = None) -> Dict[str, Any]:
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+            response = await client.post(
+                f"{self.node_url}/local-db/add-row",
+                json={"table_name": table_name, "data": data, "schema": schema}
+            )
+            response.raise_for_status()
+            return response.json()
+
+    async def update_row(self, table_name: str, data: Dict[str, Any], condition: Dict[str, Any], schema: Optional[Dict[str, Dict[str, Any]]] = None) -> Dict[str, Any]:
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+            response = await client.post(
+                f"{self.node_url}/local-db/update-row",
+                json={
+                    "table_name": table_name,
+                    "data": data,
+                    "condition": condition,
+                    "schema": schema
+                }
+            )
+            response.raise_for_status()
+            return response.json()
+
+    async def delete_row(self, table_name: str, condition: Dict[str, Any]) -> Dict[str, Any]:
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+            response = await client.post(
+                f"{self.node_url}/local-db/delete-row",
+                json={"table_name": table_name, "condition": condition}
+            )
+            response.raise_for_status()
+            return response.json()
+
+    async def list_tables(self) -> Dict[str, Any]:
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+            response = await client.get(f"{self.node_url}/local-db/tables")
+            response.raise_for_status()
+            return response.json()
+
+    async def get_table_schema(self, table_name: str) -> Dict[str, Any]:
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+            response = await client.get(f"{self.node_url}/local-db/table/{table_name}")
+            response.raise_for_status()
+            return response.json()
+
+    async def query_table(self, table_name: str, columns: Optional[str] = None, condition: Optional[Union[str, Dict]] = None, order_by: Optional[str] = None, limit: Optional[int] = None) -> Dict[str, Any]:
+        params = {"table_name": table_name}
+        if columns:
+            params["columns"] = columns
+        if condition:
+            params["condition"] = json.dumps(condition) if isinstance(condition, dict) else condition
+        if order_by:
+            params["order_by"] = order_by
+        if limit:
+            params["limit"] = limit
+
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+            response = await client.get(
+                f"{self.node_url}/local-db/table/{table_name}/rows",
+                params=params
+            )
+            response.raise_for_status()
+            return response.json()
+
 def zip_directory(file_path, zip_path):
     """Utility function to zip the content of a directory while preserving the folder structure."""
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
