@@ -51,13 +51,9 @@ Choose whether you want to interact with a local Naptha node or a hosted Naptha 
 
 ## Get Started
 
-## Sign Up
+## Sign In or Sign Up
 
-You can sign up for an account on the Naptha Hub (and generate a public/private keypair) using the commandline tool:
-
-```bash
-naptha signup
-```
+If you have already created an account on the Naptha Hub, you can add the details to HUB_USER, HUB_PASSWORD and PRIVATE_KEY in the .env file. If you don't have an account, you can either (a) add values for HUB_USER, HUB_PASSWORD and PRIVATE_KEY in the .env file and run `naptha signup`, or (b) run `naptha signup` without values in the .env file and follow the instructions to create a username and password (in this case, the public/private keypair is randomly generated, and all details will be saved in the .env file). 
 
 ## Nodes
 
