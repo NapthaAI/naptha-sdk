@@ -13,7 +13,7 @@ class Environment:
         self.table_name = "multi_chat_simulations"
 
     @classmethod
-    async def create(cls, module_run: Union[OrchestratorRun, AgentRun]):
+    async def create(cls, module_run):
         """Factory method to create and initialize an Environment instance."""
         instance = cls(module_run)
         await instance._initialize()
@@ -23,21 +23,20 @@ class Environment:
         """Initialize the environment by creating the table."""
         try:
             # First try to query if table exists
-            await self.get_simulation(run_id="test")
-        except:
-            # If table doesn't exist, create it
-            try:
+            tables = await self.environment_node.list_tables()
+            print(f"Tables: {tables}")
+            if self.table_name not in tables:
                 schema = {
-                    "run_id": {"type": "TEXT", "primary_key": True},
-                    "messages": {"type": "JSONB"}
+                    "run_id": {"type": "text", "primary_key": True},
+                    "messages": {"type": "jsonb"}  
                 }
                 await self.environment_node.create_table(
                     self.table_name, 
                     schema
                 )
-            except Exception as e:
-                logger.error(f"Failed to create table: {e}")
-                # Continue even if table creation fails - it might already exist
+        except Exception as e:
+            logger.error(f"Error initializing environment: {str(e)}")
+            raise
 
     async def upsert_simulation(self, run_id: str, messages: List[Dict[str, Any]]):
         """Update existing simulation or insert new one if it doesn't exist."""
