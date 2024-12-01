@@ -11,20 +11,21 @@ class Environment:
         self.environment_deployment = module_run.environment_deployments[0]
         self.environment_node = Node(self.environment_deployment.environment_node_url)
         self.table_name = "multi_chat_simulations"
-        self.create_table()
 
-    async def create_table(self):
-        """Create multi_chat_simulations table if it doesn't exist."""
-        try:
-            schema = {
-                "run_id": {"type": "TEXT", "primary_key": True},
-                "messages": {"type": "JSONB"}
-            }
-            await self.environment_node.create_table(self.table_name, schema)
-            logger.info("Table created successfully")
-        except Exception as e:
-            logger.error(f"Error creating table: {str(e)}")
-            raise
+    @classmethod
+    async def create(cls, module_run: Union[OrchestratorRun, AgentRun]):
+        """Factory method to create and initialize an Environment instance."""
+        instance = cls(module_run)
+        await instance._initialize()
+        return instance
+
+    async def _initialize(self):
+        """Initialize the environment by creating the table."""
+        schema = {
+            "run_id": {"type": "TEXT", "primary_key": True},
+            "messages": {"type": "JSONB"}
+        }
+        await self.environment_node.create_table(self.table_name, schema)
 
     async def upsert_simulation(self, run_id: str, messages: List[Dict[str, Any]]):
         """Update existing simulation or insert new one if it doesn't exist."""
