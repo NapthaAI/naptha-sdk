@@ -11,18 +11,7 @@ class Environment:
         self.environment_deployment = module_run.environment_deployments[0]
         self.environment_node = Node(self.environment_deployment.environment_node_url)
         self.table_name = "multi_chat_simulations"
-
-    async def initialize(self):
-        """Initialize the environment by creating the table."""
-        await self.create_table()
-        return self
-
-    @classmethod
-    async def create(cls, module_run: Union[OrchestratorRun, AgentRun]):
-        """Factory method to create and initialize an Environment instance."""
-        instance = cls(module_run)
-        await instance.initialize()
-        return instance
+        self.create_table()
 
     async def create_table(self):
         """Create multi_chat_simulations table if it doesn't exist."""
@@ -36,17 +25,6 @@ class Environment:
         except Exception as e:
             logger.error(f"Error creating table: {str(e)}")
             raise
-
-    def sync_upsert_simulation(self, run_id: str, messages: List[Dict[str, Any]]):
-        """Synchronous wrapper for upsert_simulation to be used in non-async contexts."""
-        import asyncio
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        return loop.run_until_complete(self.upsert_simulation(run_id, messages))
 
     async def upsert_simulation(self, run_id: str, messages: List[Dict[str, Any]]):
         """Update existing simulation or insert new one if it doesn't exist."""
@@ -79,17 +57,6 @@ class Environment:
         except Exception as e:
             logger.error(f"Error upserting simulation: {str(e)}")
             raise
-
-    def sync_get_simulation(self, run_id: str) -> List[Dict[str, Any]]:
-        """Synchronous wrapper for get_simulation to be used in non-async contexts."""
-        import asyncio
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        return loop.run_until_complete(self.get_simulation(run_id))
 
     async def get_simulation(self, run_id: str) -> List[Dict[str, Any]]:
         """Retrieve messages for a given run_id."""
