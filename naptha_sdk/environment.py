@@ -21,11 +21,23 @@ class Environment:
 
     async def _initialize(self):
         """Initialize the environment by creating the table."""
-        schema = {
-            "run_id": {"type": "TEXT", "primary_key": True},
-            "messages": {"type": "JSONB"}
-        }
-        await self.environment_node.create_table(self.table_name, schema)
+        try:
+            # First try to query if table exists
+            await self.get_simulation(run_id="test")
+        except:
+            # If table doesn't exist, create it
+            try:
+                schema = {
+                    "run_id": {"type": "TEXT", "primary_key": True},
+                    "messages": {"type": "JSONB"}
+                }
+                await self.environment_node.create_table(
+                    self.table_name, 
+                    schema
+                )
+            except Exception as e:
+                logger.error(f"Failed to create table: {e}")
+                # Continue even if table creation fails - it might already exist
 
     async def upsert_simulation(self, run_id: str, messages: List[Dict[str, Any]]):
         """Update existing simulation or insert new one if it doesn't exist."""
