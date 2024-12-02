@@ -41,10 +41,11 @@ class EnvironmentConfig(BaseModel):
     environment_type: Optional[str] = None
 
 class DataGenerationConfig(BaseModel):
-    save_outputs: bool = False
-    save_outputs_location: str = "node"
-    save_inputs: bool = False
-    save_inputs_location: str = "node"
+    save_outputs: Optional[bool] = None
+    save_outputs_location: Optional[str] = None
+    save_outputs_path: Optional[str] = None
+    save_inputs: Optional[bool] = None
+    save_inputs_location: Optional[str] = None
 
 class AgentDeployment(BaseModel):
     name: Optional[str] = "agent_deployment"

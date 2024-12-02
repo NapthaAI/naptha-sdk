@@ -273,7 +273,6 @@ async def run(
             agent_deployments=agent_deployments,
             environment_deployments=environment_deployments
         )
-
         orchestrator_run = await naptha.node.run_orchestrator_and_poll(orchestrator_run_input)
 
     elif module_type == "environment":
@@ -529,7 +528,7 @@ async def main():
                 if hasattr(args, 'environment_nodes') and args.environment_nodes is not None:
                     environment_node_urls = args.environment_nodes.split(',')
                 else:
-                    environment_node_urls = ["postgresql://naptha:naptha@localhost:3002/naptha"]
+                    environment_node_urls = ["http://localhost:7001"]
 
                 # parse personas urls
                 if hasattr(args, 'personas_urls') and args.personas_urls is not None:
