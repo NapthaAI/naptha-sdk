@@ -18,8 +18,8 @@ class LLMConfig(BaseModel):
     config_name: Optional[str] = "llm_config"
     client: Optional[LLMClientType] = None
     model: Optional[str] = None
-    max_tokens: Optional[int] = 400
-    temperature: Optional[float] = 0
+    max_tokens: Optional[int] = None
+    temperature: Optional[float] = None
     api_base: Optional[str] = None
 
 class AgentModuleType(str, Enum):
@@ -30,7 +30,7 @@ class AgentConfig(BaseModel):
     config_name: Optional[str] = "agent_config"
     llm_config: Optional[LLMConfig] = LLMConfig()
     persona_module: Optional[Union[Dict, BaseModel]] = None
-    system_prompt: Optional[Union[Dict, BaseModel]] = {'role': 'system', 'content': 'You are a helpful assistant.'}
+    system_prompt: Optional[Union[Dict, BaseModel]] = None
 
 class OrchestratorConfig(BaseModel):
     config_name: Optional[str] = "orchestrator_config"
@@ -49,7 +49,7 @@ class DataGenerationConfig(BaseModel):
 class AgentDeployment(BaseModel):
     name: Optional[str] = "agent_deployment"
     module: Optional[Dict] = None
-    worker_node_url: Optional[str] = "http://localhost:7001"
+    worker_node_url: Optional[str] = None
     agent_config: Optional[AgentConfig] = AgentConfig()
     data_generation_config: Optional[DataGenerationConfig] = DataGenerationConfig()
 
