@@ -6,11 +6,19 @@ from typing import Dict, Optional, Any, List, Tuple, Union
 import httpx
 import json
 import os
+import uuid
+import websockets
 import shutil
 import tempfile
 import time
 import traceback
 import zipfile
+import grpc
+from naptha_sdk.client import grpc_server_pb2_grpc
+from naptha_sdk.client import grpc_server_pb2
+from google.protobuf import struct_pb2
+from google.protobuf.json_format import MessageToDict
+
 logger = get_logger(__name__)
 HTTP_TIMEOUT = 300
 
@@ -21,6 +29,15 @@ class Node:
         self.routing_url = routing_url
         self.connections = {}
 
+        if self.node_url.startswith('ws://'):
+            self.server_type = 'ws'
+        elif self.node_url.startswith('http://'):
+            self.server_type = 'http'
+        elif self.node_url.startswith('grpc://'):
+            self.server_type = 'grpc'
+        else:
+            raise ValueError("Invalid node URL")
+        
         # at least one of node_url and indirect_node_id must be set
         if not node_url and not indirect_node_id:
             raise ValueError("Either node_url or indirect_node_id must be set")
@@ -83,7 +100,24 @@ class Node:
         """Run an environment and poll for results until completion."""
         return await self._run_and_poll(environment_input, 'environment')
 
-    async def check_user(self, user_input: Dict[str, Any]) -> Dict[str, Any]:
+    async def check_user_ws(self, user_input: Dict[str, str]):
+        response = await self.send_receive_ws(user_input, "check_user")
+        logger.info(f"Check user response: {response}")
+        return response
+
+    async def check_user_grpc(self, user_input: Dict[str, str]):
+        async with grpc.aio.insecure_channel(self.node_url) as channel:
+            stub = grpc_server_pb2_grpc.GrpcServerStub(channel)
+            request = grpc_server_pb2.CheckUserRequest(
+                user_id=user_input.get('user_id', ''),
+                public_key=user_input.get('public_key', '')
+            )
+            response = await stub.CheckUser(request)
+
+            print("BBBBB", response)
+            return MessageToDict(response, preserving_proto_field_name=True)
+
+    async def check_user_http(self, user_input: Dict[str, Any]) -> Dict[str, Any]:
         """
         Check if a user exists on a node
         """
@@ -111,7 +145,33 @@ class Node:
             logger.info(f"An unexpected error occurred: {e}")
             raise
 
-    async def register_user(self, user_input: Dict[str, Any]) -> Dict[str, Any]:
+    async def check_user(self, user_input: Dict[str, Any]) -> Dict[str, Any]:
+        if self.server_type == 'ws':
+            return await self.check_user_ws(user_input)
+        elif self.server_type == 'grpc':
+            return await self.check_user_grpc(user_input)
+        else:
+            return await self.check_user_http(user_input)
+
+    async def register_user_ws(self, user_input: Dict[str, str]):
+        response = await self.send_receive_ws(user_input, "register_user")
+        logger.info(f"Register user response: {response}")
+        return response
+
+    async def register_user_grpc(self, user_input: Dict[str, str]):
+        async with grpc.aio.insecure_channel(self.node_url) as channel:
+            stub = grpc_server_pb2_grpc.GrpcServerStub(channel)
+            request = grpc_server_pb2.RegisterUserRequest(
+                public_key=user_input.get('public_key', '')
+            )
+            response = await stub.RegisterUser(request)
+            return {
+                'id': response.id,
+                'public_key': response.public_key,
+                'created_at': response.created_at
+            }
+
+    async def register_user_http(self, user_input: Dict[str, Any]) -> Dict[str, Any]:
         """
         Register a user on a node
         """
@@ -138,6 +198,14 @@ class Node:
         except Exception as e:
             logger.info(f"An unexpected error occurred: {e}")
             raise
+
+    async def register_user(self, user_input: Dict[str, Any]) -> Dict[str, Any]:
+        if self.server_type == 'ws':
+            return await self.register_user_ws(user_input)
+        elif self.server_type == 'grpc':
+            return await self.register_user_grpc(user_input)
+        else:
+            return await self.register_user_http(user_input)
 
     async def _run_module(self, run_input: Union[AgentRunInput, OrchestratorRunInput, EnvironmentRunInput], module_type: str) -> Union[AgentRun, OrchestratorRun, EnvironmentRun]:
         """
@@ -193,6 +261,78 @@ class Node:
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
             raise
+
+    async def run_agent_ws(self, agent_run_input: AgentRunInput) -> AgentRun:
+        response = await self.send_receive_ws(agent_run_input, "run_agent")
+        
+        if response['status'] == 'success':
+            return AgentRun(**response['data'])
+        else:
+            logger.error(f"Error running agent: {response['message']}")
+            raise Exception(response['message'])
+
+    async def run_agent_grpc(self, agent_run_input: AgentRunInput):
+        async with grpc.aio.insecure_channel(self.node_url) as channel:
+            stub = grpc_server_pb2_grpc.GrpcServerStub(channel)
+            
+            # Convert dict to appropriate input type if needed
+            if isinstance(agent_run_input, dict):
+                agent_run_input = AgentRunInput(**agent_run_input)
+
+            # Convert input data to Struct
+            input_struct = struct_pb2.Struct()
+            if agent_run_input.inputs:
+                if isinstance(agent_run_input.inputs, dict):
+                    input_data = agent_run_input.inputs.dict() if hasattr(agent_run_input.inputs, 'dict') else agent_run_input.inputs
+                    input_struct.update(input_data)
+            
+            # Create agent module and deployment
+            agent_module = grpc_server_pb2.AgentModule(
+                name=agent_run_input.agent_deployment.module['name']
+            )
+            
+            agent_deployment = grpc_server_pb2.AgentDeployment(
+                name=agent_run_input.agent_deployment.name,
+                module=agent_module,
+                worker_node_url=agent_run_input.agent_deployment.worker_node_url
+            )
+            
+            # Create request
+            request = grpc_server_pb2.AgentRunInput(
+                consumer_id=agent_run_input.consumer_id,
+                agent_deployment=agent_deployment,
+                input_struct=input_struct
+            )
+            
+            final_response = None
+            async for response in stub.RunAgent(request):
+                final_response = response
+                logger.info(f"Got response: {final_response}")
+                
+            return AgentRun(
+                consumer_id=agent_run_input.consumer_id,
+                inputs=agent_run_input.inputs,
+                agent_deployment=agent_run_input.agent_deployment,
+                orchestrator_runs=[],
+                status=final_response.status,
+                error=final_response.status == "error",
+                id=final_response.id,
+                results=list(final_response.results),
+                error_message=final_response.error_message,
+                created_time=final_response.created_time,
+                start_processing_time=final_response.start_processing_time,
+                completed_time=final_response.completed_time,
+                duration=final_response.duration,
+                input_schema_ipfs_hash=final_response.input_schema_ipfs_hash
+            )
+
+    async def run_agent_in_node(self, agent_run_input: AgentRunInput) -> AgentRun:
+        if self.server_type == 'ws':
+            return await self.run_agent_ws(agent_run_input)
+        elif self.server_type == 'grpc':
+            return await self.run_agent_grpc(agent_run_input)
+        else:
+            raise ValueError("Invalid server type. Server type must be either 'ws' or 'grpc'.")
 
     async def run_agent(self, agent_run_input: AgentRunInput) -> AgentRun:
         """Run an agent on a node"""
@@ -422,6 +562,37 @@ class Node:
             )
             response.raise_for_status()
             return response.json()
+
+    async def connect_ws(self, action: str):
+        client_id = str(uuid.uuid4())
+        full_url = f"{self.node_url}/ws/{action}/{client_id}"
+        logger.info(f"Connecting to WebSocket: {full_url}")
+        ws = await websockets.connect(full_url)
+        self.connections[client_id] = ws
+        self.current_client_id = client_id
+        return client_id
+
+    async def disconnect_ws(self, client_id: str):
+        if client_id in self.connections:
+            await self.connections[client_id].close()
+            del self.connections[client_id]
+        if self.current_client_id == client_id:
+            self.current_client_id = None
+
+    async def send_receive_ws(self, data, action: str):
+        client_id = await self.connect_ws(action)
+        
+        try:
+            if isinstance(data, AgentRunInput) or isinstance(data, OrchestratorRunInput):
+                message = data.model_dump()
+            else:
+                message = data
+            await self.connections[client_id].send(json.dumps(message))
+            
+            response = await self.connections[client_id].recv()
+            return json.loads(response)
+        finally:
+            await self.disconnect_ws(client_id)
 
 def zip_directory(file_path, zip_path):
     """Utility function to zip the content of a directory while preserving the folder structure."""
