@@ -257,7 +257,8 @@ async def create(
             'consumer_id': user_id,
             "inputs": parameters,
             "agent_deployment": agent_deployment.model_dump(),
-            "personas_urls": personas_urls
+            "personas_urls": personas_urls,
+            "id": ""
         }
         print(f"Creating agent input: {agent_run_input}")
         return await naptha.node.create_agent(agent_run_input)
@@ -302,6 +303,7 @@ async def run(
     naptha,
     module_name,
     user_id,
+    id,
     parameters=None,
     worker_node_urls="http://localhost:7001",
     environment_node_urls=["http://localhost:7001"],
@@ -327,6 +329,7 @@ async def run(
 
     if module_type == "agent":
         print("Running Agent...")
+        id = "agent:{id}"
         agent_deployment = AgentDeployment(
             name=module_name,
             module={"name": module_name},
@@ -334,17 +337,19 @@ async def run(
             agent_config=AgentConfig(persona_module={"url": personas_urls})
         )
 
-        agent_run_input = {
+        agent_run = {
             'consumer_id': user_id,
             "inputs": parameters,
             "agent_deployment": agent_deployment.model_dump(),
-            "personas_urls": personas_urls
+            "personas_urls": personas_urls,
+            "id": id
         }
-        print(f"Agent run input: {agent_run_input}")
-        return await naptha.node.run_agent_and_poll(agent_run_input)
+        print(f"Agent run input: {agent_run}")
+        return await naptha.node.run_agent_and_poll(agent_run)
 
     elif module_type == "orchestrator":
         print("Running Orchestrator...")
+        id = "orchestrator:{id}"
         agent_deployments = [AgentDeployment(worker_node_url=url) for url in worker_node_urls]
         environment_deployments = [EnvironmentDeployment(environment_node_url=url) for url in environment_node_urls]
 
@@ -354,29 +359,32 @@ async def run(
             orchestrator_node_url=os.getenv("NODE_URL")
         )
 
-        orchestrator_run_input = OrchestratorRunInput(
+        orchestrator_run = OrchestratorRun(
             consumer_id=user_id,
             inputs=parameters,
             orchestrator_deployment=orchestrator_deployment,
             agent_deployments=agent_deployments,
-            environment_deployments=environment_deployments
+            environment_deployments=environment_deployments,
+            id=id
         )
-        return await naptha.node.run_orchestrator_and_poll(orchestrator_run_input)
+        return await naptha.node.run_orchestrator_and_poll(orchestrator_run)
 
     elif module_type == "environment":
         print("Running Environment...")
+        id = "environment:{id}"
         environment_deployment = EnvironmentDeployment(
             name=module_name,
             module={"name": module_name},
             environment_node_url=environment_node_urls[0]
         )
 
-        environment_run_input = EnvironmentRunInput(
+        environment_run = EnvironmentRunInput(
             inputs=parameters,
             environment_deployment=environment_deployment,
             consumer_id=user_id,
+            id=id
         )
-        return await naptha.node.run_environment_and_poll(environment_run_input)
+        return await naptha.node.run_environment_and_poll(environment_run)
 
         
 async def read_storage(naptha, hash_or_name, output_dir='./files', ipfs=False):
@@ -445,6 +453,7 @@ async def main():
     # Run command
     run_parser = subparsers.add_parser("run", help="Execute run command.")
     run_parser.add_argument("agent", help="Select the agent to run")
+    run_parser.add_argument("id", help="ID to run")
     run_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
     run_parser.add_argument("-n", "--worker_nodes", help="Worker nodes to take part in agent runs.")
     run_parser.add_argument("-e", "--environment_nodes", help="Environment nodes to store data during agent runs.")
@@ -635,6 +644,8 @@ async def main():
                 print(f"Personas URLs: {personas_urls}")
                 await create(naptha, args.agent, user_id, parsed_params, worker_node_urls, environment_node_urls, args.file, personas_urls)
             elif args.command == "run":
+                if not args.id:
+                    print("Please specify ID")
                 if hasattr(args, 'parameters') and args.parameters is not None:
                     try:
                         parsed_params = json.loads(args.parameters)
@@ -665,7 +676,7 @@ async def main():
                 else:
                     personas_urls = None
                 print(f"Personas URLs: {personas_urls}")
-                await run(naptha, args.agent, user_id, parsed_params, worker_node_urls, environment_node_urls, args.file, personas_urls)
+                await run(naptha, args.agent, user_id, args.id, parsed_params, worker_node_urls, environment_node_urls, args.file, personas_urls)
             elif args.command == "read_storage":
                 await read_storage(naptha, args.agent_run_id, args.output_dir, args.ipfs)
             elif args.command == "write_storage":
