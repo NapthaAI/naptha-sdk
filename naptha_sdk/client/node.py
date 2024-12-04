@@ -82,6 +82,63 @@ class Node:
     async def run_environment_and_poll(self, environment_input: EnvironmentRunInput) -> EnvironmentRun:
         """Run an environment and poll for results until completion."""
         return await self._run_and_poll(environment_input, 'environment')
+    
+    async def _create_module(self, module_run: Union[AgentRun, OrchestratorRun, EnvironmentRun], module_type: str) -> Union[AgentRun, OrchestratorRun, EnvironmentRun]:
+        """
+        Generic method to create either an agent, orchestrator, or environment on a node
+        
+        Args:
+            module_run: Either AgentRun, OrchestratorRun, or EnvironmentRun
+            module_type: Either 'agent', 'orchestrator', or 'environment'
+        """
+        print(f"Creating {module_type}...")
+        print(f"Module run: {module_run}")
+        print(f"Node URL: {self.node_url}")
+
+        endpoint = f"{self.node_url}/{module_type}/create"
+        
+        try:
+            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+                headers = {
+                    'Content-Type': 'application/json',
+                    'Authorization': f'Bearer {self.access_token}',
+                }
+                response = await client.post(
+                    endpoint,
+                    json=module_run.model_dump(),
+                    headers=headers
+                )
+                response.raise_for_status()
+                
+                # Convert response to appropriate return type
+                return_class = {
+                    'agent': AgentRun,
+                    'orchestrator': OrchestratorRun,
+                    'environment': EnvironmentRun
+                }[module_type]
+                return return_class(**json.loads(response.text))
+        except HTTPStatusError as e:
+            logger.info(f"HTTP error occurred: {e}")
+            raise
+        except RemoteProtocolError as e:
+            error_msg = f"Create {module_type} failed to connect to the server at {self.node_url}. Please check if the server URL is correct and the server is running. Error details: {str(e)}"
+            logger.error(error_msg)
+            raise
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+            raise
+
+    async def create_agent(self, agent_run: AgentRun) -> AgentRun:
+        """Create an agent on a node"""
+        return await self._create_module(agent_run, 'agent')
+
+    async def create_orchestrator(self, orchestrator_run: OrchestratorRun) -> OrchestratorRun:
+        """Create an orchestrator on a node"""
+        return await self._create_module(orchestrator_run, 'orchestrator')
+
+    async def create_environment(self, environment_run: EnvironmentRun) -> EnvironmentRun:
+        """Create an environment on a node"""
+        return await self._create_module(environment_run, 'environment')
 
     async def check_user(self, user_input: Dict[str, Any]) -> Dict[str, Any]:
         """
