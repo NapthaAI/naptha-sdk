@@ -39,6 +39,7 @@ class Node:
         elif self.node_url.startswith('grpc://'):
             self.node_url = self.node_url.replace('grpc://', '')
             self.server_type = 'grpc'
+            self.node_url = self.node_url.replace('grpc://', '')
         else:
             raise ValueError("Invalid node URL")
         
