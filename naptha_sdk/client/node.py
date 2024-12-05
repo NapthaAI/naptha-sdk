@@ -100,6 +100,63 @@ class Node:
     async def run_environment_and_poll(self, environment_input: EnvironmentRunInput) -> EnvironmentRun:
         """Run an environment and poll for results until completion."""
         return await self._run_and_poll(environment_input, 'environment')
+    
+    async def _create_module(self, module_run: Union[AgentRunInput, OrchestratorRunInput, EnvironmentRunInput], module_type: str) -> Union[AgentRun, OrchestratorRun, EnvironmentRun]:
+        """
+        Generic method to create either an agent, orchestrator, or environment on a node
+        
+        Args:
+            module_run: Either AgentRunInput, OrchestratorRunInput, or EnvironmentRunInput
+            module_type: Either 'agent', 'orchestrator', or 'environment'
+        """
+        print(f"Creating {module_type}...")
+        print(f"Module run: {module_run}")
+        print(f"Node URL: {self.node_url}")
+
+        endpoint = f"{self.node_url}/{module_type}/create"
+        
+        try:
+            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+                headers = {
+                    'Content-Type': 'application/json',
+                    'Authorization': f'Bearer {self.access_token}',
+                }
+                response = await client.post(
+                    endpoint,
+                    json=module_run.model_dump(),
+                    headers=headers
+                )
+                response.raise_for_status()
+                
+                # Convert response to appropriate return type
+                return_class = {
+                    'agent': AgentRun,
+                    'orchestrator': OrchestratorRun,
+                    'environment': EnvironmentRun
+                }[module_type]
+                return return_class(**json.loads(response.text))
+        except HTTPStatusError as e:
+            logger.info(f"HTTP error occurred: {e}")
+            raise
+        except RemoteProtocolError as e:
+            error_msg = f"Create {module_type} failed to connect to the server at {self.node_url}. Please check if the server URL is correct and the server is running. Error details: {str(e)}"
+            logger.error(error_msg)
+            raise
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+            raise
+
+    async def create_agent(self, agent_run: AgentRunInput) -> AgentRun:
+        """Create an agent on a node"""
+        return await self._create_module(agent_run, 'agent')
+
+    async def create_orchestrator(self, orchestrator_run: OrchestratorRunInput) -> OrchestratorRun:
+        """Create an orchestrator on a node"""
+        return await self._create_module(orchestrator_run, 'orchestrator')
+
+    async def create_environment(self, environment_run: EnvironmentRunInput) -> EnvironmentRun:
+        """Create an environment on a node"""
+        return await self._create_module(environment_run, 'environment')
 
     async def check_user_ws(self, user_input: Dict[str, str]):
         response = await self.send_receive_ws(user_input, "check_user")
@@ -208,7 +265,7 @@ class Node:
         else:
             return await self.register_user_http(user_input)
 
-    async def _run_module(self, run_input: Union[AgentRunInput, OrchestratorRunInput, EnvironmentRunInput], module_type: str) -> Union[AgentRun, OrchestratorRun, EnvironmentRun]:
+    async def _run_module(self, run_input: Union[AgentRun, OrchestratorRun, EnvironmentRun], module_type: str) -> Union[AgentRun, OrchestratorRun, EnvironmentRun]:
         """
         Generic method to run either an agent, orchestrator, or environment on a node
         
@@ -224,9 +281,9 @@ class Node:
         
         # Convert dict to appropriate input type if needed
         input_class = {
-            'agent': AgentRunInput,
-            'orchestrator': OrchestratorRunInput,
-            'environment': EnvironmentRunInput
+            'agent': AgentRun,
+            'orchestrator': OrchestratorRun,
+            'environment': EnvironmentRun
         }[module_type]
         
         if isinstance(run_input, dict):
@@ -262,6 +319,7 @@ class Node:
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
             raise
+
 
     async def run_agent_ws(self, agent_run_input: AgentRunInput) -> AgentRun:
         response = await self.send_receive_ws(agent_run_input, "run_agent")
@@ -335,15 +393,15 @@ class Node:
         else:
             raise ValueError("Invalid server type. Server type must be either 'ws' or 'grpc'.")
 
-    async def run_agent(self, agent_run_input: AgentRunInput) -> AgentRun:
+    async def run_agent(self, agent_run_input: AgentRun) -> AgentRun:
         """Run an agent on a node"""
         return await self._run_module(agent_run_input, 'agent')
 
-    async def run_orchestrator(self, orchestrator_run_input: OrchestratorRunInput) -> OrchestratorRun:
+    async def run_orchestrator(self, orchestrator_run_input: OrchestratorRun) -> OrchestratorRun:
         """Run an orchestrator on a node"""
         return await self._run_module(orchestrator_run_input, 'orchestrator')
     
-    async def run_environment(self, environment_run_input: EnvironmentRunInput) -> EnvironmentRun:
+    async def run_environment(self, environment_run_input: EnvironmentRun) -> EnvironmentRun:
         """Run an environment on a node"""
         return await self._run_module(environment_run_input, 'environment')
 
