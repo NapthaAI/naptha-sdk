@@ -1,23 +1,26 @@
-from httpx import HTTPStatusError, RemoteProtocolError
-from naptha_sdk.schemas import AgentRun, AgentRunInput, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, OrchestratorRunInput
-from naptha_sdk.utils import get_logger
-from pathlib import Path
-from typing import Dict, Optional, Any, List, Tuple, Union
-import httpx
 import json
 import os
-import uuid
-import websockets
 import shutil
 import tempfile
 import time
 import traceback
+import uuid
 import zipfile
+from pathlib import Path
+from typing import Dict, Optional, Any, List, Tuple, Union
+
 import grpc
-from naptha_sdk.client import grpc_server_pb2_grpc
-from naptha_sdk.client import grpc_server_pb2
+import httpx
+import websockets
 from google.protobuf import struct_pb2
 from google.protobuf.json_format import MessageToDict
+from httpx import HTTPStatusError, RemoteProtocolError
+
+from naptha_sdk.client import grpc_server_pb2
+from naptha_sdk.client import grpc_server_pb2_grpc
+from naptha_sdk.schemas import AgentRun, AgentRunInput, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, \
+    OrchestratorRunInput
+from naptha_sdk.utils import get_logger
 
 logger = get_logger(__name__)
 HTTP_TIMEOUT = 300
@@ -295,7 +298,7 @@ class Node:
             agent_deployment = grpc_server_pb2.AgentDeployment(
                 name=agent_run_input.agent_deployment.name,
                 module=agent_module,
-                worker_node_url=agent_run_input.agent_deployment.worker_node_url
+                agent_node_url=agent_run_input.agent_deployment.agent_node_url
             )
             
             # Create request

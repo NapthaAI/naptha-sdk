@@ -1,13 +1,14 @@
-from naptha_sdk.utils import get_logger
 import time
+
+from naptha_sdk.utils import get_logger
 
 logger = get_logger(__name__)
 
 class Task:
     def __init__(self, 
         name, 
-        fn, 
-        worker_node_url, 
+        fn,
+                 agent_node_url,
         orchestrator_node, 
         flow_run, 
         cfg,
@@ -21,10 +22,10 @@ class Task:
         self.orchestrator_node = orchestrator_node
         self.flow_run = flow_run
         self.task_engine_cls = task_engine_cls
-        if isinstance(worker_node_url, str):
-            self.worker_node = self.node_url_to_node(worker_node_url, node_cls)
+        if isinstance(agent_node_url, str):
+            self.agent_node = self.node_url_to_node(agent_node_url, node_cls)
         else:
-            self.worker_node = worker_node_url
+            self.agent_node = agent_node_url
 
     async def __call__(self, *args, **kwargs):
         return await run_task(

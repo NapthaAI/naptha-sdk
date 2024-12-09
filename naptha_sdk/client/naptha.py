@@ -1,17 +1,20 @@
 import asyncio
-from dotenv import load_dotenv
 import inspect
+import os
+import time
+from pathlib import Path
+
+from dotenv import load_dotenv
+
 from naptha_sdk.client.hub import Hub
 from naptha_sdk.client.node import Node
 from naptha_sdk.client.services import Services
-from naptha_sdk.package_manager import AGENT_DIR, add_files_to_package, add_dependencies_to_pyproject, git_add_commit, init_agent_package, publish_ipfs_package, render_agent_code, write_code_to_package
+from naptha_sdk.package_manager import AGENT_DIR, add_files_to_package, add_dependencies_to_pyproject, git_add_commit, \
+    init_agent_package, publish_ipfs_package, render_agent_code, write_code_to_package
 from naptha_sdk.schemas import User
 from naptha_sdk.scrape import scrape_init, scrape_func, scrape_func_params
 from naptha_sdk.user import get_public_key
 from naptha_sdk.utils import get_logger
-import os
-from pathlib import Path
-import time
 
 logger = get_logger(__name__)
 
@@ -135,10 +138,10 @@ def agent(name):
 class Agent:
     def __init__(self, 
         name, 
-        fn, 
-        worker_node_url, 
+        fn,
+                 agent_node_url,
     ):
         self.name = name
         self.fn = fn
-        self.worker_node_url = worker_node_url
+        self.agent_node_url = agent_node_url
         self.repo_id = name
