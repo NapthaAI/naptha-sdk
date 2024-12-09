@@ -224,3 +224,49 @@ class ChatCompletionRequest(BaseModel):
     presence_penalty: Optional[float] = None
     stop: Optional[List[str]] = None
     stream: Optional[bool] = None
+################# Toolset stuff####################
+class ToolDetails(BaseModel):
+    id: str
+    name: str
+    description: str
+    source_url: str
+
+class ToolsetDetails(BaseModel):
+    id: str
+    name: str
+    description: str
+    tools: List[ToolDetails]
+
+class ToolsetRequest(BaseModel):
+    agent_id: str
+
+class SetToolsetRequest(BaseModel):
+    agent_id: str
+    toolset_name: str
+
+class ToolsetListRequest(BaseModel):
+    agent_id: str
+
+class ToolsetLoadRepoRequest(BaseModel):
+    agent_id: str
+    repo_url: str
+    toolset_name: str
+
+class ToolsetList(BaseModel):
+    toolsets: List[ToolsetDetails]
+
+class ToolRunRequest(BaseModel):
+    tool_run_id: str
+    agent_id: str
+    toolset_id: str
+    tool_id: str
+    params: Optional[Dict] = None
+
+class ToolRunResult(BaseModel):
+    agent_id: str
+    toolset_id: str
+    tool_run_id: str
+    tool_id: str
+    params: Optional[Dict] = None
+    result: str
+################# End Toolset stuff####################
