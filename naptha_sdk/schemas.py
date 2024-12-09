@@ -1,10 +1,24 @@
+from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional, Union
-from datetime import datetime
+
 from pydantic import BaseModel
+
 
 class User(BaseModel):
     id: str
+
+
+class CreateModuleRequest(BaseModel):
+    name: str
+
+
+class CreateModuleResponse(BaseModel):
+    name: str
+    version: str
+    url: str
+    installation_status: str
+    message: str
 
 class LLMClientType(str, Enum):
     OPENAI = "openai"
