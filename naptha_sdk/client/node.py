@@ -9,7 +9,12 @@ import zipfile
 from pathlib import Path
 from typing import Dict, Optional, Any, List, Tuple, Union
 
+from pathlib import Path
+from typing import Dict, Optional, Any, List, Tuple, Union
+
 import grpc
+import httpx
+import websockets
 import httpx
 import websockets
 from google.protobuf import struct_pb2
@@ -18,8 +23,8 @@ from httpx import HTTPStatusError, RemoteProtocolError
 
 from naptha_sdk.client import grpc_server_pb2
 from naptha_sdk.client import grpc_server_pb2_grpc
-from naptha_sdk.schemas import AgentRun, AgentRunInput, ChatCompletionRequest, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, \
-    OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, KBDeployment, KBRunInput, KBRun
+from naptha_sdk.schemas import AgentRun, AgentRunInput, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, \
+    OrchestratorRunInput
 from naptha_sdk.utils import get_logger
 
 logger = get_logger(__name__)
@@ -380,7 +385,7 @@ class Node:
             agent_deployment = grpc_server_pb2.AgentDeployment(
                 name=agent_run_input.agent_deployment.name,
                 module=agent_module,
-                worker_node_url=agent_run_input.agent_deployment.worker_node_url
+                agent_node_url=agent_run_input.agent_deployment.agent_node_url
             )
             
             # Create request

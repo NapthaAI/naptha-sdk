@@ -1,7 +1,9 @@
+from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional, Union
-from datetime import datetime
+
 from pydantic import BaseModel
+
 
 class User(BaseModel):
     id: str
@@ -56,7 +58,7 @@ class KBDeployment(BaseModel):
 class AgentDeployment(BaseModel):
     name: Optional[str] = "agent_deployment"
     module: Optional[Dict] = None
-    worker_node_url: Optional[str] = None
+    agent_node_url: Optional[str] = None
     agent_config: Optional[AgentConfig] = AgentConfig()
     data_generation_config: Optional[DataGenerationConfig] = DataGenerationConfig()
     kb_deployments: Optional[List[KBDeployment]] = None

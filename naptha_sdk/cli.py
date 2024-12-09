@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import json
+import json
 import os
 import shlex
 from textwrap import wrap
@@ -8,14 +9,17 @@ from rich.console import Console
 from rich.table import Table
 from rich import box
 
+from textwrap import wrap
+
 import yaml
+from dotenv import load_dotenv
 from dotenv import load_dotenv
 from tabulate import tabulate
 
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.client.naptha import Naptha
-from naptha_sdk.schemas import AgentConfig, AgentDeployment, ChatCompletionRequest, EnvironmentDeployment, \
-    OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, KBDeployment, KBRunInput
+from naptha_sdk.schemas import AgentConfig, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, \
+    OrchestratorRunInput, EnvironmentRunInput
 from naptha_sdk.user import get_public_key
 
 load_dotenv(override=True)
@@ -521,8 +525,8 @@ async def run(
     naptha,
     module_name,
     user_id,
-    parameters=None, 
-    worker_node_urls="http://localhost:7001",
+    parameters=None,
+        agent_node_urls="http://localhost:7001",
     environment_node_urls=["http://localhost:7001"],
     kb_node_urls=["http://localhost:7001"],
     yaml_file=None, 
@@ -565,10 +569,9 @@ async def run(
 
         agent_deployment = AgentDeployment(
             name=module_name, 
-            module={"name": module_name}, 
-            worker_node_url=worker_node_urls[0], 
-            agent_config=AgentConfig(persona_module={"module_url": personas_urls}),
-            kb_deployments=kb_deployments
+            module={"name": module_name},
+            agent_node_url=agent_node_urls, 
+            agent_config=AgentConfig(persona_module={"url": personas_urls})
         )
 
         agent_run_input = {
@@ -584,8 +587,8 @@ async def run(
     elif module_type == "orchestrator":
         print("Running Orchestrator...")
         agent_deployments = []
-        for worker_node_url in worker_node_urls:
-            agent_deployments.append(AgentDeployment(worker_node_url=worker_node_url))
+        for agent_node_url in agent_node_urls:
+            agent_deployments.append(AgentDeployment(agent_node_url=agent_node_url))
 
         environment_deployments = []
         for environment_node_url in environment_node_urls:
@@ -729,9 +732,8 @@ async def main():
     run_parser = subparsers.add_parser("run", help="Execute run command.")
     run_parser.add_argument("agent", help="Select the agent to run")
     run_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
-    run_parser.add_argument("-n", "--worker_node_urls", help="Worker nodes to take part in agent runs.")
-    run_parser.add_argument("-e", "--environment_node_urls", help="Environment nodes to store data during agent runs.")
-    run_parser.add_argument('-k', '--kb_node_urls', type=str, help='Knowledge base node URLs', default=["http://localhost:7001"])
+    run_parser.add_argument("-n", "--agent_nodes", help="agent nodes to take part in agent runs.")
+    run_parser.add_argument("-e", "--environment_nodes", help="Environment nodes to store data during agent runs.")
     run_parser.add_argument("-u", "--personas_urls", help="Personas URLs to install before running the agent")
     run_parser.add_argument("-f", "--file", help="YAML file with agent run parameters")
 
@@ -961,14 +963,27 @@ async def main():
                             parsed_params[key] = value
                 else:
                     parsed_params = None
-                    
-                await run(naptha, args.agent, user_id, parsed_params, args.worker_node_urls, args.environment_node_urls, args.kb_node_urls, args.file, args.personas_urls)
-            elif args.command == "inference":
-                request = ChatCompletionRequest(
-                    messages=[{"role": "user", "content": args.prompt}],
-                    model=args.model,
-                )
-                await naptha.node.run_inference(request)
+
+                # parse agent nodes
+                if hasattr(args, 'agent_nodes') and args.agent_nodes is not None:
+                    agent_node_urls = args.agent_nodes.split(',')
+                else:
+                    agent_node_urls = "http://localhost:7001"
+
+                # parse environment nodes 
+                if hasattr(args, 'environment_nodes') and args.environment_nodes is not None:
+                    environment_node_urls = args.environment_nodes.split(',')
+                else:
+                    environment_node_urls = ["http://localhost:7001"]
+
+                # parse personas urls
+                if hasattr(args, 'personas_urls') and args.personas_urls is not None:
+                    personas_urls = args.personas_urls.split(',')
+                else:
+                    personas_urls = None
+                print(f"Personas URLs: {personas_urls}")
+                await run(naptha, args.agent, user_id, parsed_params, agent_node_urls, environment_node_urls, args.file,
+                          personas_urls)
             elif args.command == "read_storage":
                 await read_storage(naptha, args.agent_run_id, args.output_dir, args.ipfs)
             elif args.command == "write_storage":
