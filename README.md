@@ -139,12 +139,12 @@ naptha orchestrators -d orchestrator_name
 ### Run an Agent Orchestrator across a network of Nodes
 
 ```bash
-naptha run orchestrator:multiagent_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --worker_nodes "http://node.naptha.ai:7001,http://node1.naptha.ai:7001" --environment_nodes "postgresql://naptha:naptha@localhost:3002/naptha"
+naptha run orchestrator:multiagent_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --agent_nodes "http://node.naptha.ai:7001,http://node1.naptha.ai:7001" --environment_nodes "postgresql://naptha:naptha@localhost:3002/naptha"
 ```
 
 
 ```bash
-naptha run orchestrator:babyagi -p "objective='Research the history of football'" --worker_nodes "http://node.naptha.ai:7001,http://node1.naptha.ai:7001"
+naptha run orchestrator:babyagi -p "objective='Research the history of football'" --agent_nodes "http://node.naptha.ai:7001,http://node1.naptha.ai:7001"
 ```
 
 ```bash
@@ -155,7 +155,7 @@ Tesla stock was lower to start a new week of trading, falling as investors worry
 
 News Summary 2:
 Tesla faces growing competition and softening demand, impacting its stock price which is trading 43% below its all-time high. The company’s profitability is declining, with earnings per share shrinking 46% year-over-year in Q2 2024. Despite recent price cuts and a plan to produce a low-cost EV model, sales growth has decelerated. Tesla is also involved in autonomous self-driving software, humanoid robots, and solar energy, but these segments may take years to significantly impact revenue.
-'" --worker_nodes "http://node.naptha.ai:7001"
+'" --agent_nodes "http://node.naptha.ai:7001"
 ```
 
 ## Environment Modules
