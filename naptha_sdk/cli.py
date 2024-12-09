@@ -1,16 +1,19 @@
 import argparse
 import asyncio
-from dotenv import load_dotenv
-from naptha_sdk.client.naptha import Naptha
-from naptha_sdk.client.hub import user_setup_flow
-from naptha_sdk.user import get_public_key
-from naptha_sdk.schemas import AgentConfig, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, ChatCompletionRequest
+import json
 import os
 import shlex
-import yaml
-import json
-from tabulate import tabulate
 from textwrap import wrap
+
+import yaml
+from dotenv import load_dotenv
+from tabulate import tabulate
+
+from naptha_sdk.client.hub import user_setup_flow
+from naptha_sdk.client.naptha import Naptha
+from naptha_sdk.schemas import AgentConfig, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, \
+    OrchestratorRunInput, EnvironmentRunInput, CreateModuleRequest
+from naptha_sdk.user import get_public_key
 
 load_dotenv(override=True)
 
@@ -197,6 +200,31 @@ async def create_persona(naptha, persona_config):
     elif isinstance(persona, list):
         print(f"Persona created: {persona[0]}")
 
+
+async def create(
+        naptha,
+        module_name: str,
+):
+    if "orchestrator:" in module_name:
+        module_type = "orchestrator"
+    elif "agent:" in module_name:
+        module_type = "agent"
+    elif "environment:" in module_name:
+        module_type = "environment"
+    else:
+        module_type = "agent"
+
+    user = await naptha.node.check_user(user_input={"public_key": naptha.hub.public_key})
+
+    if user['is_registered']:
+        print("Found user...", user)
+    else:
+        print("No user found. Registering user...")
+        user = await naptha.node.register_user(user_input=user)
+        print(f"User registered: {user}.")
+
+    await naptha.node.create(module_type, CreateModuleRequest(name=module_name))
+
 async def run(
     naptha, 
     module_name, 
@@ -344,6 +372,10 @@ async def main():
     personas_parser.add_argument('persona_name', nargs='?', help='Optional persona name')
     personas_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
     personas_parser.add_argument('-d', '--delete', action='store_true', help='Delete a persona')
+
+    # Create command
+    run_parser = subparsers.add_parser("create", help="Execute create command.")
+    run_parser.add_argument("agent", help="Select the agent to run")
 
     # Run command
     run_parser = subparsers.add_parser("run", help="Execute run command.")
@@ -511,6 +543,8 @@ async def main():
                         await create_persona(naptha, persona_config)
                 else:
                     print("Invalid command.")
+            elif args.command == "create":
+                await create(naptha, args.agent)
             elif args.command == "run":
                 if hasattr(args, 'parameters') and args.parameters is not None:
                     try:
