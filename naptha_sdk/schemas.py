@@ -17,7 +17,7 @@ class CreateModuleResponse(BaseModel):
     name: str
     version: str
     url: str
-    installation_status: str
+    status: str
     message: str
 
 class LLMClientType(str, Enum):
