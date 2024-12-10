@@ -354,6 +354,12 @@ async def main():
     run_parser.add_argument("-u", "--personas_urls", help="Personas URLs to install before running the agent")
     run_parser.add_argument("-f", "--file", help="YAML file with agent run parameters")
 
+    # Inference command
+    inference_parser = subparsers.add_parser("inference", help="Run model inference.")
+    inference_parser.add_argument("prompt", help="Input prompt for the model")
+    inference_parser.add_argument("-m", "--model", help="Model to use for inference", default="phi3:mini")
+    inference_parser.add_argument("-p", "--parameters", type=str, help='Additional model parameters in "key=value" format')
+
     # Read storage commands
     read_storage_parser = subparsers.add_parser("read_storage", help="Read from storage.")
     read_storage_parser.add_argument("-id", "--agent_run_id", help="Agent run ID to read from")
@@ -377,7 +383,7 @@ async def main():
         args = parser.parse_args()
         if args.command == "signup":
             _, user_id = await user_setup_flow(hub_url, public_key)
-        elif args.command in ["nodes", "agents", "orchestrators", "environments", "personas", "run", "read_storage", "write_storage", "publish"]:
+        elif args.command in ["nodes", "agents", "orchestrators", "environments", "personas", "run", "inference", "read_storage", "write_storage", "publish"]:
             if not naptha.hub.is_authenticated:
                 if not hub_username or not hub_password:
                     print("Please set HUB_USER and HUB_PASS environment variables or sign up first (run naptha signup).")
@@ -537,6 +543,11 @@ async def main():
                     personas_urls = None
                 print(f"Personas URLs: {personas_urls}")
                 await run(naptha, args.agent, user_id, parsed_params, worker_node_urls, environment_node_urls, args.file, personas_urls)
+            elif args.command == "inference":
+                await naptha.node.run_inference({
+                    "messages": [{"role": "user", "content": args.prompt}],
+                    "model": args.model,
+                })
             elif args.command == "read_storage":
                 await read_storage(naptha, args.agent_run_id, args.output_dir, args.ipfs)
             elif args.command == "write_storage":
