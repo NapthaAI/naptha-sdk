@@ -101,6 +101,17 @@ class Node:
         """Run an environment and poll for results until completion."""
         return await self._run_and_poll(environment_input, 'environment')
 
+    async def check_health_ws(self, health_url: str):
+        try:
+            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+                response = await client.get(health_url)
+                response.raise_for_status()
+                return True
+        except Exception as e:
+            logger.info(f"An unexpected error occurred: {e}")
+            logger.info(f"Full traceback: {traceback.format_exc()}")
+            return False
+
     async def check_user_ws(self, user_input: Dict[str, str]):
         response = await self.send_receive_ws(user_input, "check_user")
         logger.info(f"Check user response: {response}")
