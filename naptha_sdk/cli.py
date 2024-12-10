@@ -12,7 +12,7 @@ from tabulate import tabulate
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.schemas import AgentConfig, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, \
-    OrchestratorRunInput, EnvironmentRunInput, CreateModuleRequest
+    OrchestratorRunInput, EnvironmentRunInput
 from naptha_sdk.user import get_public_key
 
 load_dotenv(override=True)
@@ -203,7 +203,10 @@ async def create_persona(naptha, persona_config):
 
 async def create(
         naptha,
-        module_name: str,
+        module_name,
+        worker_node_urls="http://localhost:7001",
+        environment_node_urls=["http://localhost:7001"],
+        personas_urls=None
 ):
     if "orchestrator:" in module_name:
         module_type = "orchestrator"
@@ -223,11 +226,46 @@ async def create(
         user = await naptha.node.register_user(user_input=user)
         print(f"User registered: {user}.")
 
-    await naptha.node.create(module_type, CreateModuleRequest(name=module_name))
+    if module_type == "agent":
+        print("Creating Agent...")
+        agent_deployment = AgentDeployment(
+            name=module_name,
+            module={"name": module_name},
+            worker_node_url=worker_node_urls,
+            agent_config=AgentConfig(persona_module={"url": personas_urls})
+        )
+        await naptha.node.create(module_type, agent_deployment)
+
+    elif module_type == "orchestrator":
+        print("Creating Orchestrator...")
+        agent_deployments = []
+        for worker_node_url in worker_node_urls:
+            agent_deployments.append(AgentDeployment(worker_node_url=worker_node_url))
+
+        environment_deployments = []
+        for environment_node_url in environment_node_urls:
+            environment_deployments.append(EnvironmentDeployment(environment_node_url=environment_node_url))
+
+        orchestrator_deployment = OrchestratorDeployment(
+            name=module_name,
+            module={"name": module_name},
+            orchestrator_node_url=os.getenv("NODE_URL")
+        )
+        await naptha.node.create(module_type, orchestrator_deployment)
+
+    elif module_type == "environment":
+        print("Creating Environment...")
+        environment_deployment = EnvironmentDeployment(
+            name=module_name,
+            module={"name": module_name},
+            environment_node_url=environment_node_urls[0]
+        )
+
+        await naptha.node.create(module_type, environment_deployment)
 
 async def run(
-    naptha, 
-    module_name, 
+    naptha,
+        module_name,
     user_id,
     parameters=None, 
     worker_node_urls="http://localhost:7001",
@@ -376,6 +414,9 @@ async def main():
     # Create command
     run_parser = subparsers.add_parser("create", help="Execute create command.")
     run_parser.add_argument("agent", help="Select the agent to run")
+    run_parser.add_argument("-n", "--worker_nodes", help="Worker nodes to take part in agent runs.")
+    run_parser.add_argument("-e", "--environment_nodes", help="Environment nodes to store data during agent runs.")
+    run_parser.add_argument("-u", "--personas_urls", help="Personas URLs to install before running the agent")
 
     # Run command
     run_parser = subparsers.add_parser("run", help="Execute run command.")
@@ -544,7 +585,27 @@ async def main():
                 else:
                     print("Invalid command.")
             elif args.command == "create":
-                await create(naptha, args.agent)
+
+                # parse worker nodes
+                if hasattr(args, 'worker_nodes') and args.worker_nodes is not None:
+                    worker_node_urls = args.worker_nodes.split(',')
+                else:
+                    worker_node_urls = "http://localhost:7001"
+
+                # parse environment nodes
+                if hasattr(args, 'environment_nodes') and args.environment_nodes is not None:
+                    environment_node_urls = args.environment_nodes.split(',')
+                else:
+                    environment_node_urls = ["http://localhost:7001"]
+
+                # parse personas urls
+                if hasattr(args, 'personas_urls') and args.personas_urls is not None:
+                    personas_urls = args.personas_urls.split(',')
+                else:
+                    personas_urls = None
+                print(f"Personas URLs: {personas_urls}")
+
+                await create(naptha, args.agent, worker_node_urls, environment_node_urls, personas_urls)
             elif args.command == "run":
                 if hasattr(args, 'parameters') and args.parameters is not None:
                     try:

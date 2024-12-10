@@ -19,7 +19,7 @@ from httpx import HTTPStatusError, RemoteProtocolError
 from naptha_sdk.client import grpc_server_pb2
 from naptha_sdk.client import grpc_server_pb2_grpc
 from naptha_sdk.schemas import AgentRun, AgentRunInput, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, \
-    OrchestratorRunInput, CreateModuleRequest, CreateModuleResponse
+    OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment
 from naptha_sdk.utils import get_logger
 
 logger = get_logger(__name__)
@@ -53,15 +53,17 @@ class Node:
         self.access_token = None
         logger.info(f"Node URL: {node_url}")
 
-    async def create(self, module_type: str, module_request: CreateModuleRequest) -> CreateModuleResponse:
+    async def create(self, module_type: str,
+                     module_request: Union[AgentDeployment, EnvironmentDeployment, OrchestratorDeployment]) -> Union[
+        AgentDeployment, EnvironmentDeployment, OrchestratorDeployment]:
         """Generic method to create either an agent, orchestrator, or environment.
 
         Args:
             module_type: Either agent, orchestrator or environment
-            module_request: CreateModuleRequest
+            module_request: Either AgentDeployment, EnvironmentDeployment, or OrchestratorDeployment
         """
 
-        print(f"Running {module_type}...")
+        print(f"Creating {module_type}...")
         print(f"Module Request: {module_request}")
         print(f"Node URL: {self.node_url}")
 
@@ -81,7 +83,7 @@ class Node:
                 response.raise_for_status()
 
                 # Convert response to appropriate return type
-                return CreateModuleResponse(**json.loads(response.text))
+                return response.json()
         except HTTPStatusError as e:
             logger.info(f"HTTP error occurred: {e}")
             raise
