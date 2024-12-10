@@ -9,16 +9,21 @@
       █  █   ▀█▀  █▀▀  ▄█  █  █      ██║╚██╗██║██╔══██║██╔═══╝    ██║   ██╔══██║██╔══██║
       █  ▀█▄  ▀█▄ █ ▄█▀▀ ▄█▀  █      ██║ ╚████║██║  ██║██║        ██║   ██║  ██║██║  ██║
        ▀█▄ ▀▀█  █ █ █ ▄██▀ ▄█▀       ╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝        ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝
-         ▀█▄ █  █ █ █ █  ▄█▀                         Decentralized Multi-Agent Workflows
+         ▀█▄ █  █ █ █ █  ▄█▀                             Orchestrating the Web of Agents
             ▀█  █ █ █ █ ▌▀                                                 www.naptha.ai
               ▀▀█ █ ██▀▀                                                    
 
  
 # Naptha Python SDK
 
-Naptha enables users to build decentralized multi-agent workflows. Decentralized workflows can run on one or more nodes (rather than on one central server), with different LLMs, and with many local data sources, opening up new use cases for AI devs. 
+Naptha is a framework and infrastructure for developing and running multi-agent systems across many devices. The Naptha SDK is made up of:
 
-Here's Yohei (creator of BabyAGI) admitting that [BabyAGI isn't a true multi-agent system](https://x.com/yoheinakajima/status/1781183534998380576) since the agents use the same LLM and code base. You can watch a demo video where we run BabyAGI as a true multi-agent system [here](https://www.youtube.com/watch?v=nzV04zOA0f0).
+1. A client for interacting with the Naptha Hub (like the huggingface_hug library but for multi-agent apps)
+2. Abstractions for the composable building blocks of multi-agent apps like Agent, Orchestrator, Tool, Environment, Persona (i.e. Naptha Modules). With Naptha, communication between these modules happens via API.
+3. Decorators for easily onboarding modules from agent frameworks like CrewAI.
+3. A CLI for interacting with the Naptha Hub and Node
+
+If you find this repo useful, please don't forget to star ⭐!
 
 <img src="images/multi-node-flow.png" width="100%">
 
@@ -216,6 +221,12 @@ naptha personas persona_name -p "description='Persona description' url='ipfs://Q
 
 ```bash
 naptha personas -d persona_name
+```
+
+## Inference 
+
+```bash
+naptha inference "How can we create scaling laws for multi-agent systems?" -m "phi3:mini"
 ```
 
 ## Interact with Node Storage

@@ -182,3 +182,18 @@ class EnvironmentRun(BaseModel):
     completed_time: Optional[str] = None
     duration: Optional[float] = None
     input_schema_ipfs_hash: Optional[str] = None
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+class ChatCompletionRequest(BaseModel):
+    model: str
+    messages: List[ChatMessage]
+    temperature: Optional[float] = None
+    max_tokens: Optional[int] = None
+    top_p: Optional[float] = None
+    frequency_penalty: Optional[float] = None
+    presence_penalty: Optional[float] = None
+    stop: Optional[List[str]] = None
+    stream: Optional[bool] = None

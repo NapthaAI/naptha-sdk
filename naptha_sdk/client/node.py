@@ -1,5 +1,5 @@
 from httpx import HTTPStatusError, RemoteProtocolError
-from naptha_sdk.schemas import AgentRun, AgentRunInput, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, OrchestratorRunInput
+from naptha_sdk.schemas import AgentRun, AgentRunInput, ChatCompletionRequest, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, OrchestratorRunInput
 from naptha_sdk.utils import get_logger
 from pathlib import Path
 from typing import Dict, Optional, Any, List, Tuple, Union
@@ -257,6 +257,40 @@ class Node:
             raise
         except RemoteProtocolError as e:
             error_msg = f"Run {module_type} failed to connect to the server at {self.node_url}. Please check if the server URL is correct and the server is running. Error details: {str(e)}"
+            logger.error(error_msg)
+            raise
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+            raise
+
+    async def run_inference(self, inference_input: ChatCompletionRequest) -> Dict:
+        """
+        Run inference on a node
+        
+        Args:
+            inference_input: The inference input to run inference on
+        """
+        endpoint = f"{self.node_url}/inference/chat"
+
+        try:
+            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+                headers = {
+                    'Content-Type': 'application/json',
+                    'Authorization': f'Bearer {self.access_token}',
+                }
+                response = await client.post(
+                    endpoint,
+                    json=inference_input,
+                    headers=headers
+                )
+                print("Response: ", response.text)
+                response.raise_for_status()
+                return json.loads(response.text)
+        except HTTPStatusError as e:
+            logger.info(f"HTTP error occurred: {e}")
+            raise
+        except RemoteProtocolError as e:
+            error_msg = f"Inference failed to connect to the server at {self.node_url}. Please check if the server URL is correct and the server is running. Error details: {str(e)}"
             logger.error(error_msg)
             raise
         except Exception as e:
