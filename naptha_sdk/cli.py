@@ -67,7 +67,7 @@ async def list_agents(naptha):
         print("No agents found.")
         return
 
-    headers = ["Name", "ID", "Type", "Version", "Author", "Description"]
+    headers = ["Name", "ID", "Type", "Version", "Author", "Parameters", "Description"]
     table_data = []
 
     for agent in agents:
@@ -80,7 +80,8 @@ async def list_agents(naptha):
             agent['type'],
             agent['version'],
             agent['author'],
-            wrapped_description
+            agent['parameters'] if 'parameters' in agent else 'Not defined',
+            wrapped_description,
         ]
         table_data.append(row)
 
@@ -94,7 +95,7 @@ async def list_orchestrators(naptha):
         print("No orchestrators found.")
         return
 
-    headers = ["Name", "ID", "Type", "Version", "Author", "Description"]
+    headers = ["Name", "ID", "Type", "Version", "Author", "Parameters", "Description"]
     table_data = []
 
     for orchestrator in orchestrators:
@@ -107,6 +108,7 @@ async def list_orchestrators(naptha):
             orchestrator['type'],
             orchestrator['version'],
             orchestrator['author'],
+            orchestrator['parameters'] if 'parameters' in orchestrator else 'Not defined',
             wrapped_description
         ]
         table_data.append(row)
@@ -121,7 +123,7 @@ async def list_environments(naptha):
         print("No environments found.")
         return
 
-    headers = ["Name", "ID", "Type", "Version", "Author", "Description"]
+    headers = ["Name", "ID", "Type", "Version", "Author", "Parameters", "Description"]
     table_data = []
 
     for environment in environments:
@@ -134,6 +136,7 @@ async def list_environments(naptha):
             environment['type'],
             environment['version'],
             environment['author'],
+            environment['parameters'] if 'parameters' in environment else 'Not defined',
             wrapped_description
         ]
         table_data.append(row)
