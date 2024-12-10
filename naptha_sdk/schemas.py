@@ -8,18 +8,6 @@ from pydantic import BaseModel
 class User(BaseModel):
     id: str
 
-
-class CreateModuleRequest(BaseModel):
-    name: str
-
-
-class CreateModuleResponse(BaseModel):
-    name: str
-    version: str
-    url: str
-    status: str
-    message: str
-
 class LLMClientType(str, Enum):
     OPENAI = "openai"
     AZURE_OPENAI = "azure_openai"
