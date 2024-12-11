@@ -13,7 +13,7 @@ class Agent:
     ):
         self.orchestrator_run = orchestrator_run
         self.agent_index = agent_index
-        worker_node_url = self.orchestrator_run.agent_deployments[self.agent_index].worker_node_url
+        worker_node_url = self.orchestrator_run.orchestrator_deployment.agent_deployments[self.agent_index].worker_node_url
         self.worker_node = Node(worker_node_url)
 
     async def call_agent_func(self, *args, **kwargs):
@@ -22,7 +22,7 @@ class Agent:
         agent_run_input = AgentRunInput(
             consumer_id=self.orchestrator_run.consumer_id,
             inputs=kwargs,
-            agent_deployment=self.orchestrator_run.agent_deployments[self.agent_index].model_dump(),
+            agent_deployment=self.orchestrator_run.orchestrator_deployment.agent_deployments[self.agent_index].model_dump(),
         )
         
         agent_run = await self.worker_node.run_agent_in_node(agent_run_input)
