@@ -26,6 +26,7 @@ class Toolset:
                 repo_url=repo_url, 
                 toolset_name=toolset_name)
 
+
             async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
                 load_repo_response = await client.post(
                     f"{self.worker_node_url}/tool/add_tool_repo_to_toolset",
@@ -54,6 +55,7 @@ class Toolset:
                 toolset_list_response.raise_for_status()
                 result = ToolsetList(**json.loads(toolset_list_response.text))
                 logger.info(result)
+                return result
         except (HTTPStatusError, RemoteProtocolError) as e:
             print(f"Failed to get toolset list: {e}")
             raise
@@ -73,8 +75,12 @@ class Toolset:
                 )
                 toolset_response.raise_for_status()
                 result = ToolsetDetails(**json.loads(toolset_response.text))
-                logger.info("~"*50)
-                logger.info(result)
+                
+                logger.info(f'Toolset {result.name} loaded')
+                # print description with newlines
+                for line in result.description.split("\n"):
+                    logger.info(f"   {line}")
+
         except (HTTPStatusError, RemoteProtocolError) as e:
             print(f"Failed to set toolset: {e}")
             raise
@@ -94,7 +100,10 @@ class Toolset:
                 )
                 toolset_list_response.raise_for_status()
                 result = ToolsetDetails(**json.loads(toolset_list_response.text))
-                logger.info(result)
+                logger.info(f'Toolset {result.name} loaded')
+                # print description with newlines
+                for line in result.description.split("\n"):
+                    logger.info(f"   {line}")
         except (HTTPStatusError, RemoteProtocolError) as e:
             print(f"Failed to get toolset: {e}")
             raise
@@ -103,15 +112,8 @@ class Toolset:
             raise
 
     async def run_tool(self, toolset_name, tool_name, params):
-        logger.info(f"Running tool {tool_name}")
+        logger.info(f"Running Tool: {toolset_name}.{tool_name}({params})")
         try:
-            print("~"*50)
-            print(f"Running tool {tool_name}")
-            print(f"Params: {params}")
-            print(f"Toolset: {toolset_name}")
-            print(f"Agent ID: {self.agent_id}")
-
-            print("~"*50)
             request = ToolRunRequest(
                 tool_run_id="1",
                 agent_id=self.agent_id,
@@ -126,9 +128,9 @@ class Toolset:
                     json=request.model_dump()
                 )
                 tool_run_response.raise_for_status()
-                logger.info(f"Ran tool {tool_name}")
+                logger.info(f"{toolset_name}.{tool_name}({params}):")
                 result = ToolRunResult(**json.loads(tool_run_response.text))
-                logger.info(result)
+                logger.info(result.result)
         except (HTTPStatusError, RemoteProtocolError) as e:
             print(f"Failed to run tool: {e}")
             raise
