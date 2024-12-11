@@ -9,16 +9,21 @@
       █  █   ▀█▀  █▀▀  ▄█  █  █      ██║╚██╗██║██╔══██║██╔═══╝    ██║   ██╔══██║██╔══██║
       █  ▀█▄  ▀█▄ █ ▄█▀▀ ▄█▀  █      ██║ ╚████║██║  ██║██║        ██║   ██║  ██║██║  ██║
        ▀█▄ ▀▀█  █ █ █ ▄██▀ ▄█▀       ╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝        ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝
-         ▀█▄ █  █ █ █ █  ▄█▀                         Decentralized Multi-Agent Workflows
+         ▀█▄ █  █ █ █ █  ▄█▀                             Orchestrating the Web of Agents
             ▀█  █ █ █ █ ▌▀                                                 www.naptha.ai
               ▀▀█ █ ██▀▀                                                    
 
  
 # Naptha Python SDK
 
-Naptha enables users to build decentralized multi-agent workflows. Decentralized workflows can run on one or more nodes (rather than on one central server), with different LLMs, and with many local data sources, opening up new use cases for AI devs. 
+Naptha is a framework and infrastructure for developing and running multi-agent systems across many devices. The Naptha SDK is made up of:
 
-Here's Yohei (creator of BabyAGI) admitting that [BabyAGI isn't a true multi-agent system](https://x.com/yoheinakajima/status/1781183534998380576) since the agents use the same LLM and code base. You can watch a demo video where we run BabyAGI as a true multi-agent system [here](https://www.youtube.com/watch?v=nzV04zOA0f0).
+1. A client for interacting with the Naptha Hub (like the huggingface_hug library but for multi-agent apps)
+2. Abstractions for the composable building blocks of multi-agent apps like Agent, Orchestrator, Tool, Environment, Persona (i.e. Naptha Modules). With Naptha, communication between these modules happens via API.
+3. Decorators for easily onboarding modules from agent frameworks like CrewAI.
+3. A CLI for interacting with the Naptha Hub and Node
+
+If you find this repo useful, please don't forget to star ⭐!
 
 <img src="images/multi-node-flow.png" width="100%">
 
@@ -139,12 +144,15 @@ naptha orchestrators -d orchestrator_name
 ### Run an Agent Orchestrator across a network of Nodes
 
 ```bash
-naptha run orchestrator:multiagent_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --worker_nodes "http://node.naptha.ai:7001,http://node1.naptha.ai:7001" --environment_nodes "postgresql://naptha:naptha@localhost:3002/naptha"
+naptha create orchestrator:multiagent_chat --agent_modules "agent:simple_chat_agent,agent:simple_chat_agent" --worker_node_urls "http://node.naptha.ai:7001,http://node1.naptha.ai:7001" --environment_modules "environment:groupchat_environment" --environment_node_urls "http://node.naptha.ai:7001"
 ```
 
+```bash
+naptha run orchestrator:multiagent_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --worker_node_urls "http://node.naptha.ai:7001,http://node1.naptha.ai:7001" --environment_node_urls "http://node.naptha.ai"
+```
 
 ```bash
-naptha run orchestrator:babyagi -p "objective='Research the history of football'" --worker_nodes "http://node.naptha.ai:7001,http://node1.naptha.ai:7001"
+naptha run orchestrator:babyagi -p "objective='Research the history of football'" --worker_node_urls "http://node.naptha.ai:7001,http://node1.naptha.ai:7001"
 ```
 
 ```bash
@@ -155,7 +163,7 @@ Tesla stock was lower to start a new week of trading, falling as investors worry
 
 News Summary 2:
 Tesla faces growing competition and softening demand, impacting its stock price which is trading 43% below its all-time high. The company’s profitability is declining, with earnings per share shrinking 46% year-over-year in Q2 2024. Despite recent price cuts and a plan to produce a low-cost EV model, sales growth has decelerated. Tesla is also involved in autonomous self-driving software, humanoid robots, and solar energy, but these segments may take years to significantly impact revenue.
-'" --worker_nodes "http://node.naptha.ai:7001"
+'" --worker_node_urls "http://node.naptha.ai:7001"
 ```
 
 ## Environment Modules
@@ -216,6 +224,12 @@ naptha personas persona_name -p "description='Persona description' url='ipfs://Q
 
 ```bash
 naptha personas -d persona_name
+```
+
+## Inference 
+
+```bash
+naptha inference "How can we create scaling laws for multi-agent systems?" -m "phi3:mini"
 ```
 
 ## Interact with Node Storage
