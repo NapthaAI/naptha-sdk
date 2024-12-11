@@ -19,7 +19,7 @@ def load_yaml(cfg_path):
         cfg = yaml.load(file, Loader=yaml.FullLoader)
     return cfg
 
-def add_credentials_to_env(username, password, private_key):
+def add_credentials_to_env(username, password, private_key_path):
     env_file_path = os.path.join(os.getcwd(), '.env')
     updated_lines = []
     hub_user_found = False
@@ -36,7 +36,7 @@ def add_credentials_to_env(username, password, private_key):
                 updated_lines.append(f"HUB_PASS={password}\n")
                 hub_pass_found = True
             elif line.startswith('PRIVATE_KEY='):
-                updated_lines.append(f"PRIVATE_KEY={private_key}\n")
+                updated_lines.append(f"PRIVATE_KEY={private_key_path}\n")
                 private_key_found = True
             else:
                 updated_lines.append(line)
@@ -47,7 +47,7 @@ def add_credentials_to_env(username, password, private_key):
     if not hub_pass_found:
         updated_lines.append(f"HUB_PASS={password}\n")
     if not private_key_found:
-        updated_lines.append(f"PRIVATE_KEY={private_key}\n")
+        updated_lines.append(f"PRIVATE_KEY={private_key_path}\n")
 
     # Write the updated content back to the .env file
     with open(env_file_path, 'w') as env_file:
