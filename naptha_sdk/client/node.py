@@ -263,13 +263,16 @@ class Node:
             print(f"An unexpected error occurred: {e}")
             raise
 
-    async def run_inference(self, inference_input: ChatCompletionRequest) -> Dict:
+    async def run_inference(self, inference_input: Union[ChatCompletionRequest, Dict]) -> Dict:
         """
         Run inference on a node
         
         Args:
             inference_input: The inference input to run inference on
         """
+        if isinstance(inference_input, dict):
+            inference_input = ChatCompletionRequest(**inference_input)
+
         endpoint = f"{self.node_url}/inference/chat"
 
         try:
@@ -278,6 +281,7 @@ class Node:
                     'Content-Type': 'application/json',
                     'Authorization': f'Bearer {self.access_token}',
                 }
+                print(f"IAAAAAAA: {endpoint}")
                 response = await client.post(
                     endpoint,
                     json=inference_input.model_dump(),
