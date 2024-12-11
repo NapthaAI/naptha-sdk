@@ -263,15 +263,15 @@ async def run(
         orchestrator_deployment = OrchestratorDeployment(
             name=module_name, 
             module={"name": module_name}, 
-            orchestrator_node_url=os.getenv("NODE_URL")
+            orchestrator_node_url=os.getenv("NODE_URL"),
+            agent_deployments=agent_deployments,
+            environment_deployments=environment_deployments
         )
 
         orchestrator_run_input = OrchestratorRunInput(
             consumer_id=user_id,
             inputs=parameters,
-            orchestrator_deployment=orchestrator_deployment,
-            agent_deployments=agent_deployments,
-            environment_deployments=environment_deployments
+            orchestrator_deployment=orchestrator_deployment
         )
         orchestrator_run = await naptha.node.run_orchestrator_and_poll(orchestrator_run_input)
 
