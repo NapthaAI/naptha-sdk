@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.user import get_public_key
-from naptha_sdk.schemas import AgentConfig, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput
+from naptha_sdk.schemas import AgentConfig, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, ChatCompletionRequest
 import os
 import shlex
 import yaml
@@ -544,10 +544,11 @@ async def main():
                 print(f"Personas URLs: {personas_urls}")
                 await run(naptha, args.agent, user_id, parsed_params, worker_node_urls, environment_node_urls, args.file, personas_urls)
             elif args.command == "inference":
-                await naptha.node.run_inference({
-                    "messages": [{"role": "user", "content": args.prompt}],
-                    "model": args.model,
-                })
+                request = ChatCompletionRequest(
+                    messages=[{"role": "user", "content": args.prompt}],
+                    model=args.model,
+                )
+                await naptha.node.run_inference(request)
             elif args.command == "read_storage":
                 await read_storage(naptha, args.agent_run_id, args.output_dir, args.ipfs)
             elif args.command == "write_storage":
