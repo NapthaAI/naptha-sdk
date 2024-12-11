@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.user import get_public_key
+from naptha_sdk.utils import get_logger
 from naptha_sdk.schemas import AgentConfig, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, ChatCompletionRequest
 import os
 import shlex
@@ -13,6 +14,7 @@ from tabulate import tabulate
 from textwrap import wrap
 
 load_dotenv(override=True)
+logger = get_logger(__name__)
 
 def load_yaml_to_dict(file_path):
     with open(file_path, 'r') as file:
@@ -382,7 +384,10 @@ async def main():
     async with naptha as naptha:
         args = parser.parse_args()
         if args.command == "signup":
-            _, user_id = await user_setup_flow(hub_url, public_key)
+            try:
+                _, user_id = await user_setup_flow(hub_url, public_key)
+            except Exception as e:
+                logger.error(e)
         elif args.command in ["nodes", "agents", "orchestrators", "environments", "personas", "run", "inference", "read_storage", "write_storage", "publish"]:
             if not naptha.hub.is_authenticated:
                 if not hub_username or not hub_password:
