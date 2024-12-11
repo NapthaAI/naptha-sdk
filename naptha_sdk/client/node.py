@@ -280,7 +280,7 @@ class Node:
                 }
                 response = await client.post(
                     endpoint,
-                    json=inference_input,
+                    json=inference_input.model_dump(),
                     headers=headers
                 )
                 print("Response: ", response.text)
