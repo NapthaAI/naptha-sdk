@@ -1,9 +1,7 @@
-from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional, Union
-
+from datetime import datetime
 from pydantic import BaseModel
-
 
 class User(BaseModel):
     id: str
@@ -56,17 +54,19 @@ class AgentDeployment(BaseModel):
     agent_config: Optional[AgentConfig] = AgentConfig()
     data_generation_config: Optional[DataGenerationConfig] = DataGenerationConfig()
 
-class OrchestratorDeployment(BaseModel):
-    name: Optional[str] = "orchestrator_deployment"
-    module: Dict
-    orchestrator_node_url: Optional[str] = "http://localhost:7001"
-    orchestrator_config: Optional[OrchestratorConfig] = OrchestratorConfig()
-
 class EnvironmentDeployment(BaseModel):
     name: Optional[str] = "environment_deployment"
     module: Optional[Dict] = None
     environment_node_url: str
     environment_config: Optional[EnvironmentConfig] = EnvironmentConfig()
+
+class OrchestratorDeployment(BaseModel):
+    name: Optional[str] = "orchestrator_deployment"
+    module: Optional[Dict] = None
+    orchestrator_node_url: Optional[str] = "http://localhost:7001"
+    orchestrator_config: Optional[OrchestratorConfig] = OrchestratorConfig()
+    environment_deployments: Optional[List[EnvironmentDeployment]] = None
+    agent_deployments: Optional[List[AgentDeployment]] = None
 
 class DockerParams(BaseModel):
     docker_image: str
@@ -142,15 +142,11 @@ class OrchestratorRunInput(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
     orchestrator_deployment: OrchestratorDeployment
-    agent_deployments: List[AgentDeployment]
-    environment_deployments: Optional[List[EnvironmentDeployment]] = None
 
 class OrchestratorRun(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
     orchestrator_deployment: OrchestratorDeployment
-    agent_deployments: List[AgentDeployment]
-    environment_deployments: Optional[List[EnvironmentDeployment]] = None
     status: str = "pending"
     error: bool = False
     id: Optional[str] = None
