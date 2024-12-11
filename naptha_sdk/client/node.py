@@ -54,8 +54,7 @@ class Node:
         logger.info(f"Node URL: {node_url}")
 
     async def create(self, module_type: str,
-                     module_request: Union[AgentDeployment, EnvironmentDeployment, OrchestratorDeployment]) -> Union[
-        AgentDeployment, EnvironmentDeployment, OrchestratorDeployment]:
+                     module_request: Union[AgentDeployment, EnvironmentDeployment, OrchestratorDeployment]):
         """Generic method to create either an agent, orchestrator, or environment.
 
         Args:
@@ -68,7 +67,6 @@ class Node:
         print(f"Node URL: {self.node_url}")
 
         endpoint = f"{self.node_url}/{module_type}/create"
-
         try:
             async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
                 headers = {
