@@ -321,7 +321,7 @@ async def run(
         agent_deployment = AgentDeployment(
             name=module_name, 
             module={"name": module_name}, 
-            worker_node_url=worker_node_urls, 
+            worker_node_url=worker_node_urls[0], 
             agent_config=AgentConfig(persona_module={"url": personas_urls})
         )
 
