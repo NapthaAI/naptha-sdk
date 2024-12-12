@@ -1,16 +1,19 @@
 import argparse
 import asyncio
-from dotenv import load_dotenv
-from naptha_sdk.client.naptha import Naptha
-from naptha_sdk.client.hub import user_setup_flow
-from naptha_sdk.user import get_public_key
-from naptha_sdk.schemas import AgentConfig, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, ChatCompletionRequest
+import json
 import os
 import shlex
-import yaml
-import json
-from tabulate import tabulate
 from textwrap import wrap
+
+import yaml
+from dotenv import load_dotenv
+from tabulate import tabulate
+
+from naptha_sdk.client.hub import user_setup_flow
+from naptha_sdk.client.naptha import Naptha
+from naptha_sdk.schemas import AgentConfig, AgentDeployment, ChatCompletionRequest, EnvironmentDeployment, OrchestratorDeployment, \
+    OrchestratorRunInput, EnvironmentRunInput
+from naptha_sdk.user import get_public_key
 
 load_dotenv(override=True)
 
@@ -197,9 +200,91 @@ async def create_persona(naptha, persona_config):
     elif isinstance(persona, list):
         print(f"Persona created: {persona[0]}")
 
+
+async def create(
+        naptha,
+        module_name,
+        agent_modules = None,
+        worker_node_urls = None,
+        environment_modules = None,
+        environment_node_urls = None
+):
+    if "orchestrator:" in module_name:
+        module_type = "orchestrator"
+    elif "agent:" in module_name:
+        module_type = "agent"
+    elif "environment:" in module_name:
+        module_type = "environment"
+    else:
+        module_type = "agent"
+
+    user = await naptha.node.check_user(user_input={"public_key": naptha.hub.public_key})
+
+    if user['is_registered']:
+        print("Found user...", user)
+    else:
+        print("No user found. Registering user...")
+        user = await naptha.node.register_user(user_input=user)
+        print(f"User registered: {user}.")
+
+    if agent_modules:
+        aux_agent_deployments = []
+        for agent_module, worker_node_url in zip(agent_modules, worker_node_urls):
+            aux_agent_deployments.append(AgentDeployment(
+                name=agent_module,
+                module={"name": agent_module},
+                worker_node_url=worker_node_url
+            ))
+
+    if environment_modules:
+        aux_environment_deployments = []
+        for environment_module, environment_node_url in zip(environment_modules, environment_node_urls):
+            aux_environment_deployments.append(EnvironmentDeployment(
+                name=environment_module,
+                module={"name": environment_module},
+                environment_node_url=environment_node_url
+            ))
+
+    if module_type == "agent":
+        print("Creating Agent...")
+        agent_deployment = AgentDeployment(
+            name=module_name,
+            module={"name": module_name},
+        )
+        result = await naptha.node.create(module_type, agent_deployment)
+        print(f"Agent creation result: {result}")
+
+    elif module_type == "orchestrator":
+        print("Creating Orchestrator...")
+        orchestrator_deployment = OrchestratorDeployment(
+            name=module_name,
+            module={"name": module_name},
+            orchestrator_node_url=os.getenv("NODE_URL"),
+            agent_deployments=aux_agent_deployments,
+            environment_deployments=aux_environment_deployments
+        )
+        result = await naptha.node.create(module_type, orchestrator_deployment)
+        print(f"Orchestrator creation result: {result}")
+
+    elif module_type == "environment":
+        print("Creating Environment...")
+        if not environment_node_urls:
+            environment_node_urls = ["http://localhost:7001"]
+        elif isinstance(environment_node_urls, str):
+            environment_node_urls = [environment_node_urls]
+
+        environment_deployment = EnvironmentDeployment(
+            name=module_name,
+            module={"name": module_name},
+            environment_node_url=environment_node_urls[0]
+        )
+
+        result = await naptha.node.create(module_type, environment_deployment)
+        print(f"Environment creation result: {result}")
+
 async def run(
-    naptha, 
-    module_name, 
+    naptha,
+    module_name,
     user_id,
     parameters=None, 
     worker_node_urls="http://localhost:7001",
@@ -263,15 +348,15 @@ async def run(
         orchestrator_deployment = OrchestratorDeployment(
             name=module_name, 
             module={"name": module_name}, 
-            orchestrator_node_url=os.getenv("NODE_URL")
+            orchestrator_node_url=os.getenv("NODE_URL"),
+            agent_deployments=agent_deployments,
+            environment_deployments=environment_deployments
         )
 
         orchestrator_run_input = OrchestratorRunInput(
             consumer_id=user_id,
             inputs=parameters,
-            orchestrator_deployment=orchestrator_deployment,
-            agent_deployments=agent_deployments,
-            environment_deployments=environment_deployments
+            orchestrator_deployment=orchestrator_deployment
         )
         orchestrator_run = await naptha.node.run_orchestrator_and_poll(orchestrator_run_input)
 
@@ -281,7 +366,7 @@ async def run(
         environment_deployment = EnvironmentDeployment(
             name=module_name, 
             module={"name": module_name}, 
-            environment_node_url=environment_node_urls[0]
+            environment_node_url=environment_node_urls[0] if isinstance(environment_node_urls, list) else environment_node_urls
         )
 
         environment_run_input = EnvironmentRunInput(
@@ -306,6 +391,22 @@ async def write_storage(naptha, storage_input, ipfs=False, publish_to_ipns=False
         print(response)
     except Exception as err:
         print(f"Error: {err}")
+
+def _parse_list_arg(args, arg_name, default=None, split_char=','):
+    """Helper function to parse list arguments with common logic."""
+    if hasattr(args, arg_name) and getattr(args, arg_name) is not None:
+        value = getattr(args, arg_name)
+        return value.split(split_char) if split_char in value else [value]
+    return default
+
+def _parse_str_args(args):
+    # Parse all list arguments
+    args.worker_node_urls = _parse_list_arg(args, 'worker_node_urls', default=["http://localhost:7001"])
+    args.environment_node_urls = _parse_list_arg(args, 'environment_node_urls', default=["http://localhost:7001"])
+    args.agent_modules = _parse_list_arg(args, 'agent_modules', default=None)
+    args.environment_modules = _parse_list_arg(args, 'environment_modules', default=None)
+    args.personas_urls = _parse_list_arg(args, 'personas_urls', default=None)
+    return args
 
 async def main():
     public_key = get_public_key(os.getenv("PRIVATE_KEY")) if os.getenv("PRIVATE_KEY") else None
@@ -345,12 +446,20 @@ async def main():
     personas_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
     personas_parser.add_argument('-d', '--delete', action='store_true', help='Delete a persona')
 
+    # Create command
+    create_parser = subparsers.add_parser("create", help="Execute create command.")
+    create_parser.add_argument("module", help="Select the module to create")
+    create_parser.add_argument("-a", "--agent_modules", help="Agent modules to create")
+    create_parser.add_argument("-n", "--worker_node_urls", help="Agent nodes to take part in orchestrator runs.")
+    create_parser.add_argument("-e", "--environment_modules", help="Environment module to create")
+    create_parser.add_argument("-m", "--environment_node_urls", help="Environment nodes to store data during agent runs.")
+
     # Run command
     run_parser = subparsers.add_parser("run", help="Execute run command.")
     run_parser.add_argument("agent", help="Select the agent to run")
     run_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
-    run_parser.add_argument("-n", "--worker_nodes", help="Worker nodes to take part in agent runs.")
-    run_parser.add_argument("-e", "--environment_nodes", help="Environment nodes to store data during agent runs.")
+    run_parser.add_argument("-n", "--worker_node_urls", help="Worker nodes to take part in agent runs.")
+    run_parser.add_argument("-e", "--environment_node_urls", help="Environment nodes to store data during agent runs.")
     run_parser.add_argument("-u", "--personas_urls", help="Personas URLs to install before running the agent")
     run_parser.add_argument("-f", "--file", help="YAML file with agent run parameters")
 
@@ -381,9 +490,10 @@ async def main():
 
     async with naptha as naptha:
         args = parser.parse_args()
+        args = _parse_str_args(args)
         if args.command == "signup":
             _, user_id = await user_setup_flow(hub_url, public_key)
-        elif args.command in ["nodes", "agents", "orchestrators", "environments", "personas", "run", "inference", "read_storage", "write_storage", "publish"]:
+        elif args.command in ["nodes", "agents", "orchestrators", "environments", "personas", "run", "inference", "read_storage", "write_storage", "publish", "create"]:
             if not naptha.hub.is_authenticated:
                 if not hub_username or not hub_password:
                     print("Please set HUB_USER and HUB_PASS environment variables or sign up first (run naptha signup).")
@@ -511,6 +621,8 @@ async def main():
                         await create_persona(naptha, persona_config)
                 else:
                     print("Invalid command.")
+            elif args.command == "create":
+                await create(naptha, args.module, args.agent_modules, args.worker_node_urls, args.environment_modules, args.environment_node_urls)
             elif args.command == "run":
                 if hasattr(args, 'parameters') and args.parameters is not None:
                     try:
@@ -523,26 +635,8 @@ async def main():
                             parsed_params[key] = value
                 else:
                     parsed_params = None
-                
-                # parse worker nodes
-                if hasattr(args, 'worker_nodes') and args.worker_nodes is not None:
-                    worker_node_urls = args.worker_nodes.split(',')
-                else:
-                    worker_node_urls = "http://localhost:7001"
-
-                # parse environment nodes 
-                if hasattr(args, 'environment_nodes') and args.environment_nodes is not None:
-                    environment_node_urls = args.environment_nodes.split(',')
-                else:
-                    environment_node_urls = ["http://localhost:7001"]
-
-                # parse personas urls
-                if hasattr(args, 'personas_urls') and args.personas_urls is not None:
-                    personas_urls = args.personas_urls.split(',')
-                else:
-                    personas_urls = None
-                print(f"Personas URLs: {personas_urls}")
-                await run(naptha, args.agent, user_id, parsed_params, worker_node_urls, environment_node_urls, args.file, personas_urls)
+                    
+                await run(naptha, args.agent, user_id, parsed_params, args.worker_node_urls, args.environment_node_urls, args.file, args.personas_urls)
             elif args.command == "inference":
                 request = ChatCompletionRequest(
                     messages=[{"role": "user", "content": args.prompt}],

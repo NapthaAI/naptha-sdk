@@ -1,23 +1,26 @@
-from httpx import HTTPStatusError, RemoteProtocolError
-from naptha_sdk.schemas import AgentRun, AgentRunInput, ChatCompletionRequest, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, OrchestratorRunInput
-from naptha_sdk.utils import get_logger
-from pathlib import Path
-from typing import Dict, Optional, Any, List, Tuple, Union
-import httpx
 import json
 import os
-import uuid
-import websockets
 import shutil
 import tempfile
 import time
 import traceback
+import uuid
 import zipfile
+from pathlib import Path
+from typing import Dict, Optional, Any, List, Tuple, Union
+
 import grpc
-from naptha_sdk.client import grpc_server_pb2_grpc
-from naptha_sdk.client import grpc_server_pb2
+import httpx
+import websockets
 from google.protobuf import struct_pb2
 from google.protobuf.json_format import MessageToDict
+from httpx import HTTPStatusError, RemoteProtocolError
+
+from naptha_sdk.client import grpc_server_pb2
+from naptha_sdk.client import grpc_server_pb2_grpc
+from naptha_sdk.schemas import AgentRun, AgentRunInput, ChatCompletionRequest, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, \
+    OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment
+from naptha_sdk.utils import get_logger
 
 logger = get_logger(__name__)
 HTTP_TIMEOUT = 300
@@ -49,6 +52,46 @@ class Node:
         
         self.access_token = None
         logger.info(f"Node URL: {node_url}")
+
+    async def create(self, module_type: str,
+                     module_request: Union[AgentDeployment, EnvironmentDeployment, OrchestratorDeployment]):
+        """Generic method to create either an agent, orchestrator, or environment.
+
+        Args:
+            module_type: Either agent, orchestrator or environment
+            module_request: Either AgentDeployment, EnvironmentDeployment, or OrchestratorDeployment
+        """
+
+        print(f"Creating {module_type}...")
+        print(f"Module Request: {module_request}")
+        print(f"Node URL: {self.node_url}")
+
+        endpoint = f"{self.node_url}/{module_type}/create"
+        try:
+            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+                headers = {
+                    'Content-Type': 'application/json',
+                    'Authorization': f'Bearer {self.access_token}',
+                }
+                response = await client.post(
+                    endpoint,
+                    json=module_request.model_dump(),
+                    headers=headers
+                )
+                response.raise_for_status()
+
+                # Convert response to appropriate return type
+                return response.json()
+        except HTTPStatusError as e:
+            logger.info(f"HTTP error occurred: {e}")
+            raise
+        except RemoteProtocolError as e:
+            error_msg = f"Run {module_type} failed to connect to the server at {self.node_url}. Please check if the server URL is correct and the server is running. Error details: {str(e)}"
+            logger.error(error_msg)
+            raise
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+            raise
 
     async def _run_and_poll(self, run_input: Union[AgentRunInput, EnvironmentRunInput, OrchestratorRunInput, Dict], module_type: str) -> Union[AgentRun, EnvironmentRun, OrchestratorRun, Dict]:
         """Generic method to run and poll either an agent, orchestrator, or environment.
