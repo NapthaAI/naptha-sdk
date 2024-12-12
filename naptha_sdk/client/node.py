@@ -18,7 +18,7 @@ from httpx import HTTPStatusError, RemoteProtocolError
 
 from naptha_sdk.client import grpc_server_pb2
 from naptha_sdk.client import grpc_server_pb2_grpc
-from naptha_sdk.schemas import AgentRun, AgentRunInput, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, \
+from naptha_sdk.schemas import AgentRun, AgentRunInput, ChatCompletionRequest, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, \
     OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment
 from naptha_sdk.utils import get_logger
 
