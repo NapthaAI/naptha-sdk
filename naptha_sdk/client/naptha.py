@@ -84,6 +84,7 @@ class Naptha:
                     "id": f"agent:{agent}",
                     "name": agent,
                     "description": agent,
+                    "parameters": agent,
                     "author": self.hub.user_id,
                     "url": f'ipfs://{response["ipfs_hash"]}',
                     "type": "package",

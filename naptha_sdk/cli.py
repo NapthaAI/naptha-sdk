@@ -67,7 +67,7 @@ async def list_agents(naptha):
         print("No agents found.")
         return
 
-    headers = ["Name", "ID", "Type", "Version", "Author", "Description"]
+    headers = ["Name", "ID", "Type", "Version", "Author", "Parameters", "Description"]
     table_data = []
 
     for agent in agents:
@@ -80,6 +80,7 @@ async def list_agents(naptha):
             agent['type'],
             agent['version'],
             agent['author'],
+            agent['parameters'],
             wrapped_description
         ]
         table_data.append(row)
@@ -94,7 +95,7 @@ async def list_orchestrators(naptha):
         print("No orchestrators found.")
         return
 
-    headers = ["Name", "ID", "Type", "Version", "Author", "Description"]
+    headers = ["Name", "ID", "Type", "Version", "Author", "Parameters", "Description"]
     table_data = []
 
     for orchestrator in orchestrators:
@@ -107,6 +108,7 @@ async def list_orchestrators(naptha):
             orchestrator['type'],
             orchestrator['version'],
             orchestrator['author'],
+            orchestrator['parameters'],
             wrapped_description
         ]
         table_data.append(row)
@@ -121,7 +123,7 @@ async def list_environments(naptha):
         print("No environments found.")
         return
 
-    headers = ["Name", "ID", "Type", "Version", "Author", "Description"]
+    headers = ["Name", "ID", "Type", "Version", "Author", "Parameters", "Description"]
     table_data = []
 
     for environment in environments:
@@ -134,6 +136,7 @@ async def list_environments(naptha):
             environment['type'],
             environment['version'],
             environment['author'],
+            environment['parameters'],
             wrapped_description
         ]
         table_data.append(row)
@@ -425,25 +428,25 @@ async def main():
     # Agent commands
     agents_parser = subparsers.add_parser("agents", help="List available agents.")
     agents_parser.add_argument('agent_name', nargs='?', help='Optional agent name')
-    agents_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
+    agents_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
     agents_parser.add_argument('-d', '--delete', action='store_true', help='Delete a agent')
 
     # Orchestrator commands
     orchestrators_parser = subparsers.add_parser("orchestrators", help="List available orchestrators.")
     orchestrators_parser.add_argument('orchestrator_name', nargs='?', help='Optional orchestrator name')
-    orchestrators_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
+    orchestrators_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
     orchestrators_parser.add_argument('-d', '--delete', action='store_true', help='Delete an orchestrator')
 
     # Environment commands
     environments_parser = subparsers.add_parser("environments", help="List available environments.")
     environments_parser.add_argument('environment_name', nargs='?', help='Optional environment name')
-    environments_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
+    environments_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
     environments_parser.add_argument('-d', '--delete', action='store_true', help='Delete an environment')
 
     # Persona commands
     personas_parser = subparsers.add_parser("personas", help="List available personas.")
     personas_parser.add_argument('persona_name', nargs='?', help='Optional persona name')
-    personas_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
+    personas_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
     personas_parser.add_argument('-d', '--delete', action='store_true', help='Delete a persona')
 
     # Create command
@@ -508,22 +511,24 @@ async def main():
                 elif args.delete and len(args.agent_name.split()) == 1:
                     await naptha.hub.delete_agent(args.agent_name)
                 elif len(args.agent_name.split()) == 1:
-                    if hasattr(args, 'parameters') and args.parameters is not None:
-                        params = shlex.split(args.parameters)
+                    if hasattr(args, 'metadata') and args.metadata is not None:
+                        params = shlex.split(args.metadata)
                         parsed_params = {}
                         for param in params:
                             key, value = param.split('=')
                             parsed_params[key] = value
 
-                        required_parameters = ['description', 'url', 'type', 'version']
-                        if not all(param in parsed_params for param in required_parameters):
-                            print(f"Missing one or more of the following required parameters: {required_parameters}")
+                        required_metadata = ['description', 'parameters', 'url', 'type', 'version']
+                        missing_metadata = [param for param in required_metadata if param not in parsed_params]
+                        if missing_metadata:
+                            print(f"Missing required metadata: {', '.join(missing_metadata)}")
                             return
                             
                         agent_config = {
                             "id": f"agent:{args.agent_name}",
                             "name": args.agent_name,
                             "description": parsed_params['description'],
+                            "parameters": parsed_params['parameters'],
                             "author": naptha.hub.user_id,
                             "url": parsed_params['url'],
                             "type": parsed_params['type'],
@@ -538,22 +543,23 @@ async def main():
                 elif args.delete and len(args.orchestrator_name.split()) == 1:
                     await naptha.hub.delete_orchestrator(args.orchestrator_name)
                 elif len(args.orchestrator_name.split()) == 1:
-                    if hasattr(args, 'parameters') and args.parameters is not None:
-                        params = shlex.split(args.parameters)
+                    if hasattr(args, 'metadata') and args.metadata is not None:
+                        params = shlex.split(args.metadata)
                         parsed_params = {}
                         for param in params:
                             key, value = param.split('=')
                             parsed_params[key] = value
 
-                        required_parameters = ['description', 'url', 'type', 'version']
-                        if not all(param in parsed_params for param in required_parameters):
-                            print(f"Missing one or more of the following required parameters: {required_parameters}")
+                        required_metadata = ['description', 'parameters', 'url', 'type', 'version']
+                        if not all(param in parsed_params for param in required_metadata):
+                            print(f"Missing one or more of the following required metadata: {required_metadata}")
                             return
                             
                         orchestrator_config = {
                             "id": f"orchestrator:{args.orchestrator_name}",
                             "name": args.orchestrator_name,
                             "description": parsed_params['description'],
+                            "parameters": parsed_params['parameters'],
                             "author": naptha.hub.user_id,
                             "url": parsed_params['url'],
                             "type": parsed_params['type'],
@@ -568,22 +574,23 @@ async def main():
                 elif args.delete and len(args.environment_name.split()) == 1:
                     await naptha.hub.delete_environment(args.environment_name)
                 elif len(args.environment_name.split()) == 1:
-                    if hasattr(args, 'parameters') and args.parameters is not None:
-                        params = shlex.split(args.parameters)
+                    if hasattr(args, 'metadata') and args.metadata is not None:
+                        params = shlex.split(args.metadata)
                         parsed_params = {}
                         for param in params:
                             key, value = param.split('=')
                             parsed_params[key] = value
 
-                        required_parameters = ['description', 'url', 'type', 'version']
-                        if not all(param in parsed_params for param in required_parameters):
-                            print(f"Missing one or more of the following required parameters: {required_parameters}")
+                        required_metadata = ['description', 'parameters', 'url', 'type', 'version']
+                        if not all(param in parsed_params for param in required_metadata):
+                            print(f"Missing one or more of the following required metadata: {required_metadata}")
                             return
                             
                         environment_config = {
                             "id": f"environment:{args.environment_name}",
                             "name": args.environment_name,
                             "description": parsed_params['description'],
+                            "parameters": parsed_params['parameters'],
                             "author": naptha.hub.user_id,
                             "url": parsed_params['url'],
                             "type": parsed_params['type'],
@@ -598,16 +605,16 @@ async def main():
                 elif args.delete and len(args.persona_name.split()) == 1:
                     await naptha.hub.delete_persona(args.persona_name)
                 elif len(args.persona_name.split()) == 1:
-                    if hasattr(args, 'parameters') and args.parameters is not None:
-                        params = shlex.split(args.parameters)
+                    if hasattr(args, 'metadata') and args.metadata is not None:
+                        params = shlex.split(args.metadata)
                         parsed_params = {}
                         for param in params:
                             key, value = param.split('=')
                             parsed_params[key] = value
 
-                        required_parameters = ['description', 'url', 'version']
-                        if not all(param in parsed_params for param in required_parameters):
-                            print(f"Missing one or more of the following required parameters: {required_parameters}")
+                        required_metadata = ['description', 'parameters', 'url', 'type', 'version']
+                        if not all(param in parsed_params for param in required_metadata):
+                            print(f"Missing one or more of the following required metadata: {required_metadata}")
                             return
                             
                         persona_config = {
