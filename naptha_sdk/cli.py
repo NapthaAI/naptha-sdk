@@ -67,7 +67,7 @@ async def list_agents(naptha):
         print("No agents found.")
         return
 
-    headers = ["Name", "ID", "Type", "Version", "Author", "Description"]
+    headers = ["Name", "ID", "Type", "Version", "Author", "Parameters", "Description"]
     table_data = []
 
     for agent in agents:
@@ -80,6 +80,7 @@ async def list_agents(naptha):
             agent['type'],
             agent['version'],
             agent['author'],
+            agent['parameters'],
             wrapped_description
         ]
         table_data.append(row)
