@@ -141,7 +141,7 @@ naptha orchestrators orchestrator_name -p "description='Orchestrator description
 naptha orchestrators -d orchestrator_name
 ```
 
-### Run an Agent Orchestrator across a network of Nodes
+### Run an Agent Orchestrator across a network of nodes:
 
 You can download and install the modules for an orchestrator without running first using:
 
@@ -149,10 +149,16 @@ You can download and install the modules for an orchestrator without running fir
 naptha create orchestrator:multiagent_chat --agent_modules "agent:simple_chat_agent,agent:simple_chat_agent" --worker_node_urls "http://node.naptha.ai:7001,http://node1.naptha.ai:7001" --environment_modules "environment:groupchat_environment" --environment_node_urls "http://node.naptha.ai:7001"
 ```
 
-You can run the orchestrator module using:
+You can run the orchestrator module on hosted nodes using:
 
 ```bash
 naptha run orchestrator:multiagent_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --worker_node_urls "http://node.naptha.ai:7001,http://node1.naptha.ai:7001" --environment_node_urls "http://node.naptha.ai"
+```
+
+Or on local nodes:
+
+```bash
+naptha run orchestrator:multiagent_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --worker_node_urls "http://localhost:7001,http://localhost:7001" --environment_node_urls "http://localhost:7001"
 ```
 
 ```bash
