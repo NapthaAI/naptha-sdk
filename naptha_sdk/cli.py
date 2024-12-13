@@ -95,7 +95,7 @@ async def list_orchestrators(naptha):
         print("No orchestrators found.")
         return
 
-    headers = ["Name", "ID", "Type", "Version", "Author", "Description"]
+    headers = ["Name", "ID", "Type", "Version", "Author", "Parameters", "Description"]
     table_data = []
 
     for orchestrator in orchestrators:
@@ -108,6 +108,7 @@ async def list_orchestrators(naptha):
             orchestrator['type'],
             orchestrator['version'],
             orchestrator['author'],
+            orchestrator['parameters'],
             wrapped_description
         ]
         table_data.append(row)
@@ -122,7 +123,7 @@ async def list_environments(naptha):
         print("No environments found.")
         return
 
-    headers = ["Name", "ID", "Type", "Version", "Author", "Description"]
+    headers = ["Name", "ID", "Type", "Version", "Author", "Parameters", "Description"]
     table_data = []
 
     for environment in environments:
@@ -135,6 +136,7 @@ async def list_environments(naptha):
             environment['type'],
             environment['version'],
             environment['author'],
+            environment['parameters'],
             wrapped_description
         ]
         table_data.append(row)
