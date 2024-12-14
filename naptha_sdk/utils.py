@@ -1,6 +1,8 @@
 import logging
 import os
+
 import yaml
+
 
 def get_logger(name):
     logger = logging.getLogger(name)
@@ -29,11 +31,11 @@ def add_credentials_to_env(username, password, private_key):
     # Read the existing .env file
     with open(env_file_path, 'r') as env_file:
         for line in env_file:
-            if line.startswith('HUB_USER='):
-                updated_lines.append(f"HUB_USER={username}\n")
+            if line.startswith('HUB_USERNAME='):
+                updated_lines.append(f"HUB_USERNAME={username}\n")
                 hub_user_found = True
-            elif line.startswith('HUB_PASS='):
-                updated_lines.append(f"HUB_PASS={password}\n")
+            elif line.startswith('HUB_PASSWORD='):
+                updated_lines.append(f"HUB_PASSWORD={password}\n")
                 hub_pass_found = True
             elif line.startswith('PRIVATE_KEY='):
                 updated_lines.append(f"PRIVATE_KEY={private_key}\n")
@@ -43,9 +45,9 @@ def add_credentials_to_env(username, password, private_key):
 
     # Append new credentials if not found
     if not hub_user_found:
-        updated_lines.append(f"HUB_USER={username}\n")
+        updated_lines.append(f"HUB_USERNAME={username}\n")
     if not hub_pass_found:
-        updated_lines.append(f"HUB_PASS={password}\n")
+        updated_lines.append(f"HUB_PASSWORD={password}\n")
     if not private_key_found:
         updated_lines.append(f"PRIVATE_KEY={private_key}\n")
 

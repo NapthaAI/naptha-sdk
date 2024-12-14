@@ -1,11 +1,13 @@
-import jwt
 import os
-from naptha_sdk.utils import add_credentials_to_env, get_logger
-from naptha_sdk.user import generate_keypair
-from naptha_sdk.user import get_public_key
-from surrealdb import Surreal
 import traceback
 from typing import Dict, List, Optional, Tuple
+
+import jwt
+from surrealdb import Surreal
+
+from naptha_sdk.user import generate_keypair
+from naptha_sdk.user import get_public_key
+from naptha_sdk.utils import add_credentials_to_env, get_logger
 
 logger = get_logger(__name__)
 
@@ -243,7 +245,7 @@ class Hub:
 
 async def user_setup_flow(hub_url, public_key):
     async with Hub(hub_url, public_key) as hub:
-        username, password = os.getenv("HUB_USER"), os.getenv("HUB_PASS")
+        username, password = os.getenv("HUB_USERNAME"), os.getenv("HUB_PASSWORD")
         username_exists, password_exists = len(username) > 1, len(password) > 1
         public_key = get_public_key(os.getenv("PRIVATE_KEY")) if os.getenv("PRIVATE_KEY") else None
         logger.info(f"Checking if user exists... User: {username}")
