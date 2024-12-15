@@ -11,7 +11,8 @@ from tabulate import tabulate
 
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.client.naptha import Naptha
-from naptha_sdk.schemas import AgentConfig, AgentDeployment, ChatCompletionRequest, EnvironmentDeployment, OrchestratorDeployment, \
+from naptha_sdk.schemas import AgentConfig, AgentDeployment, ChatCompletionRequest, EnvironmentDeployment, \
+    OrchestratorDeployment, \
     OrchestratorRunInput, EnvironmentRunInput
 from naptha_sdk.user import get_public_key
 
@@ -413,8 +414,8 @@ def _parse_str_args(args):
 
 async def main():
     public_key = get_public_key(os.getenv("PRIVATE_KEY")) if os.getenv("PRIVATE_KEY") else None
-    hub_username = os.getenv("HUB_USER")
-    hub_password = os.getenv("HUB_PASS")
+    hub_username = os.getenv("HUB_USERNAME")
+    hub_password = os.getenv("HUB_PASSWORD")
     hub_url = os.getenv("HUB_URL")
 
     naptha = Naptha()
@@ -499,7 +500,8 @@ async def main():
         elif args.command in ["nodes", "agents", "orchestrators", "environments", "personas", "run", "inference", "read_storage", "write_storage", "publish", "create"]:
             if not naptha.hub.is_authenticated:
                 if not hub_username or not hub_password:
-                    print("Please set HUB_USER and HUB_PASS environment variables or sign up first (run naptha signup).")
+                    print(
+                        "Please set HUB_USERNAME and HUB_PASSWORD environment variables or sign up first (run naptha signup).")
                     return
                 _, _, user_id = await naptha.hub.signin(hub_username, hub_password)
 

@@ -1,17 +1,20 @@
 import asyncio
-from dotenv import load_dotenv
 import inspect
+import os
+import time
+from pathlib import Path
+
+from dotenv import load_dotenv
+
 from naptha_sdk.client.hub import Hub
 from naptha_sdk.client.node import Node
 from naptha_sdk.client.services import Services
-from naptha_sdk.package_manager import AGENT_DIR, add_files_to_package, add_dependencies_to_pyproject, git_add_commit, init_agent_package, publish_ipfs_package, render_agent_code, write_code_to_package
+from naptha_sdk.package_manager import AGENT_DIR, add_files_to_package, add_dependencies_to_pyproject, git_add_commit, \
+    init_agent_package, publish_ipfs_package, render_agent_code, write_code_to_package
 from naptha_sdk.schemas import User
 from naptha_sdk.scrape import scrape_init, scrape_func, scrape_func_params
 from naptha_sdk.user import get_public_key
 from naptha_sdk.utils import get_logger
-import os
-from pathlib import Path
-import time
 
 logger = get_logger(__name__)
 
@@ -23,7 +26,7 @@ class Naptha:
     def __init__(self):
         self.public_key = get_public_key(os.getenv("PRIVATE_KEY")) if os.getenv("PRIVATE_KEY") else None
         self.user = User(id=f"user:{self.public_key}")
-        self.hub_username = os.getenv("HUB_USER", None)
+        self.hub_username = os.getenv("HUB_USERNAME", None)
         self.hub_url = os.getenv("HUB_URL", None)
         self.node_url = os.getenv("NODE_URL", None)
         self.routing_url = os.getenv("ROUTING_URL", None)
@@ -47,7 +50,7 @@ class Naptha:
 
     async def create_agent(self, name):
         async with self.hub:
-            _, _, user_id = await self.hub.signin(self.hub_username, os.getenv("HUB_PASS"))
+            _, _, user_id = await self.hub.signin(self.hub_username, os.getenv("HUB_PASSWORD"))
             agent_config = {
                 "id": f"agent:{name}",
                 "name": name,
@@ -79,7 +82,7 @@ class Naptha:
         
             # Register agent with hub
             async with self.hub:
-                _, _, user_id = await self.hub.signin(self.hub_username, os.getenv("HUB_PASS"))
+                _, _, user_id = await self.hub.signin(self.hub_username, os.getenv("HUB_PASSWORD"))
                 agent_config = {
                     "id": f"agent:{agent}",
                     "name": agent,
@@ -102,7 +105,7 @@ class Naptha:
 
     async def connect_publish(self):
         await self.hub.connect()
-        await self.hub.signin(os.getenv("HUB_USER"), os.getenv("HUB_PASS"))
+        await self.hub.signin(os.getenv("HUB_USERNAME"), os.getenv("HUB_PASSWORD"))
         await self.publish_agents()
         await self.hub.close()
 
@@ -122,7 +125,7 @@ def agent(name):
         init_agent_package(name)
         write_code_to_package(name, agent_code)
         add_dependencies_to_pyproject(name, selective_import_modules + standard_import_modules)
-        add_files_to_package(name, params, os.getenv("HUB_USER"))
+        add_files_to_package(name, params, os.getenv("HUB_USERNAME"))
 
         loop = asyncio.get_event_loop()
         if loop.is_running():
