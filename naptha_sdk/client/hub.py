@@ -102,7 +102,7 @@ class Hub:
             "SELECT * FROM user WHERE public_key = $public_key LIMIT 1",
             {"public_key": public_key}
         )
-        # print(public_key)
+
         if result and result[0]["result"]:
             return result[0]["result"][0]
         return None
@@ -250,9 +250,9 @@ class Hub:
         await self.close()
 
 
-async def user_setup_flow(hub_url, public_key):      
+async def user_setup_flow(hub_url, public_key):
     async with Hub(hub_url, public_key) as hub:
-        username, password = os.getenv("HUB_USER"), os.getenv("HUB_PASS")
+        username, password = os.getenv("HUB_USERNAME"), os.getenv("HUB_PASSWORD")
         username_exists, password_exists = len(username) > 1, len(password) > 1
         public_key = get_public_key(os.getenv("PRIVATE_KEY")) if os.getenv("PRIVATE_KEY") else None
         logger.info(f"Checking if user exists... User: {username}")
