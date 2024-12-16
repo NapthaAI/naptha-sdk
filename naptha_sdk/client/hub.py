@@ -294,12 +294,13 @@ async def user_setup_flow(hub_url, public_key):
                         logger.error("Sign up failed. Please try again.")
 
             case None, True, True, False:
-                # User doesn't exist but credentials are provided
+                logger.info("User doesn't exist but some credentials are provided in .env. Using them to create new user.")
                 private_key_path = None
                 if not public_key:
+                    logger.info("No public key provided. Generating new keypair...")
                     public_key, private_key_path = generate_keypair(f"{username}.pem")
 
-                print(f"Using user credentials in .env. Signing up user: {username} with public key: {public_key}")
+                print(f"Signing up user: {username} with public key: {public_key}")
                 success, token, user_id = await hub.signup(username, password, public_key)
                 if success:
                     if private_key_path:
