@@ -1,4 +1,8 @@
 import os
+from naptha_sdk.utils import add_credentials_to_env, get_logger, write_private_key_to_file
+from naptha_sdk.user import generate_keypair
+from naptha_sdk.user import get_public_key, is_hex
+from surrealdb import Surreal
 import traceback
 from typing import Dict, List, Optional, Tuple
 
@@ -87,8 +91,10 @@ class Hub:
             "SELECT * FROM user WHERE username = $username LIMIT 1",
             {"username": username}
         )
+        
         if result and result[0]["result"]:
             return result[0]["result"][0]
+        
         return None
 
     async def get_user_by_public_key(self, public_key: str) -> Optional[Dict]:
@@ -96,6 +102,7 @@ class Hub:
             "SELECT * FROM user WHERE public_key = $public_key LIMIT 1",
             {"public_key": public_key}
         )
+
         if result and result[0]["result"]:
             return result[0]["result"][0]
         return None
@@ -276,21 +283,28 @@ async def user_setup_flow(hub_url, public_key):
                         print(f"Username '{username}' already exists. Please choose a different username.")
                         continue
                     password = input("Enter password: ")
-                    public_key, private_key = generate_keypair()
+                    public_key, private_key_path = generate_keypair(f"{username}.pem")
                     print(f"Signing up user: {username} with public key: {public_key}")
                     success, token, user_id = await hub.signup(username, password, public_key)
                     if success:
-                        add_credentials_to_env(username, password, private_key)
+                        add_credentials_to_env(username, password, private_key_path)
                         logger.info("Sign up successful!")
                         return token, user_id
                     else:
                         logger.error("Sign up failed. Please try again.")
 
             case None, True, True, False:
-                # User doesn't exist but credentials are provided
-                print(f"Using user credentials in .env. Signing up user: {username} with public key: {public_key}")
+                logger.info("User doesn't exist but some credentials are provided in .env. Using them to create new user.")
+                private_key_path = None
+                if not public_key:
+                    logger.info("No public key provided. Generating new keypair...")
+                    public_key, private_key_path = generate_keypair(f"{username}.pem")
+
+                print(f"Signing up user: {username} with public key: {public_key}")
                 success, token, user_id = await hub.signup(username, password, public_key)
                 if success:
+                    if private_key_path:
+                        add_credentials_to_env(username, password, private_key_path)
                     logger.info("Sign up successful!")
                     return token, user_id
                 else:
@@ -300,6 +314,9 @@ async def user_setup_flow(hub_url, public_key):
             case dict(), True, True, False:
                 # User exists, attempt to sign in
                 logger.info("Using user credentials in .env. User exists. Attempting to sign in...")
+                if os.getenv("PRIVATE_KEY") and is_hex(os.getenv("PRIVATE_KEY")):
+                    write_private_key_to_file(os.getenv("PRIVATE_KEY"), username)
+
                 success, token, user_id = await hub.signin(username, password)
                 if success:
                     logger.info("Sign in successful!")
@@ -311,4 +328,3 @@ async def user_setup_flow(hub_url, public_key):
             case _:
                 logger.error("Unexpected case encountered in user setup flow.")
                 raise Exception("Unexpected error in user setup. Please check your configuration and try again.")
-                    
