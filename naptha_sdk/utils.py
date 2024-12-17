@@ -55,7 +55,7 @@ def add_credentials_to_env(username, password, private_key_path):
     with open(env_file_path, 'w') as env_file:
         env_file.writelines(updated_lines)
 
-    print("Your credentials and private key have been updated in the .env file. You can now use these credentials to authenticate in future sessions.")
+    print("Your credentials have been updated in the .env file. You can now use these credentials to authenticate in future sessions.")
 
 def write_private_key_to_file(private_key, username):
     private_key_file_path = os.path.join(os.getcwd(), f'{username}.pem')
