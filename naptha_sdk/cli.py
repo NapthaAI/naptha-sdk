@@ -12,8 +12,7 @@ from tabulate import tabulate
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.schemas import AgentConfig, AgentDeployment, ChatCompletionRequest, EnvironmentDeployment, \
-    OrchestratorDeployment, \
-    OrchestratorRunInput, EnvironmentRunInput
+    OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, KBDeployment, KBRunInput
 from naptha_sdk.user import get_public_key
 
 load_dotenv(override=True)
@@ -172,6 +171,34 @@ async def list_personas(naptha):
     print(tabulate(table_data, headers=headers, tablefmt="grid"))
     print(f"\nTotal personas: {len(personas)}")
 
+async def list_knowledge_bases(naptha, knowledge_base_name=None):
+    knowledge_bases = await naptha.hub.list_knowledge_bases(knowledge_base_name=knowledge_base_name)
+    
+    if not knowledge_bases:
+        print("No knowledge bases found.")
+        return
+
+    headers = ["Name", "ID", "Type", "Version", "Author", "Description", "URL"]
+    table_data = []
+
+    for knowledge_base in knowledge_bases:
+        # Wrap the description text for better readability
+        wrapped_description = '\n'.join(wrap(knowledge_base['description'], width=50))
+        
+        row = [
+            knowledge_base['name'],
+            knowledge_base['id'],
+            knowledge_base['type'],
+            knowledge_base['version'],
+            knowledge_base['author'],
+            wrapped_description,
+            knowledge_base['url']
+        ]
+        table_data.append(row)
+
+    print(tabulate(table_data, headers=headers, tablefmt="grid"))
+    print(f"\nTotal knowledge bases: {len(knowledge_bases)}")
+
 async def create_agent(naptha, agent_config):
     print(f"Agent Config: {agent_config}")
     agent = await naptha.hub.create_agent(agent_config)
@@ -219,6 +246,8 @@ async def create(
         module_type = "agent"
     elif "environment:" in module_name:
         module_type = "environment"
+    elif "knowledge_base:" in module_name:
+        module_type = "knowledge_base"
     else:
         module_type = "agent"
 
@@ -286,6 +315,21 @@ async def create(
         result = await naptha.node.create(module_type, environment_deployment)
         print(f"Environment creation result: {result}")
 
+    elif module_type == "knowledge_base":
+        print("Creating Knowledge Base...")
+        if "knowledge_base:" in module_name:
+            module_name = module_name.split(":")[1]
+        else:
+            module_name = module_name
+
+        knowledge_base_deployment = KBDeployment(
+            name=module_name,
+            module={"name": module_name},
+            kb_node_url=os.getenv("NODE_URL")
+        )
+        result = await naptha.node.create(module_type, knowledge_base_deployment)
+        print(f"Knowledge Base creation result: {result}")
+
 async def run(
     naptha,
     module_name,
@@ -308,6 +352,8 @@ async def run(
         module_type = "agent" 
     elif "environment:" in module_name:
         module_type = "environment"
+    elif "knowledge_base:" in module_name:
+        module_type = "knowledge_base"
     else:
         module_type = "agent" # Default to agent for backwards compatibility
 
@@ -379,7 +425,22 @@ async def run(
             consumer_id=user_id,
         )
         environment_run = await naptha.node.run_environment_and_poll(environment_run_input)
-        
+
+    elif module_type == "knowledge_base":
+        print("Running Knowledge Base...")
+        knowledge_base_deployment = KBDeployment(
+            name=module_name, 
+            module={"name": module_name}, 
+            kb_node_url=os.getenv("NODE_URL")
+        )
+
+        knowledge_base_run_input = KBRunInput(
+            consumer_id=user_id,
+            inputs=parameters,
+            kb_deployment=knowledge_base_deployment
+        )
+        knowledge_base_run = await naptha.node.run_knowledge_base_and_poll(knowledge_base_run_input)
+
 async def read_storage(naptha, hash_or_name, output_dir='./files', ipfs=False):
     """Read from storage, IPFS, or IPNS."""
     try:
@@ -450,6 +511,10 @@ async def main():
     personas_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
     personas_parser.add_argument('-d', '--delete', action='store_true', help='Delete a persona')
 
+    # Knowledge base commands
+    knowledge_bases_parser = subparsers.add_parser("knowledge_bases", help="List available knowledge bases.")
+    knowledge_bases_parser.add_argument('knowledge_base_name', nargs='?', help='Optional knowledge base name')
+
     # Create command
     create_parser = subparsers.add_parser("create", help="Execute create command.")
     create_parser.add_argument("module", help="Select the module to create")
@@ -497,7 +562,7 @@ async def main():
         args = _parse_str_args(args)
         if args.command == "signup":
             _, user_id = await user_setup_flow(hub_url, public_key)
-        elif args.command in ["nodes", "agents", "orchestrators", "environments", "personas", "run", "inference", "read_storage", "write_storage", "publish", "create"]:
+        elif args.command in ["nodes", "agents", "orchestrators", "environments", "personas", "knowledge_bases", "run", "inference", "read_storage", "write_storage", "publish", "create"]:
             if not naptha.hub.is_authenticated:
                 if not hub_username or not hub_password:
                     print(
@@ -630,8 +695,21 @@ async def main():
                         await create_persona(naptha, persona_config)
                 else:
                     print("Invalid command.")
+            elif args.command == "knowledge_bases":
+                print(f"Knowledge base name: {args.knowledge_base_name}")
+                if not args.knowledge_base_name:
+                    await list_knowledge_bases(naptha)
+                # get knowledge base by name
+                elif len(args.knowledge_base_name.split()) == 1:
+                    await list_knowledge_bases(naptha, args.knowledge_base_name)
+                elif args.delete and len(args.knowledge_base_name.split()) == 1:
+                    await naptha.hub.delete_knowledge_base(args.knowledge_base_name)
+                else:
+                    print("Invalid command.")
+
             elif args.command == "create":
                 await create(naptha, args.module, args.agent_modules, args.worker_node_urls, args.environment_modules, args.environment_node_urls)
+            
             elif args.command == "run":
                 if hasattr(args, 'parameters') and args.parameters is not None:
                     try:
