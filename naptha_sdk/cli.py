@@ -178,7 +178,7 @@ async def list_knowledge_bases(naptha, knowledge_base_name=None):
         print("No knowledge bases found.")
         return
 
-    headers = ["Name", "ID", "Type", "Version", "Author", "Description", "URL"]
+    headers = ["Name", "ID", "Author", "Description", "Module URL", "Module Type", "Module Version"]
     table_data = []
 
     for knowledge_base in knowledge_bases:
@@ -192,7 +192,9 @@ async def list_knowledge_bases(naptha, knowledge_base_name=None):
             knowledge_base['version'],
             knowledge_base['author'],
             wrapped_description,
-            knowledge_base['url']
+            knowledge_base['module_url'],
+            knowledge_base['module_type'],
+            knowledge_base['module_version'],
         ]
         table_data.append(row)
 
