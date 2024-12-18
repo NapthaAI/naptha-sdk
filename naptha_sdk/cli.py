@@ -188,8 +188,6 @@ async def list_knowledge_bases(naptha, knowledge_base_name=None):
         row = [
             knowledge_base['name'],
             knowledge_base['id'],
-            knowledge_base['type'],
-            knowledge_base['version'],
             knowledge_base['author'],
             wrapped_description,
             knowledge_base['module_url'],
@@ -200,6 +198,10 @@ async def list_knowledge_bases(naptha, knowledge_base_name=None):
 
     print(tabulate(table_data, headers=headers, tablefmt="grid"))
     print(f"\nTotal knowledge bases: {len(knowledge_bases)}")
+
+async def list_kb_content(naptha, knowledge_base_name):
+    content = await naptha.hub.list_kb_content(knowledge_base_name)
+    print(content)
 
 async def create_agent(naptha, agent_config):
     print(f"Agent Config: {agent_config}")
@@ -516,6 +518,7 @@ async def main():
     # Knowledge base commands
     knowledge_bases_parser = subparsers.add_parser("kbs", help="List available knowledge bases.")
     knowledge_bases_parser.add_argument('knowledge_base_name', nargs='?', help='Optional knowledge base name')
+    knowledge_bases_parser.add_argument('-l', '--list', action='store_true', help='List content in a knowledge base')
 
     # Create command
     create_parser = subparsers.add_parser("create", help="Execute create command.")
@@ -702,8 +705,10 @@ async def main():
                 if not args.knowledge_base_name:
                     await list_knowledge_bases(naptha)
                 # get knowledge base by name
-                elif len(args.knowledge_base_name.split()) == 1:
+                elif len(args.knowledge_base_name.split()) == 1 and not args.list:
                     await list_knowledge_bases(naptha, args.knowledge_base_name)
+                elif args.list:
+                    await list_kb_content(naptha, args.knowledge_base_name)
                 elif args.delete and len(args.knowledge_base_name.split()) == 1:
                     await naptha.hub.delete_knowledge_base(args.knowledge_base_name)
                 else:
