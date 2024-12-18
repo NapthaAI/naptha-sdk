@@ -10,6 +10,8 @@ import os
 import shlex
 from textwrap import wrap
 
+import json
+
 import yaml
 from dotenv import load_dotenv
 from tabulate import tabulate
@@ -80,6 +82,10 @@ async def list_agents(naptha):
         # Wrap the description text
         wrapped_description = '\n'.join(wrap(agent['description'], width=50))
         
+        print("~" * 50)
+        print(agent)
+        print("~" * 50)
+
         row = [
             agent['name'],
             agent['id'],
