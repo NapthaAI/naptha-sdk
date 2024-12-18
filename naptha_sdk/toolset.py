@@ -131,6 +131,7 @@ class Toolset:
                 logger.info(f"{toolset_name}.{tool_name}({params}):")
                 result = ToolRunResult(**json.loads(tool_run_response.text))
                 logger.info(result.result)
+                return result
         except (HTTPStatusError, RemoteProtocolError) as e:
             print(f"Failed to run tool: {e}")
             raise

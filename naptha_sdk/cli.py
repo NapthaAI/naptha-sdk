@@ -13,6 +13,8 @@ from rich.console import Console
 from rich.table import Table
 from rich import box
 
+import json
+
 import yaml
 from dotenv import load_dotenv
 from tabulate import tabulate
