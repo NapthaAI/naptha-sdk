@@ -512,7 +512,7 @@ async def main():
     personas_parser.add_argument('-d', '--delete', action='store_true', help='Delete a persona')
 
     # Knowledge base commands
-    knowledge_bases_parser = subparsers.add_parser("knowledge_bases", help="List available knowledge bases.")
+    knowledge_bases_parser = subparsers.add_parser("kbs", help="List available knowledge bases.")
     knowledge_bases_parser.add_argument('knowledge_base_name', nargs='?', help='Optional knowledge base name')
 
     # Create command
@@ -562,7 +562,7 @@ async def main():
         args = _parse_str_args(args)
         if args.command == "signup":
             _, user_id = await user_setup_flow(hub_url, public_key)
-        elif args.command in ["nodes", "agents", "orchestrators", "environments", "personas", "knowledge_bases", "run", "inference", "read_storage", "write_storage", "publish", "create"]:
+        elif args.command in ["nodes", "agents", "orchestrators", "environments", "personas", "kbs", "run", "inference", "read_storage", "write_storage", "publish", "create"]:
             if not naptha.hub.is_authenticated:
                 if not hub_username or not hub_password:
                     print(
@@ -695,7 +695,7 @@ async def main():
                         await create_persona(naptha, persona_config)
                 else:
                     print("Invalid command.")
-            elif args.command == "knowledge_bases":
+            elif args.command == "kbs":
                 print(f"Knowledge base name: {args.knowledge_base_name}")
                 if not args.knowledge_base_name:
                     await list_knowledge_bases(naptha)
