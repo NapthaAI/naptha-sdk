@@ -200,8 +200,14 @@ async def list_knowledge_bases(naptha, knowledge_base_name=None):
     print(f"\nTotal knowledge bases: {len(knowledge_bases)}")
 
 async def list_kb_content(naptha, knowledge_base_name):
-    content = await naptha.hub.list_kb_content(knowledge_base_name)
-    print(content)
+    rows = await naptha.node.query_table(
+        table_name=knowledge_base_name,   
+        columns="*",
+        condition=None,
+        order_by=None,
+        limit=None
+    )
+    print(rows)
 
 async def create_agent(naptha, agent_config):
     print(f"Agent Config: {agent_config}")
