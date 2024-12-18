@@ -60,6 +60,12 @@ class EnvironmentDeployment(BaseModel):
     environment_node_url: str
     environment_config: Optional[EnvironmentConfig] = EnvironmentConfig()
 
+class KBDeployment(BaseModel):
+    name: Optional[str] = "kb_deployment"
+    module: Optional[Dict] = None
+    kb_node_url: Optional[str] = "http://localhost:7001"
+    kb_config: Optional[Dict] = None
+
 class OrchestratorDeployment(BaseModel):
     name: Optional[str] = "orchestrator_deployment"
     module: Optional[Dict] = None
@@ -181,6 +187,27 @@ class EnvironmentRun(BaseModel):
     duration: Optional[float] = None
     input_schema_ipfs_hash: Optional[str] = None
 
+class KBRunInput(BaseModel):
+    consumer_id: str
+    inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
+    kb_deployment: KBDeployment
+    orchestrator_runs: List['OrchestratorRun'] = []
+
+class KBRun(BaseModel):
+    consumer_id: str
+    inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
+    kb_deployment: KBDeployment
+    orchestrator_runs: List['OrchestratorRun'] = []
+    status: str = "pending"
+    error: bool = False
+    id: Optional[str] = None
+    results: list[Optional[str]] = []
+    error_message: Optional[str] = None
+    created_time: Optional[str] = None
+    start_processing_time: Optional[str] = None
+    completed_time: Optional[str] = None
+    duration: Optional[float] = None
+    
 class ChatMessage(BaseModel):
     role: str
     content: str
