@@ -150,6 +150,14 @@ class Hub:
             persona = await self.surrealdb.query("SELECT * FROM persona WHERE id=$persona_name;", {"persona_name": persona_name})
             return persona[0]['result']
 
+    async def list_knowledge_bases(self, knowledge_base_name=None) -> List:
+        if not knowledge_base_name:
+            knowledge_bases = await self.surrealdb.query("SELECT * FROM knowledge_base;")
+            return knowledge_bases[0]['result']
+        else:
+            knowledge_base = await self.surrealdb.query("SELECT * FROM knowledge_base WHERE name=$knowledge_base_name;", {"knowledge_base_name": knowledge_base_name})
+            return knowledge_base[0]['result']
+
     async def delete_agent(self, agent_id: str) -> Tuple[bool, Optional[Dict]]:
         if ":" not in agent_id:
             agent_id = f"agent:{agent_id}".strip()
