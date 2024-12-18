@@ -216,6 +216,52 @@ naptha environments -d environment_name
 naptha run environment:groupchat_environment -p "function_name='get_global_state'"
 ```
 
+## Knowledge Base Modules
+
+### Interact with the Knowledge Base Hub
+
+You can also use the CLI to explore available knowledge bases that you can use with agents:
+
+```bash
+naptha kbs
+```
+
+### Register a New Knowledge Base Module on the Hub
+
+```bash
+naptha kbs kb_name -p "description='Knowledge Base description' parameters='{input_parameter_1: str, input_parameter_2: int}' url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg' type='package' version='0.1' entrypoint='run.py'" 
+```
+
+### Delete a Knowledge Base Module
+
+```bash
+naptha kbs -d kb_name
+```
+
+### Create a New Knowledge Base on a Node
+
+```bash
+naptha create kb:wikipedia_kb --kb_node_urls "http://node.naptha.ai:7001" 
+```
+
+### List content in a Knowledge Base
+
+```bash
+naptha kbs wikipedia_kb -l
+```
+
+### Add to a Knowledge Base
+
+```bash
+naptha kbs wikipedia_kb -a "url='https://en.wikipedia.org/wiki/Elon_Musk' title='Elon Musk' text='Elon Musk is a billionaire entrepreneur and the CEO of SpaceX and Tesla.'" 
+```
+
+### Run a Knowledge Base Module
+
+```bash
+naptha run kb:wikipedia_kb -p "method_name='query_wikipedia' method_input_data='Elon Musk'"
+```
+
 ## Personas
 
 ### Interact with the Persona Hub
