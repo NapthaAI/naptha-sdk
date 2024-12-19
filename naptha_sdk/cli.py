@@ -18,7 +18,7 @@ from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.schemas import AgentDeployment, ChatCompletionRequest, EnvironmentDeployment, \
     OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, KBDeployment, KBRunInput, ToolDeployment, ToolRunInput
-from naptha_sdk.user import get_public_key
+from naptha_sdk.user import get_public_key, sign_consumer_id
 from naptha_sdk.utils import url_to_node
 
 load_dotenv(override=True)
@@ -762,6 +762,7 @@ async def run(
             'consumer_id': user['id'],
             "inputs": parameters,
             "deployment": agent_deployment.model_dump(),
+            "signature": sign_consumer_id(user_id, os.getenv("PRIVATE_KEY"))
         }
         print(f"Agent run input: {agent_run_input}")
 
