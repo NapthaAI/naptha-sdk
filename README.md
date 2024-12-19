@@ -91,7 +91,7 @@ For each agent, you will see a url where you can check out the code.
 ### Create a New Agent
 
 ```bash
-naptha agents agent_name -p "description='Agent description' parameters='{tool_name: str, tool_input_data: str}' url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg' type='package' version='0.1'" 
+naptha agents agent_name -p "description='Agent description' parameters='{tool_name: str, tool_input_data: str}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
 ```
 
 ### Delete an Agent
@@ -136,7 +136,7 @@ For each orchestrator, you will see a url where you can check out the code.
 ### Create a New Agent Orchestrator
 
 ```bash
-naptha orchestrators orchestrator_name -p "description='Orchestrator description' parameters='{input_parameter_1: str, input_parameter_2: int}' url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg' type='package' version='0.1'" 
+naptha orchestrators orchestrator_name -p "description='Orchestrator description' parameters='{input_parameter_1: str, input_parameter_2: int}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
 ```
 
 ### Delete an Agent Orchestrator
@@ -201,7 +201,7 @@ naptha environments
 ### Create a New Environment Module
 
 ```bash
-naptha environments environment_name -p "description='Environment description' parameters='{input_parameter_1: str, input_parameter_2: int}' url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg' type='package' version='0.1' entrypoint='run.py'" 
+naptha environments environment_name -p "description='Environment description' parameters='{input_parameter_1: str, input_parameter_2: int}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
 ```
 
 ### Delete an Environment Module
@@ -214,6 +214,64 @@ naptha environments -d environment_name
 
 ```bash
 naptha run environment:groupchat_environment -p "function_name='get_global_state'"
+```
+
+## Knowledge Base Modules
+
+### Interact with the Knowledge Base Hub
+
+You can also use the CLI to explore available knowledge bases that you can use with agents:
+
+```bash
+naptha kbs
+```
+
+### Register a New Knowledge Base Module on the Hub
+
+```bash
+naptha kbs kb_name -p "description='Knowledge Base description' parameters='{input_parameter_1: str, input_parameter_2: int}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
+```
+
+### Delete a Knowledge Base Module
+
+```bash
+naptha kbs -d kb_name
+```
+
+### Create a New Knowledge Base on a Node
+
+```bash
+naptha create kb:wikipedia_kb 
+```
+
+### Initialize the content in the Knowledge Base
+
+```bash
+naptha run kb:wikipedia_kb -p "mode='init'"
+```
+
+### List content in the Knowledge Base
+
+```bash
+naptha kbs wikipedia_kb -l
+```
+
+### Add to the Knowledge Base
+
+```bash
+naptha kbs wikipedia_kb -a -c "url='https://en.wikipedia.org/wiki/Socrates' title='Socrates' text='Socrates was a Greek philosopher from Athens who is credited as the founder of Western philosophy and as among the first moral philosophers of the ethical tradition of thought.'" 
+```
+
+### Query the Knowledge Base Module
+
+```bash
+naptha run kb:wikipedia_kb -p "mode='query' query='Socrates'"
+```
+
+### Run an Agent that interacts with the Knowledge Base
+
+```bash
+naptha run agent:wikipedia_agent -p "query='Socrates' question='Who is Socrates?'" --kb_node_urls "http://localhost:7001"
 ```
 
 ## Personas
@@ -231,7 +289,7 @@ For each persona, you will see a url where you can check out the data.
 ### Create a New Persona
 
 ```bash
-naptha personas persona_name -p "description='Persona description' url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg' version='0.1'" 
+naptha personas persona_name -p "description='Persona description' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
 ```
 
 ### Delete a Persona

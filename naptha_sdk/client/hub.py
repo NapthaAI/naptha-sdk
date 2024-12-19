@@ -150,6 +150,18 @@ class Hub:
             persona = await self.surrealdb.query("SELECT * FROM persona WHERE id=$persona_name;", {"persona_name": persona_name})
             return persona[0]['result']
 
+    async def list_kbs(self, kb_name=None) -> List:
+        if not kb_name:
+            kbs = await self.surrealdb.query("SELECT * FROM kb;")
+            return kbs[0]['result']
+        else:
+            kb = await self.surrealdb.query("SELECT * FROM kb WHERE name=$kb_name;", {"kb_name": kb_name})
+            return kb[0]['result']
+
+    async def list_kb_content(self, kb_name: str) -> List:
+        kb_content = await self.surrealdb.query("SELECT * FROM kb_content WHERE kb_id=$kb_id;", {"kb_id": f"kb:{kb_name}"})
+        return kb_content[0]['result']
+
     async def delete_agent(self, agent_id: str) -> Tuple[bool, Optional[Dict]]:
         if ":" not in agent_id:
             agent_id = f"agent:{agent_id}".strip()
@@ -194,6 +206,17 @@ class Hub:
             print("Failed to delete persona")
         return success
 
+    async def delete_kb(self, kb_id: str) -> Tuple[bool, Optional[Dict]]:
+        if ":" not in kb_id:
+            kb_id = f"kb:{kb_id}".strip()
+        print(f"Deleting knowledge base: {kb_id}")
+        success = await self.surrealdb.delete(kb_id)
+        if success:
+            print("Deleted knowledge base")
+        else:
+            print("Failed to delete knowledge base")
+        return success
+
     async def create_agent(self, agent_config: Dict) -> Tuple[bool, Optional[Dict]]:
         if not agent_config.get('id'):
             return await self.surrealdb.create("agent", agent_config)
@@ -217,6 +240,12 @@ class Hub:
             return await self.surrealdb.create("persona", persona_config)
         else:
             return await self.surrealdb.create(persona_config.pop('id'), persona_config)
+
+    async def create_kb(self, kb_config: Dict) -> Tuple[bool, Optional[Dict]]:
+        if not kb_config.get('id'):
+            return await self.surrealdb.create("kb", kb_config)
+        else:
+            return await self.surrealdb.create(kb_config.pop('id'), kb_config)
 
     async def update_agent(self, agent_config: Dict) -> Tuple[bool, Optional[Dict]]:
         return await self.surrealdb.update("agent", agent_config)

@@ -47,12 +47,19 @@ class DataGenerationConfig(BaseModel):
     save_inputs: Optional[bool] = None
     save_inputs_location: Optional[str] = None
 
+class KBDeployment(BaseModel):
+    name: Optional[str] = "kb_deployment"
+    module: Optional[Dict] = None
+    kb_node_url: Optional[str] = "http://localhost:7001"
+    kb_config: Optional[Dict] = None
+
 class AgentDeployment(BaseModel):
     name: Optional[str] = "agent_deployment"
     module: Optional[Dict] = None
     worker_node_url: Optional[str] = None
     agent_config: Optional[AgentConfig] = AgentConfig()
     data_generation_config: Optional[DataGenerationConfig] = DataGenerationConfig()
+    kb_deployments: Optional[List[KBDeployment]] = None
 
 class EnvironmentDeployment(BaseModel):
     name: Optional[str] = "environment_deployment"
@@ -136,6 +143,7 @@ class AgentRunInput(BaseModel):
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
     agent_deployment: AgentDeployment
     environment_deployments: Optional[List[EnvironmentDeployment]] = None
+    kb_deployment: Optional[KBDeployment] = None
     orchestrator_runs: List['OrchestratorRun'] = []
     
 class OrchestratorRunInput(BaseModel):
@@ -181,6 +189,27 @@ class EnvironmentRun(BaseModel):
     duration: Optional[float] = None
     input_schema_ipfs_hash: Optional[str] = None
 
+class KBRunInput(BaseModel):
+    consumer_id: str
+    inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
+    kb_deployment: KBDeployment
+    orchestrator_runs: List['OrchestratorRun'] = []
+
+class KBRun(BaseModel):
+    consumer_id: str
+    inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
+    kb_deployment: KBDeployment
+    orchestrator_runs: List['OrchestratorRun'] = []
+    status: str = "pending"
+    error: bool = False
+    id: Optional[str] = None
+    results: list[Optional[str]] = []
+    error_message: Optional[str] = None
+    created_time: Optional[str] = None
+    start_processing_time: Optional[str] = None
+    completed_time: Optional[str] = None
+    duration: Optional[float] = None
+    
 class ChatMessage(BaseModel):
     role: str
     content: str

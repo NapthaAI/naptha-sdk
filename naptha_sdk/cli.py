@@ -4,6 +4,9 @@ import json
 import os
 import shlex
 from textwrap import wrap
+from rich.console import Console
+from rich.table import Table
+from rich import box
 
 import yaml
 from dotenv import load_dotenv
@@ -12,8 +15,7 @@ from tabulate import tabulate
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.schemas import AgentConfig, AgentDeployment, ChatCompletionRequest, EnvironmentDeployment, \
-    OrchestratorDeployment, \
-    OrchestratorRunInput, EnvironmentRunInput
+    OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, KBDeployment, KBRunInput
 from naptha_sdk.user import get_public_key
 
 load_dotenv(override=True)
@@ -36,141 +38,353 @@ async def list_nodes(naptha):
     nodes = await naptha.hub.list_nodes()
     
     if not nodes:
-        print("No nodes found.")
+        console = Console()
+        console.print("[red]No nodes found.[/red]")
         return
 
-    # Determine available keys
-    keys = list(nodes[0].keys())
+    console = Console()
+    table = Table(
+        box=box.ROUNDED,
+        show_lines=True,
+        title="Available Nodes",
+        title_style="bold cyan",
+        header_style="bold blue",
+        row_styles=["", "dim"]  # Alternating row styles
+    )
 
-    # Create headers and table data based on available keys
-    headers = keys
-    table_data = []
+    # Get dynamic headers from first node
+    headers = list(nodes[0].keys())
+    
+    # Add columns with appropriate formatting
+    for header in headers:
+        table.add_column(
+            header,
+            overflow="fold",
+            max_width=60,
+            justify="left",
+            no_wrap=False
+        )
 
+    # Add rows
     for node in nodes:
-        row = []
-        for key in keys:
-            value = str(node.get(key, ''))
-            if len(value) > 50:
-                wrapped_value = '\n'.join(wrap(value, width=50))
-                row.append(wrapped_value)
-            else:
-                row.append(value)
-        table_data.append(row)
+        table.add_row(*[str(node.get(key, '')) for key in headers])
 
-    print("\nAll Nodes:")
-    print(tabulate(table_data, headers=headers, tablefmt="grid"))
-    print(f"\nTotal nodes: {len(nodes)}")
+    # Print table and summary
+    console.print()
+    console.print(table)
+    console.print(f"\n[green]Total nodes:[/green] {len(nodes)}")
 
 async def list_agents(naptha):
     agents = await naptha.hub.list_agents()
     
     if not agents:
-        print("No agents found.")
+        console = Console()
+        console.print("[red]No agents found.[/red]")
         return
 
-    headers = ["Name", "ID", "Type", "Version", "Author", "Parameters", "Description"]
-    table_data = []
+    console = Console()
+    table = Table(
+        box=box.ROUNDED,
+        show_lines=True,
+        title="Available Agents",
+        title_style="bold cyan",
+        header_style="bold blue",
+        row_styles=["", "dim"]  # Alternating row styles
+    )
 
+    # Define columns with specific formatting
+    table.add_column("Name", justify="left", style="green")
+    table.add_column("ID", justify="left")
+    table.add_column("Author", justify="left")
+    table.add_column("Description", justify="left", max_width=50)
+    table.add_column("Parameters", justify="left", max_width=30)
+    table.add_column("Module URL", justify="left", max_width=30)
+    table.add_column("Module Type", justify="left")
+    table.add_column("Module Version", justify="center")
+
+    # Add rows
     for agent in agents:
-        # Wrap the description text
-        wrapped_description = '\n'.join(wrap(agent['description'], width=50))
-        
-        row = [
+        table.add_row(
             agent['name'],
             agent['id'],
-            agent['type'],
-            agent['version'],
             agent['author'],
-            agent['parameters'],
-            wrapped_description
-        ]
-        table_data.append(row)
+            agent['description'],
+            str(agent['parameters']),
+            agent['module_url'],
+            agent['module_type'],
+            agent['module_version'],
+        )
 
-    print(tabulate(table_data, headers=headers, tablefmt="grid"))
-    print(f"\nTotal agents: {len(agents)}")
+    # Print table and summary
+    console.print()
+    console.print(table)
+    console.print(f"\n[green]Total agents:[/green] {len(agents)}")
 
 async def list_orchestrators(naptha):
     orchestrators = await naptha.hub.list_orchestrators()
     
     if not orchestrators:
-        print("No orchestrators found.")
+        console = Console()
+        console.print("[red]No orchestrators found.[/red]")
         return
 
-    headers = ["Name", "ID", "Type", "Version", "Author", "Parameters", "Description"]
-    table_data = []
+    console = Console()
+    table = Table(
+        box=box.ROUNDED,
+        show_lines=True,
+        title="Available Orchestrators",
+        title_style="bold cyan",
+        header_style="bold blue",
+        row_styles=["", "dim"]  # Alternating row styles
+    )
 
+    # Define columns with specific formatting
+    table.add_column("Name", justify="left", style="green")
+    table.add_column("ID", justify="left")
+    table.add_column("Author", justify="left")
+    table.add_column("Description", justify="left", max_width=50)
+    table.add_column("Parameters", justify="left", max_width=30)
+    table.add_column("Module URL", justify="left", max_width=30)
+    table.add_column("Module Type", justify="left")
+    table.add_column("Module Version", justify="center")
+
+    # Add rows
     for orchestrator in orchestrators:
-        # Wrap the description text
-        wrapped_description = '\n'.join(wrap(orchestrator['description'], width=50))
-        
-        row = [
+        table.add_row(
             orchestrator['name'],
             orchestrator['id'],
-            orchestrator['type'],
-            orchestrator['version'],
             orchestrator['author'],
-            orchestrator['parameters'],
-            wrapped_description
-        ]
-        table_data.append(row)
+            orchestrator['description'],
+            str(orchestrator['parameters']),
+            orchestrator['module_url'],
+            orchestrator['module_type'],
+            orchestrator['module_version'],
+        )
 
-    print(tabulate(table_data, headers=headers, tablefmt="grid"))
-    print(f"\nTotal orchestrators: {len(orchestrators)}")
+    # Print table and summary
+    console.print()
+    console.print(table)
+    console.print(f"\n[green]Total orchestrators:[/green] {len(orchestrators)}")
 
 async def list_environments(naptha):
     environments = await naptha.hub.list_environments()
     
     if not environments:
-        print("No environments found.")
+        console = Console()
+        console.print("[red]No environments found.[/red]")
         return
 
-    headers = ["Name", "ID", "Type", "Version", "Author", "Parameters", "Description"]
-    table_data = []
+    console = Console()
+    table = Table(
+        box=box.ROUNDED,
+        show_lines=True,
+        title="Available Environments",
+        title_style="bold cyan",
+        header_style="bold blue",
+        row_styles=["", "dim"]  # Alternating row styles
+    )
 
+    # Define columns with specific formatting
+    table.add_column("Name", justify="left", style="green")
+    table.add_column("ID", justify="left")
+    table.add_column("Author", justify="left")
+    table.add_column("Description", justify="left", max_width=50)
+    table.add_column("Parameters", justify="left", max_width=30)
+    table.add_column("Module URL", justify="left", max_width=30)
+    table.add_column("Module Type", justify="left")
+    table.add_column("Module Version", justify="center")
+
+    # Add rows
     for environment in environments:
-        # Wrap the description text
-        wrapped_description = '\n'.join(wrap(environment['description'], width=50))
-        
-        row = [
+        table.add_row(
             environment['name'],
             environment['id'],
-            environment['type'],
-            environment['version'],
             environment['author'],
-            environment['parameters'],
-            wrapped_description
-        ]
-        table_data.append(row)
+            environment['description'],
+            str(environment['parameters']),
+            environment['module_url'],
+            environment['module_type'],
+            environment['module_version'],
+        )
 
-    print(tabulate(table_data, headers=headers, tablefmt="grid"))
-    print(f"\nTotal environments: {len(environments)}")
+    # Print table and summary
+    console.print()
+    console.print(table)
+    console.print(f"\n[green]Total environments:[/green] {len(environments)}")
 
 async def list_personas(naptha):
     personas = await naptha.hub.list_personas()
     
     if not personas:
-        print("No personas found.")
+        console = Console()
+        console.print("[red]No personas found.[/red]")
         return
 
-    headers = ["Name", "ID", "Version", "Author", "Description", "URL"]
-    table_data = []
+    console = Console()
+    table = Table(
+        box=box.ROUNDED,
+        show_lines=True,
+        title="Available Personas",
+        title_style="bold cyan",
+        header_style="bold blue",
+        row_styles=["", "dim"]  # Alternating row styles
+    )
 
+    # Define columns with specific formatting
+    table.add_column("Name", justify="left", style="green")
+    table.add_column("ID", justify="left")
+    table.add_column("Author", justify="left")
+    table.add_column("Description", justify="left", max_width=50)
+    table.add_column("Module URL", justify="left", max_width=40)
+    table.add_column("Module Version", justify="center")
+
+    # Add rows
     for persona in personas:
-        # Wrap the description text
-        wrapped_description = '\n'.join(wrap(persona['description'], width=50))
-        
-        row = [
+        table.add_row(
             persona['name'],
             persona['id'],
-            persona['version'],
             persona['author'],
-            wrapped_description,
-            persona['url']
-        ]
-        table_data.append(row)
+            persona['description'],
+            persona['module_url'],
+            persona['module_version'],
+        )
 
-    print(tabulate(table_data, headers=headers, tablefmt="grid"))
-    print(f"\nTotal personas: {len(personas)}")
+    # Print table and summary
+    console.print()
+    console.print(table)
+    console.print(f"\n[green]Total personas:[/green] {len(personas)}")
+
+async def list_kbs(naptha, kb_name=None):
+    kbs = await naptha.hub.list_kbs(kb_name=kb_name)
+    
+    if not kbs:
+        console = Console()
+        console.print("[red]No knowledge bases found.[/red]")
+        return
+
+    console = Console()
+    table = Table(
+        box=box.ROUNDED,
+        show_lines=True,
+        title="Available Knowledge Bases",
+        title_style="bold cyan", 
+        header_style="bold blue",
+        row_styles=["", "dim"]  # Alternating row styles
+    )
+
+    # Define columns with specific formatting
+    table.add_column("Name", justify="left", style="green")
+    table.add_column("ID", justify="left")
+    table.add_column("Author", justify="left")
+    table.add_column("Description", justify="left", max_width=50)
+    table.add_column("Parameters", justify="left", max_width=40)
+    table.add_column("Module URL", justify="left", max_width=40)
+    table.add_column("Module Type", justify="left")
+    table.add_column("Module Version", justify="center")
+
+    # Add rows
+    for kb in kbs:
+        table.add_row(
+            kb['name'],
+            kb['id'],
+            kb['author'],
+            kb['description'],
+            kb['parameters'],
+            kb['module_url'],
+            kb['module_type'],
+            kb['module_version']
+        )
+
+    # Print table and summary
+    console.print()
+    console.print(table)
+    console.print(f"\n[green]Total knowledge bases:[/green] {len(kbs)}")
+
+async def list_kb_content(naptha, kb_name):
+    rows = await naptha.node.query_table(
+        table_name=kb_name,   
+        columns="*",
+        condition=None,
+        order_by=None,
+        limit=None
+    )
+    
+    if not rows.get('rows'):
+        console = Console()
+        console.print("[red]No content found in knowledge base.[/red]")
+        return
+
+    console = Console()
+    table = Table(
+        box=box.ROUNDED,
+        show_lines=True,
+        title=f"Knowledge Base Content: {kb_name}",
+        title_style="bold cyan",
+        header_style="bold blue",
+        row_styles=["", "dim"]  # Alternating row styles
+    )
+
+    # Add headers
+    headers = list(rows['rows'][0].keys())
+    for header in headers:
+        if header.lower() in ['id', 'module_url']:
+            table.add_column(header, justify="left", max_width=40)
+        elif header.lower() in ['title', 'name']:
+            table.add_column(header, justify="left", style="green", max_width=40)
+        elif header.lower() in ['text', 'description', 'content']:
+            table.add_column(header, justify="left", max_width=60)
+        else:
+            table.add_column(header, justify="left", max_width=30)
+
+    # Add rows
+    for row in rows['rows']:
+        table.add_row(*[str(row.get(key, '')) for key in headers])
+
+    # Print table and summary
+    console.print()
+    console.print(table)
+    console.print(f"\n[green]Total rows:[/green] {len(rows['rows'])}")
+
+async def add_data_to_kb(naptha, kb_name, data, user_id=None, kb_node_url="http://localhost:7001"):
+    try:
+        # Parse the data string into a dictionary
+        data_dict = {}
+        # Split by spaces, but keep quoted strings together
+        parts = shlex.split(data)
+        
+        for part in parts:
+            if '=' in part:
+                key, value = part.split('=', 1)
+                # Remove quotes if they exist
+                value = value.strip("'\"")
+                data_dict[key] = value
+
+        data_dict = [data_dict]
+        
+        kb_run_input = {
+            "consumer_id": user_id,
+            "inputs": {
+                "mode": "add_data",
+                "data": json.dumps(data_dict)
+            },
+            "kb_deployment": {
+                "name": kb_name,
+                "module": {
+                    "name": kb_name
+                },
+                "kb_node_url": kb_node_url
+            }
+        }
+
+        kb_run = await naptha.node.run_kb_and_poll(kb_run_input)
+        console = Console()
+        console.print(f"\n[green]Successfully added data to knowledge base:[/green] {kb_name}")
+        console.print(kb_run)
+        
+    except Exception as e:
+        console = Console()
+        console.print(f"\n[red]Error adding data to knowledge base:[/red] {str(e)}")
+
 
 async def create_agent(naptha, agent_config):
     print(f"Agent Config: {agent_config}")
@@ -219,6 +433,8 @@ async def create(
         module_type = "agent"
     elif "environment:" in module_name:
         module_type = "environment"
+    elif "kb:" in module_name:
+        module_type = "kb"
     else:
         module_type = "agent"
 
@@ -286,6 +502,21 @@ async def create(
         result = await naptha.node.create(module_type, environment_deployment)
         print(f"Environment creation result: {result}")
 
+    elif module_type == "kb":
+        print("Creating Knowledge Base...")
+        if "kb:" in module_name:
+            module_name = module_name.split(":")[1]
+        else:
+            module_name = module_name
+
+        kb_deployment = KBDeployment(
+            name=module_name,
+            module={"name": module_name},
+            kb_node_url=os.getenv("NODE_URL")
+        )
+        result = await naptha.node.create(module_type, kb_deployment)
+        print(f"Knowledge Base creation result: {result}")
+
 async def run(
     naptha,
     module_name,
@@ -293,6 +524,7 @@ async def run(
     parameters=None, 
     worker_node_urls="http://localhost:7001",
     environment_node_urls=["http://localhost:7001"],
+    kb_node_urls=["http://localhost:7001"],
     yaml_file=None, 
     personas_urls=None
 ):   
@@ -308,6 +540,8 @@ async def run(
         module_type = "agent" 
     elif "environment:" in module_name:
         module_type = "environment"
+    elif "kb:" in module_name:
+        module_type = "kb"
     else:
         module_type = "agent" # Default to agent for backwards compatibility
 
@@ -322,11 +556,17 @@ async def run(
 
     if module_type == "agent":
         print("Running Agent...")
+
+        kb_deployments = []
+        for kb_node_url in kb_node_urls:
+            kb_deployments.append(KBDeployment(kb_node_url=kb_node_url))
+
         agent_deployment = AgentDeployment(
             name=module_name, 
             module={"name": module_name}, 
             worker_node_url=worker_node_urls[0], 
-            agent_config=AgentConfig(persona_module={"url": personas_urls})
+            agent_config=AgentConfig(persona_module={"module_url": personas_urls}),
+            kb_deployments=kb_deployments
         )
 
         agent_run_input = {
@@ -379,7 +619,22 @@ async def run(
             consumer_id=user_id,
         )
         environment_run = await naptha.node.run_environment_and_poll(environment_run_input)
-        
+
+    elif module_type == "kb":
+        print("Running Knowledge Base...")
+        kb_deployment = KBDeployment(
+            name=module_name, 
+            module={"name": module_name}, 
+            kb_node_url=os.getenv("NODE_URL")
+        )
+
+        kb_run_input = KBRunInput(
+            consumer_id=user_id,
+            inputs=parameters,
+            kb_deployment=kb_deployment
+        )
+        kb_run = await naptha.node.run_kb_and_poll(kb_run_input)
+
 async def read_storage(naptha, hash_or_name, output_dir='./files', ipfs=False):
     """Read from storage, IPFS, or IPNS."""
     try:
@@ -450,6 +705,16 @@ async def main():
     personas_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
     personas_parser.add_argument('-d', '--delete', action='store_true', help='Delete a persona')
 
+    # Knowledge base commands
+    kbs_parser = subparsers.add_parser("kbs", help="List available knowledge bases.")
+    kbs_parser.add_argument('kb_name', nargs='?', help='Optional knowledge base name')
+    kbs_parser.add_argument('-p', '--metadata', type=str, help='Metadata for knowledge base registration in "key=value" format')
+    kbs_parser.add_argument('-d', '--delete', action='store_true', help='Delete a knowledge base')
+    kbs_parser.add_argument('-l', '--list', action='store_true', help='List content in a knowledge base')
+    kbs_parser.add_argument('-a', '--add', action='store_true', help='Add data to a knowledge base')
+    kbs_parser.add_argument('-c', '--content', type=str, help='Content to add to a knowledge base', required=False)
+    kbs_parser.add_argument('-k', '--kb_node_urls', type=str, help='Knowledge base node URLs', default=["http://localhost:7001"])
+
     # Create command
     create_parser = subparsers.add_parser("create", help="Execute create command.")
     create_parser.add_argument("module", help="Select the module to create")
@@ -464,6 +729,7 @@ async def main():
     run_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
     run_parser.add_argument("-n", "--worker_node_urls", help="Worker nodes to take part in agent runs.")
     run_parser.add_argument("-e", "--environment_node_urls", help="Environment nodes to store data during agent runs.")
+    run_parser.add_argument('-k', '--kb_node_urls', type=str, help='Knowledge base node URLs', default=["http://localhost:7001"])
     run_parser.add_argument("-u", "--personas_urls", help="Personas URLs to install before running the agent")
     run_parser.add_argument("-f", "--file", help="YAML file with agent run parameters")
 
@@ -497,7 +763,7 @@ async def main():
         args = _parse_str_args(args)
         if args.command == "signup":
             _, user_id = await user_setup_flow(hub_url, public_key)
-        elif args.command in ["nodes", "agents", "orchestrators", "environments", "personas", "run", "inference", "read_storage", "write_storage", "publish", "create"]:
+        elif args.command in ["nodes", "agents", "orchestrators", "environments", "personas", "kbs", "run", "inference", "read_storage", "write_storage", "publish", "create"]:
             if not naptha.hub.is_authenticated:
                 if not hub_username or not hub_password:
                     print(
@@ -520,7 +786,7 @@ async def main():
                             key, value = param.split('=')
                             parsed_params[key] = value
 
-                        required_metadata = ['description', 'parameters', 'url', 'type', 'version']
+                        required_metadata = ['description', 'parameters', 'module_url']
                         missing_metadata = [param for param in required_metadata if param not in parsed_params]
                         if missing_metadata:
                             print(f"Missing required metadata: {', '.join(missing_metadata)}")
@@ -532,9 +798,10 @@ async def main():
                             "description": parsed_params['description'],
                             "parameters": parsed_params['parameters'],
                             "author": naptha.hub.user_id,
-                            "url": parsed_params['url'],
-                            "type": parsed_params['type'],
-                            "version": parsed_params['version'],
+                            "module_url": parsed_params['module_url'],
+                            "module_type": parsed_params.get('module_type', 'package'),
+                            "module_version": parsed_params.get('module_version', '0.1'),
+                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py')
                         }
                         await create_agent(naptha, agent_config)
                 else:
@@ -552,7 +819,7 @@ async def main():
                             key, value = param.split('=')
                             parsed_params[key] = value
 
-                        required_metadata = ['description', 'parameters', 'url', 'type', 'version']
+                        required_metadata = ['description', 'parameters', 'module_url']
                         if not all(param in parsed_params for param in required_metadata):
                             print(f"Missing one or more of the following required metadata: {required_metadata}")
                             return
@@ -563,9 +830,10 @@ async def main():
                             "description": parsed_params['description'],
                             "parameters": parsed_params['parameters'],
                             "author": naptha.hub.user_id,
-                            "url": parsed_params['url'],
-                            "type": parsed_params['type'],
-                            "version": parsed_params['version'],
+                            "module_url": parsed_params['module_url'],
+                            "module_type": parsed_params.get('module_type', 'package'),
+                            "module_version": parsed_params.get('module_version', '0.1'),
+                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py')
                         }
                         await create_orchestrator(naptha, orchestrator_config)
                 else:
@@ -583,7 +851,7 @@ async def main():
                             key, value = param.split('=')
                             parsed_params[key] = value
 
-                        required_metadata = ['description', 'parameters', 'url', 'type', 'version']
+                        required_metadata = ['description', 'parameters', 'module_url']
                         if not all(param in parsed_params for param in required_metadata):
                             print(f"Missing one or more of the following required metadata: {required_metadata}")
                             return
@@ -594,9 +862,10 @@ async def main():
                             "description": parsed_params['description'],
                             "parameters": parsed_params['parameters'],
                             "author": naptha.hub.user_id,
-                            "url": parsed_params['url'],
-                            "type": parsed_params['type'],
-                            "version": parsed_params['version'],
+                            "module_url": parsed_params['module_url'],
+                            "module_type": parsed_params.get('module_type', 'package'),
+                            "module_version": parsed_params.get('module_version', '0.1'),
+                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py')
                         }
                         await create_environment(naptha, environment_config)
                 else:
@@ -614,7 +883,7 @@ async def main():
                             key, value = param.split('=')
                             parsed_params[key] = value
 
-                        required_metadata = ['description', 'parameters', 'url', 'type', 'version']
+                        required_metadata = ['description', 'module_url']
                         if not all(param in parsed_params for param in required_metadata):
                             print(f"Missing one or more of the following required metadata: {required_metadata}")
                             return
@@ -624,14 +893,60 @@ async def main():
                             "name": args.persona_name,
                             "description": parsed_params['description'],
                             "author": naptha.hub.user_id,
-                            "url": parsed_params['url'],
-                            "version": parsed_params['version'],
+                            "module_url": parsed_params['module_url'],
+                            "module_version": parsed_params.get('module_version', '0.1'),
                         }
                         await create_persona(naptha, persona_config)
                 else:
                     print("Invalid command.")
+            elif args.command == "kbs":
+                if not args.kb_name:
+                    # List all knowledge bases
+                    await list_kbs(naptha)
+                elif args.list:
+                    # List content of specific knowledge base
+                    await list_kb_content(naptha, args.kb_name)
+                elif args.add:
+                    # Add data to knowledge base
+                    if not args.content:
+                        console = Console()
+                        console.print("[red]Data is required for add command.[/red]")
+                        return
+                    await add_data_to_kb(naptha, args.kb_name, args.content, user_id=user_id, kb_node_url=args.kb_node_urls[0])
+                elif args.delete and len(args.kb_name.split()) == 1:
+                    await naptha.hub.delete_kb(args.kb_name)
+                elif len(args.kb_name.split()) == 1:
+                    if hasattr(args, 'metadata') and args.metadata is not None:
+                        params = shlex.split(args.metadata)
+                        parsed_params = {}
+                        for param in params:
+                            key, value = param.split('=')
+                            parsed_params[key] = value
+
+                        required_metadata = ['description', 'parameters', 'module_url']
+                        if not all(param in parsed_params for param in required_metadata):
+                            print(f"Missing one or more of the following required metadata: {required_metadata}")
+                            return
+                            
+                        kb_config = {
+                            "id": f"kb:{args.kb_name}",
+                            "name": args.kb_name,
+                            "description": parsed_params['description'],
+                            "parameters": parsed_params['parameters'],
+                            "author": naptha.hub.user_id,
+                            "module_url": parsed_params['module_url'],
+                            "module_type": parsed_params.get('module_type', 'package'),
+                            "module_version": parsed_params.get('module_version', '0.1'),
+                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py')
+                        }
+                        await naptha.hub.create_kb(kb_config)
+                else:
+                    # Show specific knowledge base info
+                    await list_kbs(naptha, args.kb_name)
+
             elif args.command == "create":
                 await create(naptha, args.module, args.agent_modules, args.worker_node_urls, args.environment_modules, args.environment_node_urls)
+            
             elif args.command == "run":
                 if hasattr(args, 'parameters') and args.parameters is not None:
                     try:
@@ -645,7 +960,7 @@ async def main():
                 else:
                     parsed_params = None
                     
-                await run(naptha, args.agent, user_id, parsed_params, args.worker_node_urls, args.environment_node_urls, args.file, args.personas_urls)
+                await run(naptha, args.agent, user_id, parsed_params, args.worker_node_urls, args.environment_node_urls, args.kb_node_urls, args.file, args.personas_urls)
             elif args.command == "inference":
                 request = ChatCompletionRequest(
                     messages=[{"role": "user", "content": args.prompt}],

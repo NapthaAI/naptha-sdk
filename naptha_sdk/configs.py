@@ -21,7 +21,7 @@ def load_agent_deployments(agent_deployments_path, load_persona_data=True, load_
         deployment["agent_config"]["llm_config"] = llm_config   
 
         if load_persona_data:
-            persona_data, input_schema = load_persona(deployment["agent_config"]["persona_module"]["url"])
+            persona_data, input_schema = load_persona(deployment["agent_config"]["persona_module"]["module_url"])
             deployment["agent_config"]["persona_module"]["data"] = persona_data
         if load_persona_schema:
             deployment["agent_config"]["persona_module"]["data"] = input_schema(**persona_data)

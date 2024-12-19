@@ -19,7 +19,7 @@ from httpx import HTTPStatusError, RemoteProtocolError
 from naptha_sdk.client import grpc_server_pb2
 from naptha_sdk.client import grpc_server_pb2_grpc
 from naptha_sdk.schemas import AgentRun, AgentRunInput, ChatCompletionRequest, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, \
-    OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment
+    OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, KBDeployment, KBRunInput, KBRun
 from naptha_sdk.utils import get_logger
 
 logger = get_logger(__name__)
@@ -54,7 +54,7 @@ class Node:
         logger.info(f"Node URL: {node_url}")
 
     async def create(self, module_type: str,
-                     module_request: Union[AgentDeployment, EnvironmentDeployment, OrchestratorDeployment]):
+                     module_request: Union[AgentDeployment, EnvironmentDeployment, KBDeployment, OrchestratorDeployment]):
         """Generic method to create either an agent, orchestrator, or environment.
 
         Args:
@@ -63,8 +63,6 @@ class Node:
         """
 
         print(f"Creating {module_type}...")
-        print(f"Module Request: {module_request}")
-        print(f"Node URL: {self.node_url}")
 
         endpoint = f"{self.node_url}/{module_type}/create"
         try:
@@ -93,24 +91,24 @@ class Node:
             print(f"An unexpected error occurred: {e}")
             raise
 
-    async def _run_and_poll(self, run_input: Union[AgentRunInput, EnvironmentRunInput, OrchestratorRunInput, Dict], module_type: str) -> Union[AgentRun, EnvironmentRun, OrchestratorRun, Dict]:
+    async def _run_and_poll(self, run_input: Union[AgentRunInput, EnvironmentRunInput, OrchestratorRunInput, KBRunInput, Dict], module_type: str) -> Union[AgentRun, EnvironmentRun, OrchestratorRun, KBRun, Dict]:
         """Generic method to run and poll either an agent, orchestrator, or environment.
         
         Args:
-            run_input: Either AgentRunInput, OrchestratorRunInput, or environment dict
-            module_type: Either 'agent', 'orchestrator', or 'environment'
+            run_input: Either AgentRunInput, OrchestratorRunInput, environment dict or KBDeployment
+            module_type: Either 'agent', 'orchestrator', 'environment' or 'kb'
         """
-
+        print(f"Run input: {run_input}")
+        print(f"Module type: {module_type}")
         # Start the run
         run = await getattr(self, f'run_{module_type}')(run_input)
         print(f"{module_type.title()} run started: {run}")
 
         current_results_len = 0
         while True:
-            # Check run status
             run = await getattr(self, f'check_{module_type}_run')(run)
-            
-            output = f"{run.status} {getattr(run, f'{module_type}_deployment').module['type']} {getattr(run, f'{module_type}_deployment').module['name']}"
+
+            output = f"{run.status} {getattr(run, f'{module_type}_deployment').module['module_type']} {getattr(run, f'{module_type}_deployment').module['name']}"
             print(output)
 
             results = run.results
@@ -143,6 +141,10 @@ class Node:
     async def run_environment_and_poll(self, environment_input: EnvironmentRunInput) -> EnvironmentRun:
         """Run an environment and poll for results until completion."""
         return await self._run_and_poll(environment_input, 'environment')
+    
+    async def run_kb_and_poll(self, kb_input: KBDeployment) -> KBDeployment:
+        """Run a knowledge base and poll for results until completion."""
+        return await self._run_and_poll(kb_input, 'kb')
 
     async def check_user_ws(self, user_input: Dict[str, str]):
         response = await self.send_receive_ws(user_input, "check_user")
@@ -269,7 +271,8 @@ class Node:
         input_class = {
             'agent': AgentRunInput,
             'orchestrator': OrchestratorRunInput,
-            'environment': EnvironmentRunInput
+            'environment': EnvironmentRunInput,
+            'kb': KBRunInput
         }[module_type]
         
         if isinstance(run_input, dict):
@@ -292,7 +295,8 @@ class Node:
                 return_class = {
                     'agent': AgentRun,
                     'orchestrator': OrchestratorRun,
-                    'environment': EnvironmentRun
+                    'environment': EnvironmentRun,
+                    'kb': KBRun
                 }[module_type]
                 return return_class(**json.loads(response.text))
         except HTTPStatusError as e:
@@ -427,16 +431,20 @@ class Node:
         """Run an environment on a node"""
         return await self._run_module(environment_run_input, 'environment')
 
+    async def run_kb(self, kb_run_input: KBRunInput) -> KBRun:
+        """Run a knowledge base on a node"""
+        return await self._run_module(kb_run_input, 'kb')
+
     async def check_run(
         self, 
-        module_run: Union[AgentRun, OrchestratorRun, EnvironmentRun], 
+        module_run: Union[AgentRun, OrchestratorRun, EnvironmentRun, KBRun], 
         module_type: str
-    ) -> Union[AgentRun, OrchestratorRun, EnvironmentRun]:
+    ) -> Union[AgentRun, OrchestratorRun, EnvironmentRun, KBRun]:
         """Generic method to check the status of a module run.
         
         Args:
-            module_run: Either AgentRun, OrchestratorRun, or EnvironmentRun object
-            module_type: Either 'agent', 'orchestrator', or 'environment'
+            module_run: Either AgentRun, OrchestratorRun, EnvironmentRun, or KBRun object
+            module_type: Either 'agent', 'orchestrator', 'environment', or 'kb'
         """
         try:
             async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
@@ -449,7 +457,8 @@ class Node:
             return_class = {
                 'agent': AgentRun,
                 'orchestrator': OrchestratorRun,
-                'environment': EnvironmentRun
+                'environment': EnvironmentRun,
+                'kb': KBRun
             }[module_type]
             return return_class(**json.loads(response.text))
         except HTTPStatusError as e:
@@ -468,6 +477,9 @@ class Node:
 
     async def check_environment_run(self, environment_run: EnvironmentRun) -> EnvironmentRun:
         return await self.check_run(environment_run, 'environment')
+
+    async def check_kb_run(self, kb_run: KBRun) -> KBRun:
+        return await self.check_run(kb_run, 'kb')
 
     async def create_agent_run(self, agent_run_input: AgentRunInput) -> AgentRun:
         try:
