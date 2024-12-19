@@ -298,6 +298,16 @@ naptha personas persona_name -p "description='Persona description' module_url='i
 naptha personas -d persona_name
 ```
 
+## Toolsets
+Specially marked repos can be ingested directly to be made available to agents. These repos are loaded onto the active node and ran there.
+
+* load from hub: `naptha toolset -lh test toolset:test_toolset`
+* load from repo: `naptha toolset -lr test https://github.com/C0deMunk33/test_toolset`
+* list toolsets: `naptha toolset`
+* set toolset: `naptha toolset -s test`
+* get current toolset: `naptha toolset -g`
+* Run test function: `naptha toolset -r test add a=1,b=2`
+
 ## Inference 
 
 ```bash
