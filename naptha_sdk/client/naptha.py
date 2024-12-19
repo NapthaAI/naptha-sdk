@@ -24,11 +24,14 @@ class Naptha:
     """The entry point into Naptha."""
 
     def __init__(self):
+        self.node_url = os.getenv("NODE_URL", None)
+        if not self.node_url:
+            raise ValueError("`NODE_URL` environment variable is required but not found")
+            
         self.public_key = get_public_key(os.getenv("PRIVATE_KEY")) if os.getenv("PRIVATE_KEY") else None
         self.user = User(id=f"user:{self.public_key}")
         self.hub_username = os.getenv("HUB_USERNAME", None)
         self.hub_url = os.getenv("HUB_URL", None)
-        self.node_url = os.getenv("NODE_URL", None)
         self.routing_url = os.getenv("ROUTING_URL", None)
         self.indirect_node_id = os.getenv("INDIRECT_NODE_ID", None)
         self.node = Node(
