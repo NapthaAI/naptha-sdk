@@ -271,6 +271,7 @@ async def list_kbs(naptha, kb_name=None):
     table.add_column("ID", justify="left")
     table.add_column("Author", justify="left")
     table.add_column("Description", justify="left", max_width=50)
+    table.add_column("Parameters", justify="left", max_width=40)
     table.add_column("Module URL", justify="left", max_width=40)
     table.add_column("Module Type", justify="left")
     table.add_column("Module Version", justify="center")
@@ -282,6 +283,7 @@ async def list_kbs(naptha, kb_name=None):
             kb['id'],
             kb['author'],
             kb['description'],
+            kb['parameters'],
             kb['module_url'],
             kb['module_type'],
             kb['module_version']
@@ -693,9 +695,11 @@ async def main():
     # Knowledge base commands
     kbs_parser = subparsers.add_parser("kbs", help="List available knowledge bases.")
     kbs_parser.add_argument('kb_name', nargs='?', help='Optional knowledge base name')
+    kbs_parser.add_argument('-p', '--metadata', type=str, help='Metadata for knowledge base registration in "key=value" format')
+    kbs_parser.add_argument('-d', '--delete', action='store_true', help='Delete a knowledge base')
     kbs_parser.add_argument('-l', '--list', action='store_true', help='List content in a knowledge base')
     kbs_parser.add_argument('-a', '--add', action='store_true', help='Add data to a knowledge base')
-    kbs_parser.add_argument('-d', '--data', type=str, help='Data to add to a knowledge base', required=False)
+    kbs_parser.add_argument('-t', '--data', type=str, help='Data to add to a knowledge base', required=False)
     kbs_parser.add_argument('-n', '--kb_node_url', type=str, help='Knowledge base node URL', default="http://localhost:7001")
 
     # Create command
@@ -892,6 +896,33 @@ async def main():
                         console.print("[red]Data is required for add command.[/red]")
                         return
                     await add_data_to_kb(naptha, args.kb_name, args.data, user_id=user_id, kb_node_url=args.kb_node_url)
+                elif args.delete and len(args.kb_name.split()) == 1:
+                    await naptha.hub.delete_kb(args.kb_name)
+                elif len(args.kb_name.split()) == 1:
+                    if hasattr(args, 'metadata') and args.metadata is not None:
+                        params = shlex.split(args.metadata)
+                        parsed_params = {}
+                        for param in params:
+                            key, value = param.split('=')
+                            parsed_params[key] = value
+
+                        required_metadata = ['description', 'parameters', 'module_url']
+                        if not all(param in parsed_params for param in required_metadata):
+                            print(f"Missing one or more of the following required metadata: {required_metadata}")
+                            return
+                            
+                        kb_config = {
+                            "id": f"kb:{args.kb_name}",
+                            "name": args.kb_name,
+                            "description": parsed_params['description'],
+                            "parameters": parsed_params['parameters'],
+                            "author": naptha.hub.user_id,
+                            "module_url": parsed_params['module_url'],
+                            "module_type": parsed_params.get('module_type', 'package'),
+                            "module_version": parsed_params.get('module_version', '0.1'),
+                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py')
+                        }
+                        await naptha.hub.create_kb(kb_config)
                 else:
                     # Show specific knowledge base info
                     await list_kbs(naptha, args.kb_name)

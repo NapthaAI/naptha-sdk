@@ -206,6 +206,17 @@ class Hub:
             print("Failed to delete persona")
         return success
 
+    async def delete_kb(self, kb_id: str) -> Tuple[bool, Optional[Dict]]:
+        if ":" not in kb_id:
+            kb_id = f"kb:{kb_id}".strip()
+        print(f"Deleting knowledge base: {kb_id}")
+        success = await self.surrealdb.delete(kb_id)
+        if success:
+            print("Deleted knowledge base")
+        else:
+            print("Failed to delete knowledge base")
+        return success
+
     async def create_agent(self, agent_config: Dict) -> Tuple[bool, Optional[Dict]]:
         if not agent_config.get('id'):
             return await self.surrealdb.create("agent", agent_config)
@@ -229,6 +240,12 @@ class Hub:
             return await self.surrealdb.create("persona", persona_config)
         else:
             return await self.surrealdb.create(persona_config.pop('id'), persona_config)
+
+    async def create_kb(self, kb_config: Dict) -> Tuple[bool, Optional[Dict]]:
+        if not kb_config.get('id'):
+            return await self.surrealdb.create("kb", kb_config)
+        else:
+            return await self.surrealdb.create(kb_config.pop('id'), kb_config)
 
     async def update_agent(self, agent_config: Dict) -> Tuple[bool, Optional[Dict]]:
         return await self.surrealdb.update("agent", agent_config)
