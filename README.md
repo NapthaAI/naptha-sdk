@@ -244,22 +244,28 @@ naptha kbs -d kb_name
 naptha create kb:wikipedia_kb 
 ```
 
-### List content in a Knowledge Base
+### Initialize the content in the Knowledge Base
+
+```bash
+naptha run kb:wikipedia_kb -p "mode='init'"
+```
+
+### List content in the Knowledge Base
 
 ```bash
 naptha kbs wikipedia_kb -l
 ```
 
-### Add to a Knowledge Base
+### Add to the Knowledge Base
 
 ```bash
-naptha kbs wikipedia_kb -a "module_url='https://en.wikipedia.org/wiki/Elon_Musk' title='Elon Musk' text='Elon Musk is a billionaire entrepreneur and the CEO of SpaceX and Tesla.'" 
+naptha kbs wikipedia_kb -a -c "url='https://en.wikipedia.org/wiki/Socrates' title='Socrates' text='Socrates was a Greek philosopher from Athens who is credited as the founder of Western philosophy and as among the first moral philosophers of the ethical tradition of thought.'" 
 ```
 
-### Run a Knowledge Base Module
+### Query the Knowledge Base Module
 
 ```bash
-naptha run kb:wikipedia_kb -p "method_name='query_wikipedia' method_input_data='Elon Musk'"
+naptha run kb:wikipedia_kb -p "mode='query' query='Socrates'"
 ```
 
 ## Personas

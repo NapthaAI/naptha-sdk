@@ -705,7 +705,7 @@ async def main():
     kbs_parser.add_argument('-d', '--delete', action='store_true', help='Delete a knowledge base')
     kbs_parser.add_argument('-l', '--list', action='store_true', help='List content in a knowledge base')
     kbs_parser.add_argument('-a', '--add', action='store_true', help='Add data to a knowledge base')
-    kbs_parser.add_argument('-t', '--data', type=str, help='Data to add to a knowledge base', required=False)
+    kbs_parser.add_argument('-c', '--content', type=str, help='Content to add to a knowledge base', required=False)
     kbs_parser.add_argument('-n', '--kb_node_url', type=str, help='Knowledge base node URL', default="http://localhost:7001")
 
     # Create command
@@ -900,11 +900,11 @@ async def main():
                     await list_kb_content(naptha, args.kb_name)
                 elif args.add:
                     # Add data to knowledge base
-                    if not args.data:
+                    if not args.content:
                         console = Console()
                         console.print("[red]Data is required for add command.[/red]")
                         return
-                    await add_data_to_kb(naptha, args.kb_name, args.data, user_id=user_id, kb_node_url=args.kb_node_url)
+                    await add_data_to_kb(naptha, args.kb_name, args.content, user_id=user_id, kb_node_url=args.kb_node_url)
                 elif args.delete and len(args.kb_name.split()) == 1:
                     await naptha.hub.delete_kb(args.kb_name)
                 elif len(args.kb_name.split()) == 1:
