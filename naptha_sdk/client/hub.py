@@ -20,7 +20,6 @@ class Hub:
     """The Hub class is the entry point into Naptha AI Hub."""
 
     def __init__(self, hub_url, public_key=None, *args, **kwargs):
-        print("HUB URL: ", hub_url)
         self.hub_url = hub_url
         self.public_key = public_key
         self.ns = "naptha"
@@ -269,7 +268,7 @@ class Hub:
 
     async def get_toolset(self, toolset_id: str) -> Optional[Dict]:
         print(f"Getting toolset: {toolset_id}")
-        toolsets = await self.surrealdb.query(f"SELECT * FROM agent;")
+        toolsets = await self.surrealdb.query(f"SELECT * FROM toolset;")
         print(toolsets)
         return toolsets[0]
 
