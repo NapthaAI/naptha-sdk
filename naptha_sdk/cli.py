@@ -4,6 +4,9 @@ import json
 import os
 import shlex
 from textwrap import wrap
+from rich.console import Console
+from rich.table import Table
+from rich import box
 
 import yaml
 from dotenv import load_dotenv
@@ -35,169 +38,259 @@ async def list_nodes(naptha):
     nodes = await naptha.hub.list_nodes()
     
     if not nodes:
-        print("No nodes found.")
+        console = Console()
+        console.print("[red]No nodes found.[/red]")
         return
 
-    # Determine available keys
-    keys = list(nodes[0].keys())
+    console = Console()
+    table = Table(
+        box=box.ROUNDED,
+        show_lines=True,
+        title="Available Nodes",
+        title_style="bold cyan",
+        header_style="bold blue",
+        row_styles=["", "dim"]  # Alternating row styles
+    )
 
-    # Create headers and table data based on available keys
-    headers = keys
-    table_data = []
+    # Get dynamic headers from first node
+    headers = list(nodes[0].keys())
+    
+    # Add columns with appropriate formatting
+    for header in headers:
+        table.add_column(
+            header,
+            overflow="fold",
+            max_width=60,
+            justify="left",
+            no_wrap=False
+        )
 
+    # Add rows
     for node in nodes:
-        row = []
-        for key in keys:
-            value = str(node.get(key, ''))
-            if len(value) > 50:
-                wrapped_value = '\n'.join(wrap(value, width=50))
-                row.append(wrapped_value)
-            else:
-                row.append(value)
-        table_data.append(row)
+        table.add_row(*[str(node.get(key, '')) for key in headers])
 
-    print("\nAll Nodes:")
-    print(tabulate(table_data, headers=headers, tablefmt="grid"))
-    print(f"\nTotal nodes: {len(nodes)}")
+    # Print table and summary
+    console.print()
+    console.print(table)
+    console.print(f"\n[green]Total nodes:[/green] {len(nodes)}")
 
 async def list_agents(naptha):
     agents = await naptha.hub.list_agents()
     
     if not agents:
-        print("No agents found.")
+        console = Console()
+        console.print("[red]No agents found.[/red]")
         return
 
-    headers = ["Name", "ID", "Type", "Version", "Author", "Parameters", "Description"]
-    table_data = []
+    console = Console()
+    table = Table(
+        box=box.ROUNDED,
+        show_lines=True,
+        title="Available Agents",
+        title_style="bold cyan",
+        header_style="bold blue",
+        row_styles=["", "dim"]  # Alternating row styles
+    )
 
+    # Define columns with specific formatting
+    table.add_column("Name", justify="left", style="green")
+    table.add_column("ID", justify="left")
+    table.add_column("Type", justify="left")
+    table.add_column("Version", justify="center")
+    table.add_column("Author", justify="left")
+    table.add_column("Parameters", justify="left", max_width=30)
+    table.add_column("Description", justify="left", max_width=50)
+
+    # Add rows
     for agent in agents:
-        # Wrap the description text
-        wrapped_description = '\n'.join(wrap(agent['description'], width=50))
-        
-        row = [
+        table.add_row(
             agent['name'],
             agent['id'],
             agent['type'],
             agent['version'],
             agent['author'],
-            agent['parameters'],
-            wrapped_description
-        ]
-        table_data.append(row)
+            str(agent['parameters']),
+            agent['description']
+        )
 
-    print(tabulate(table_data, headers=headers, tablefmt="grid"))
-    print(f"\nTotal agents: {len(agents)}")
+    # Print table and summary
+    console.print()
+    console.print(table)
+    console.print(f"\n[green]Total agents:[/green] {len(agents)}")
 
 async def list_orchestrators(naptha):
     orchestrators = await naptha.hub.list_orchestrators()
     
     if not orchestrators:
-        print("No orchestrators found.")
+        console = Console()
+        console.print("[red]No orchestrators found.[/red]")
         return
 
-    headers = ["Name", "ID", "Type", "Version", "Author", "Parameters", "Description"]
-    table_data = []
+    console = Console()
+    table = Table(
+        box=box.ROUNDED,
+        show_lines=True,
+        title="Available Orchestrators",
+        title_style="bold cyan",
+        header_style="bold blue",
+        row_styles=["", "dim"]  # Alternating row styles
+    )
 
+    # Define columns with specific formatting
+    table.add_column("Name", justify="left", style="green")
+    table.add_column("ID", justify="left")
+    table.add_column("Type", justify="left")
+    table.add_column("Version", justify="center")
+    table.add_column("Author", justify="left")
+    table.add_column("Parameters", justify="left", max_width=30)
+    table.add_column("Description", justify="left", max_width=50)
+
+    # Add rows
     for orchestrator in orchestrators:
-        # Wrap the description text
-        wrapped_description = '\n'.join(wrap(orchestrator['description'], width=50))
-        
-        row = [
+        table.add_row(
             orchestrator['name'],
             orchestrator['id'],
             orchestrator['type'],
             orchestrator['version'],
             orchestrator['author'],
-            orchestrator['parameters'],
-            wrapped_description
-        ]
-        table_data.append(row)
+            str(orchestrator['parameters']),
+            orchestrator['description']
+        )
 
-    print(tabulate(table_data, headers=headers, tablefmt="grid"))
-    print(f"\nTotal orchestrators: {len(orchestrators)}")
+    # Print table and summary
+    console.print()
+    console.print(table)
+    console.print(f"\n[green]Total orchestrators:[/green] {len(orchestrators)}")
 
 async def list_environments(naptha):
     environments = await naptha.hub.list_environments()
     
     if not environments:
-        print("No environments found.")
+        console = Console()
+        console.print("[red]No environments found.[/red]")
         return
 
-    headers = ["Name", "ID", "Type", "Version", "Author", "Parameters", "Description"]
-    table_data = []
+    console = Console()
+    table = Table(
+        box=box.ROUNDED,
+        show_lines=True,
+        title="Available Environments",
+        title_style="bold cyan",
+        header_style="bold blue",
+        row_styles=["", "dim"]  # Alternating row styles
+    )
 
+    # Define columns with specific formatting
+    table.add_column("Name", justify="left", style="green")
+    table.add_column("ID", justify="left")
+    table.add_column("Type", justify="left")
+    table.add_column("Version", justify="center")
+    table.add_column("Author", justify="left")
+    table.add_column("Parameters", justify="left", max_width=30)
+    table.add_column("Description", justify="left", max_width=50)
+
+    # Add rows
     for environment in environments:
-        # Wrap the description text
-        wrapped_description = '\n'.join(wrap(environment['description'], width=50))
-        
-        row = [
+        table.add_row(
             environment['name'],
             environment['id'],
             environment['type'],
             environment['version'],
             environment['author'],
-            environment['parameters'],
-            wrapped_description
-        ]
-        table_data.append(row)
+            str(environment['parameters']),
+            environment['description']
+        )
 
-    print(tabulate(table_data, headers=headers, tablefmt="grid"))
-    print(f"\nTotal environments: {len(environments)}")
+    # Print table and summary
+    console.print()
+    console.print(table)
+    console.print(f"\n[green]Total environments:[/green] {len(environments)}")
 
 async def list_personas(naptha):
     personas = await naptha.hub.list_personas()
     
     if not personas:
-        print("No personas found.")
+        console = Console()
+        console.print("[red]No personas found.[/red]")
         return
 
-    headers = ["Name", "ID", "Version", "Author", "Description", "URL"]
-    table_data = []
+    console = Console()
+    table = Table(
+        box=box.ROUNDED,
+        show_lines=True,
+        title="Available Personas",
+        title_style="bold cyan",
+        header_style="bold blue",
+        row_styles=["", "dim"]  # Alternating row styles
+    )
 
+    # Define columns with specific formatting
+    table.add_column("Name", justify="left", style="green")
+    table.add_column("ID", justify="left")
+    table.add_column("Version", justify="center")
+    table.add_column("Author", justify="left")
+    table.add_column("Description", justify="left", max_width=50)
+    table.add_column("URL", justify="left", max_width=40)
+
+    # Add rows
     for persona in personas:
-        # Wrap the description text
-        wrapped_description = '\n'.join(wrap(persona['description'], width=50))
-        
-        row = [
+        table.add_row(
             persona['name'],
             persona['id'],
             persona['version'],
             persona['author'],
-            wrapped_description,
+            persona['description'],
             persona['url']
-        ]
-        table_data.append(row)
+        )
 
-    print(tabulate(table_data, headers=headers, tablefmt="grid"))
-    print(f"\nTotal personas: {len(personas)}")
+    # Print table and summary
+    console.print()
+    console.print(table)
+    console.print(f"\n[green]Total personas:[/green] {len(personas)}")
 
 async def list_knowledge_bases(naptha, knowledge_base_name=None):
     knowledge_bases = await naptha.hub.list_knowledge_bases(knowledge_base_name=knowledge_base_name)
     
     if not knowledge_bases:
-        print("No knowledge bases found.")
+        console = Console()
+        console.print("[red]No knowledge bases found.[/red]")
         return
 
-    headers = ["Name", "ID", "Author", "Description", "Module URL", "Module Type", "Module Version"]
-    table_data = []
+    console = Console()
+    table = Table(
+        box=box.ROUNDED,
+        show_lines=True,
+        title="Available Knowledge Bases",
+        title_style="bold cyan", 
+        header_style="bold blue",
+        row_styles=["", "dim"]  # Alternating row styles
+    )
 
-    for knowledge_base in knowledge_bases:
-        # Wrap the description text for better readability
-        wrapped_description = '\n'.join(wrap(knowledge_base['description'], width=50))
-        
-        row = [
-            knowledge_base['name'],
-            knowledge_base['id'],
-            knowledge_base['author'],
-            wrapped_description,
-            knowledge_base['module_url'],
-            knowledge_base['module_type'],
-            knowledge_base['module_version'],
-        ]
-        table_data.append(row)
+    # Define columns with specific formatting
+    table.add_column("Name", justify="left", style="green")
+    table.add_column("ID", justify="left")
+    table.add_column("Author", justify="left")
+    table.add_column("Description", justify="left", max_width=50)
+    table.add_column("Module URL", justify="left", max_width=40)
+    table.add_column("Module Type", justify="left")
+    table.add_column("Module Version", justify="center")
 
-    print(tabulate(table_data, headers=headers, tablefmt="grid"))
-    print(f"\nTotal knowledge bases: {len(knowledge_bases)}")
+    # Add rows
+    for kb in knowledge_bases:
+        table.add_row(
+            kb['name'],
+            kb['id'],
+            kb['author'],
+            kb['description'],
+            kb['url'],
+            kb['type'],
+            kb['version']
+        )
+
+    # Print table and summary
+    console.print()
+    console.print(table)
+    console.print(f"\n[green]Total knowledge bases:[/green] {len(knowledge_bases)}")
 
 async def list_kb_content(naptha, knowledge_base_name):
     rows = await naptha.node.query_table(
@@ -207,7 +300,42 @@ async def list_kb_content(naptha, knowledge_base_name):
         order_by=None,
         limit=None
     )
-    print(rows)
+    
+    if not rows.get('rows'):
+        console = Console()
+        console.print("[red]No content found in knowledge base.[/red]")
+        return
+
+    console = Console()
+    table = Table(
+        box=box.ROUNDED,
+        show_lines=True,
+        title=f"Knowledge Base Content: {knowledge_base_name}",
+        title_style="bold cyan",
+        header_style="bold blue",
+        row_styles=["", "dim"]  # Alternating row styles
+    )
+
+    # Add headers
+    headers = list(rows['rows'][0].keys())
+    for header in headers:
+        if header.lower() in ['id', 'url']:
+            table.add_column(header, justify="left", max_width=40)
+        elif header.lower() in ['title', 'name']:
+            table.add_column(header, justify="left", style="green", max_width=40)
+        elif header.lower() in ['text', 'description', 'content']:
+            table.add_column(header, justify="left", max_width=60)
+        else:
+            table.add_column(header, justify="left", max_width=30)
+
+    # Add rows
+    for row in rows['rows']:
+        table.add_row(*[str(row.get(key, '')) for key in headers])
+
+    # Print table and summary
+    console.print()
+    console.print(table)
+    console.print(f"\n[green]Total rows:[/green] {len(rows['rows'])}")
 
 async def create_agent(naptha, agent_config):
     print(f"Agent Config: {agent_config}")
