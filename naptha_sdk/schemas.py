@@ -47,24 +47,25 @@ class DataGenerationConfig(BaseModel):
     save_inputs: Optional[bool] = None
     save_inputs_location: Optional[str] = None
 
+class KBDeployment(BaseModel):
+    name: Optional[str] = "kb_deployment"
+    module: Optional[Dict] = None
+    kb_node_url: Optional[str] = "http://localhost:7001"
+    kb_config: Optional[Dict] = None
+
 class AgentDeployment(BaseModel):
     name: Optional[str] = "agent_deployment"
     module: Optional[Dict] = None
     worker_node_url: Optional[str] = None
     agent_config: Optional[AgentConfig] = AgentConfig()
     data_generation_config: Optional[DataGenerationConfig] = DataGenerationConfig()
+    kb_deployments: Optional[List[KBDeployment]] = None
 
 class EnvironmentDeployment(BaseModel):
     name: Optional[str] = "environment_deployment"
     module: Optional[Dict] = None
     environment_node_url: str
     environment_config: Optional[EnvironmentConfig] = EnvironmentConfig()
-
-class KBDeployment(BaseModel):
-    name: Optional[str] = "kb_deployment"
-    module: Optional[Dict] = None
-    kb_node_url: Optional[str] = "http://localhost:7001"
-    kb_config: Optional[Dict] = None
 
 class OrchestratorDeployment(BaseModel):
     name: Optional[str] = "orchestrator_deployment"

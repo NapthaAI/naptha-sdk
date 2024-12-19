@@ -524,6 +524,7 @@ async def run(
     parameters=None, 
     worker_node_urls="http://localhost:7001",
     environment_node_urls=["http://localhost:7001"],
+    kb_node_urls=["http://localhost:7001"],
     yaml_file=None, 
     personas_urls=None
 ):   
@@ -555,11 +556,17 @@ async def run(
 
     if module_type == "agent":
         print("Running Agent...")
+
+        kb_deployments = []
+        for kb_node_url in kb_node_urls:
+            kb_deployments.append(KBDeployment(kb_node_url=kb_node_url))
+
         agent_deployment = AgentDeployment(
             name=module_name, 
             module={"name": module_name}, 
             worker_node_url=worker_node_urls[0], 
-            agent_config=AgentConfig(persona_module={"module_url": personas_urls})
+            agent_config=AgentConfig(persona_module={"module_url": personas_urls}),
+            kb_deployments=kb_deployments
         )
 
         agent_run_input = {
@@ -706,7 +713,7 @@ async def main():
     kbs_parser.add_argument('-l', '--list', action='store_true', help='List content in a knowledge base')
     kbs_parser.add_argument('-a', '--add', action='store_true', help='Add data to a knowledge base')
     kbs_parser.add_argument('-c', '--content', type=str, help='Content to add to a knowledge base', required=False)
-    kbs_parser.add_argument('-n', '--kb_node_url', type=str, help='Knowledge base node URL', default="http://localhost:7001")
+    kbs_parser.add_argument('-k', '--kb_node_urls', type=str, help='Knowledge base node URLs', default=["http://localhost:7001"])
 
     # Create command
     create_parser = subparsers.add_parser("create", help="Execute create command.")
@@ -722,6 +729,7 @@ async def main():
     run_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
     run_parser.add_argument("-n", "--worker_node_urls", help="Worker nodes to take part in agent runs.")
     run_parser.add_argument("-e", "--environment_node_urls", help="Environment nodes to store data during agent runs.")
+    run_parser.add_argument('-k', '--kb_node_urls', type=str, help='Knowledge base node URLs', default=["http://localhost:7001"])
     run_parser.add_argument("-u", "--personas_urls", help="Personas URLs to install before running the agent")
     run_parser.add_argument("-f", "--file", help="YAML file with agent run parameters")
 
@@ -904,7 +912,7 @@ async def main():
                         console = Console()
                         console.print("[red]Data is required for add command.[/red]")
                         return
-                    await add_data_to_kb(naptha, args.kb_name, args.content, user_id=user_id, kb_node_url=args.kb_node_url)
+                    await add_data_to_kb(naptha, args.kb_name, args.content, user_id=user_id, kb_node_url=args.kb_node_urls[0])
                 elif args.delete and len(args.kb_name.split()) == 1:
                     await naptha.hub.delete_kb(args.kb_name)
                 elif len(args.kb_name.split()) == 1:
@@ -952,7 +960,7 @@ async def main():
                 else:
                     parsed_params = None
                     
-                await run(naptha, args.agent, user_id, parsed_params, args.worker_node_urls, args.environment_node_urls, args.file, args.personas_urls)
+                await run(naptha, args.agent, user_id, parsed_params, args.worker_node_urls, args.environment_node_urls, args.kb_node_urls, args.file, args.personas_urls)
             elif args.command == "inference":
                 request = ChatCompletionRequest(
                     messages=[{"role": "user", "content": args.prompt}],
