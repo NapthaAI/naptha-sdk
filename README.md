@@ -271,7 +271,7 @@ naptha run kb:wikipedia_kb -p "mode='query' query='Socrates'"
 ### Run an Agent that interacts with the Knowledge Base
 
 ```bash
-naptha run agent:wikipedia_agent -p "query='socrates' question='Who is Socrates?'" --kb_node_urls "http://localhost:7001"
+naptha run agent:wikipedia_agent -p "query='Socrates' question='Who is Socrates?'" --kb_node_urls "http://localhost:7001"
 ```
 
 ## Personas
