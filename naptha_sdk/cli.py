@@ -81,7 +81,7 @@ async def list_agents(naptha):
             agent['type'],
             agent['version'],
             agent['author'],
-            agent['parameters'] if agent['parameters'] else '{}',
+            agent['parameters'] if hasattr(agent, 'parameters') else '{}',
             wrapped_description
         ]
         table_data.append(row)
@@ -109,7 +109,7 @@ async def list_orchestrators(naptha):
             orchestrator['type'],
             orchestrator['version'],
             orchestrator['author'],
-            orchestrator['parameters'] if orchestrator['parameters'] else '{}',
+            orchestrator['parameters'] if hasattr(orchestrator, 'parameters') else '{}',
             wrapped_description
         ]
         table_data.append(row)
@@ -137,7 +137,7 @@ async def list_environments(naptha):
             environment['type'],
             environment['version'],
             environment['author'],
-            environment['parameters'] if environment['parameters'] else '{}',
+            environment['parameters'] if hasattr(environment, 'parameters') else '{}',
             wrapped_description
         ]
         table_data.append(row)
