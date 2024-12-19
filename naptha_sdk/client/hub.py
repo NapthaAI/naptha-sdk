@@ -150,16 +150,16 @@ class Hub:
             persona = await self.surrealdb.query("SELECT * FROM persona WHERE id=$persona_name;", {"persona_name": persona_name})
             return persona[0]['result']
 
-    async def list_knowledge_bases(self, knowledge_base_name=None) -> List:
-        if not knowledge_base_name:
-            knowledge_bases = await self.surrealdb.query("SELECT * FROM kb;")
-            return knowledge_bases[0]['result']
+    async def list_kbs(self, kb_name=None) -> List:
+        if not kb_name:
+            kbs = await self.surrealdb.query("SELECT * FROM kb;")
+            return kbs[0]['result']
         else:
-            knowledge_base = await self.surrealdb.query("SELECT * FROM kb WHERE name=$knowledge_base_name;", {"knowledge_base_name": knowledge_base_name})
-            return knowledge_base[0]['result']
+            kb = await self.surrealdb.query("SELECT * FROM kb WHERE name=$kb_name;", {"kb_name": kb_name})
+            return kb[0]['result']
 
-    async def list_kb_content(self, knowledge_base_name: str) -> List:
-        kb_content = await self.surrealdb.query("SELECT * FROM kb_content WHERE kb_id=$kb_id;", {"kb_id": f"kb:{knowledge_base_name}"})
+    async def list_kb_content(self, kb_name: str) -> List:
+        kb_content = await self.surrealdb.query("SELECT * FROM kb_content WHERE kb_id=$kb_id;", {"kb_id": f"kb:{kb_name}"})
         return kb_content[0]['result']
 
     async def delete_agent(self, agent_id: str) -> Tuple[bool, Optional[Dict]]:

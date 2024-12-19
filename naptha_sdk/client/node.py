@@ -96,7 +96,7 @@ class Node:
         
         Args:
             run_input: Either AgentRunInput, OrchestratorRunInput, environment dict or KBDeployment
-            module_type: Either 'agent', 'orchestrator', 'environment' or 'knowledge_base'
+            module_type: Either 'agent', 'orchestrator', 'environment' or 'kb'
         """
         print(f"Run input: {run_input}")
         print(f"Module type: {module_type}")
@@ -106,14 +106,7 @@ class Node:
 
         current_results_len = 0
         while True:
-            # Check run status
-            if module_type == 'kb':
-                module_type = 'knowledge_base'
-            
             run = await getattr(self, f'check_{module_type}_run')(run)
-            
-            if module_type == 'knowledge_base':
-                module_type = 'kb'
 
             output = f"{run.status} {getattr(run, f'{module_type}_deployment').module['type']} {getattr(run, f'{module_type}_deployment').module['name']}"
             print(output)
@@ -149,9 +142,9 @@ class Node:
         """Run an environment and poll for results until completion."""
         return await self._run_and_poll(environment_input, 'environment')
     
-    async def run_knowledge_base_and_poll(self, knowledge_base_input: KBDeployment) -> KBDeployment:
+    async def run_kb_and_poll(self, kb_input: KBDeployment) -> KBDeployment:
         """Run a knowledge base and poll for results until completion."""
-        return await self._run_and_poll(knowledge_base_input, 'knowledge_base')
+        return await self._run_and_poll(kb_input, 'kb')
 
     async def check_user_ws(self, user_input: Dict[str, str]):
         response = await self.send_receive_ws(user_input, "check_user")
@@ -279,7 +272,7 @@ class Node:
             'agent': AgentRunInput,
             'orchestrator': OrchestratorRunInput,
             'environment': EnvironmentRunInput,
-            'knowledge_base': KBRunInput
+            'kb': KBRunInput
         }[module_type]
         
         if isinstance(run_input, dict):
@@ -303,7 +296,7 @@ class Node:
                     'agent': AgentRun,
                     'orchestrator': OrchestratorRun,
                     'environment': EnvironmentRun,
-                    'knowledge_base': KBRun
+                    'kb': KBRun
                 }[module_type]
                 return return_class(**json.loads(response.text))
         except HTTPStatusError as e:
@@ -438,9 +431,9 @@ class Node:
         """Run an environment on a node"""
         return await self._run_module(environment_run_input, 'environment')
 
-    async def run_knowledge_base(self, kb_run_input: KBRunInput) -> KBRun:
+    async def run_kb(self, kb_run_input: KBRunInput) -> KBRun:
         """Run a knowledge base on a node"""
-        return await self._run_module(kb_run_input, 'knowledge_base')
+        return await self._run_module(kb_run_input, 'kb')
 
     async def check_run(
         self, 
@@ -451,7 +444,7 @@ class Node:
         
         Args:
             module_run: Either AgentRun, OrchestratorRun, EnvironmentRun, or KBRun object
-            module_type: Either 'agent', 'orchestrator', 'environment', or 'knowledge_base'
+            module_type: Either 'agent', 'orchestrator', 'environment', or 'kb'
         """
         try:
             async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
@@ -465,7 +458,7 @@ class Node:
                 'agent': AgentRun,
                 'orchestrator': OrchestratorRun,
                 'environment': EnvironmentRun,
-                'knowledge_base': KBRun
+                'kb': KBRun
             }[module_type]
             return return_class(**json.loads(response.text))
         except HTTPStatusError as e:
@@ -485,8 +478,8 @@ class Node:
     async def check_environment_run(self, environment_run: EnvironmentRun) -> EnvironmentRun:
         return await self.check_run(environment_run, 'environment')
 
-    async def check_knowledge_base_run(self, kb_run: KBRun) -> KBRun:
-        return await self.check_run(kb_run, 'knowledge_base')
+    async def check_kb_run(self, kb_run: KBRun) -> KBRun:
+        return await self.check_run(kb_run, 'kb')
 
     async def create_agent_run(self, agent_run_input: AgentRunInput) -> AgentRun:
         try:

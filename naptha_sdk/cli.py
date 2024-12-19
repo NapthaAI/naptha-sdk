@@ -248,10 +248,10 @@ async def list_personas(naptha):
     console.print(table)
     console.print(f"\n[green]Total personas:[/green] {len(personas)}")
 
-async def list_knowledge_bases(naptha, knowledge_base_name=None):
-    knowledge_bases = await naptha.hub.list_knowledge_bases(knowledge_base_name=knowledge_base_name)
+async def list_kbs(naptha, kb_name=None):
+    kbs = await naptha.hub.list_kbs(kb_name=kb_name)
     
-    if not knowledge_bases:
+    if not kbs:
         console = Console()
         console.print("[red]No knowledge bases found.[/red]")
         return
@@ -276,7 +276,7 @@ async def list_knowledge_bases(naptha, knowledge_base_name=None):
     table.add_column("Module Version", justify="center")
 
     # Add rows
-    for kb in knowledge_bases:
+    for kb in kbs:
         table.add_row(
             kb['name'],
             kb['id'],
@@ -290,11 +290,11 @@ async def list_knowledge_bases(naptha, knowledge_base_name=None):
     # Print table and summary
     console.print()
     console.print(table)
-    console.print(f"\n[green]Total knowledge bases:[/green] {len(knowledge_bases)}")
+    console.print(f"\n[green]Total knowledge bases:[/green] {len(kbs)}")
 
-async def list_kb_content(naptha, knowledge_base_name):
+async def list_kb_content(naptha, kb_name):
     rows = await naptha.node.query_table(
-        table_name=knowledge_base_name,   
+        table_name=kb_name,   
         columns="*",
         condition=None,
         order_by=None,
@@ -310,7 +310,7 @@ async def list_kb_content(naptha, knowledge_base_name):
     table = Table(
         box=box.ROUNDED,
         show_lines=True,
-        title=f"Knowledge Base Content: {knowledge_base_name}",
+        title=f"Knowledge Base Content: {kb_name}",
         title_style="bold cyan",
         header_style="bold blue",
         row_styles=["", "dim"]  # Alternating row styles
@@ -336,6 +336,47 @@ async def list_kb_content(naptha, knowledge_base_name):
     console.print()
     console.print(table)
     console.print(f"\n[green]Total rows:[/green] {len(rows['rows'])}")
+
+async def add_data_to_kb(naptha, kb_name, data, user_id=None, kb_node_url="http://localhost:7001"):
+    try:
+        # Parse the data string into a dictionary
+        data_dict = {}
+        # Split by spaces, but keep quoted strings together
+        parts = shlex.split(data)
+        
+        for part in parts:
+            if '=' in part:
+                key, value = part.split('=', 1)
+                # Remove quotes if they exist
+                value = value.strip("'\"")
+                data_dict[key] = value
+
+        data_dict = [data_dict]
+        
+        kb_run_input = {
+            "consumer_id": user_id,
+            "inputs": {
+                "mode": "add_data",
+                "data": json.dumps(data_dict)
+            },
+            "kb_deployment": {
+                "name": kb_name,
+                "module": {
+                    "name": kb_name
+                },
+                "kb_node_url": kb_node_url
+            }
+        }
+
+        kb_run = await naptha.node.run_kb_and_poll(kb_run_input)
+        console = Console()
+        console.print(f"\n[green]Successfully added data to knowledge base:[/green] {kb_name}")
+        console.print(kb_run)
+        
+    except Exception as e:
+        console = Console()
+        console.print(f"\n[red]Error adding data to knowledge base:[/red] {str(e)}")
+
 
 async def create_agent(naptha, agent_config):
     print(f"Agent Config: {agent_config}")
@@ -384,8 +425,8 @@ async def create(
         module_type = "agent"
     elif "environment:" in module_name:
         module_type = "environment"
-    elif "knowledge_base:" in module_name:
-        module_type = "knowledge_base"
+    elif "kb:" in module_name:
+        module_type = "kb"
     else:
         module_type = "agent"
 
@@ -453,19 +494,19 @@ async def create(
         result = await naptha.node.create(module_type, environment_deployment)
         print(f"Environment creation result: {result}")
 
-    elif module_type == "knowledge_base":
+    elif module_type == "kb":
         print("Creating Knowledge Base...")
-        if "knowledge_base:" in module_name:
+        if "kb:" in module_name:
             module_name = module_name.split(":")[1]
         else:
             module_name = module_name
 
-        knowledge_base_deployment = KBDeployment(
+        kb_deployment = KBDeployment(
             name=module_name,
             module={"name": module_name},
             kb_node_url=os.getenv("NODE_URL")
         )
-        result = await naptha.node.create(module_type, knowledge_base_deployment)
+        result = await naptha.node.create(module_type, kb_deployment)
         print(f"Knowledge Base creation result: {result}")
 
 async def run(
@@ -490,8 +531,8 @@ async def run(
         module_type = "agent" 
     elif "environment:" in module_name:
         module_type = "environment"
-    elif "knowledge_base:" in module_name:
-        module_type = "knowledge_base"
+    elif "kb:" in module_name:
+        module_type = "kb"
     else:
         module_type = "agent" # Default to agent for backwards compatibility
 
@@ -564,20 +605,20 @@ async def run(
         )
         environment_run = await naptha.node.run_environment_and_poll(environment_run_input)
 
-    elif module_type == "knowledge_base":
+    elif module_type == "kb":
         print("Running Knowledge Base...")
-        knowledge_base_deployment = KBDeployment(
+        kb_deployment = KBDeployment(
             name=module_name, 
             module={"name": module_name}, 
             kb_node_url=os.getenv("NODE_URL")
         )
 
-        knowledge_base_run_input = KBRunInput(
+        kb_run_input = KBRunInput(
             consumer_id=user_id,
             inputs=parameters,
-            kb_deployment=knowledge_base_deployment
+            kb_deployment=kb_deployment
         )
-        knowledge_base_run = await naptha.node.run_knowledge_base_and_poll(knowledge_base_run_input)
+        kb_run = await naptha.node.run_kb_and_poll(kb_run_input)
 
 async def read_storage(naptha, hash_or_name, output_dir='./files', ipfs=False):
     """Read from storage, IPFS, or IPNS."""
@@ -650,9 +691,12 @@ async def main():
     personas_parser.add_argument('-d', '--delete', action='store_true', help='Delete a persona')
 
     # Knowledge base commands
-    knowledge_bases_parser = subparsers.add_parser("kbs", help="List available knowledge bases.")
-    knowledge_bases_parser.add_argument('knowledge_base_name', nargs='?', help='Optional knowledge base name')
-    knowledge_bases_parser.add_argument('-l', '--list', action='store_true', help='List content in a knowledge base')
+    kbs_parser = subparsers.add_parser("kbs", help="List available knowledge bases.")
+    kbs_parser.add_argument('kb_name', nargs='?', help='Optional knowledge base name')
+    kbs_parser.add_argument('-l', '--list', action='store_true', help='List content in a knowledge base')
+    kbs_parser.add_argument('-a', '--add', action='store_true', help='Add data to a knowledge base')
+    kbs_parser.add_argument('-d', '--data', type=str, help='Data to add to a knowledge base', required=False)
+    kbs_parser.add_argument('-n', '--kb_node_url', type=str, help='Knowledge base node URL', default="http://localhost:7001")
 
     # Create command
     create_parser = subparsers.add_parser("create", help="Execute create command.")
@@ -835,18 +879,22 @@ async def main():
                 else:
                     print("Invalid command.")
             elif args.command == "kbs":
-                print(f"Knowledge base name: {args.knowledge_base_name}")
-                if not args.knowledge_base_name:
-                    await list_knowledge_bases(naptha)
-                # get knowledge base by name
-                elif len(args.knowledge_base_name.split()) == 1 and not args.list:
-                    await list_knowledge_bases(naptha, args.knowledge_base_name)
+                if not args.kb_name:
+                    # List all knowledge bases
+                    await list_kbs(naptha)
                 elif args.list:
-                    await list_kb_content(naptha, args.knowledge_base_name)
-                elif args.delete and len(args.knowledge_base_name.split()) == 1:
-                    await naptha.hub.delete_knowledge_base(args.knowledge_base_name)
+                    # List content of specific knowledge base
+                    await list_kb_content(naptha, args.kb_name)
+                elif args.add:
+                    # Add data to knowledge base
+                    if not args.data:
+                        console = Console()
+                        console.print("[red]Data is required for add command.[/red]")
+                        return
+                    await add_data_to_kb(naptha, args.kb_name, args.data, user_id=user_id, kb_node_url=args.kb_node_url)
                 else:
-                    print("Invalid command.")
+                    # Show specific knowledge base info
+                    await list_kbs(naptha, args.kb_name)
 
             elif args.command == "create":
                 await create(naptha, args.module, args.agent_modules, args.worker_node_urls, args.environment_modules, args.environment_node_urls)
