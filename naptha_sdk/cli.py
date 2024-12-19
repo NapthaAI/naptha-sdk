@@ -95,22 +95,24 @@ async def list_agents(naptha):
     # Define columns with specific formatting
     table.add_column("Name", justify="left", style="green")
     table.add_column("ID", justify="left")
-    table.add_column("Type", justify="left")
-    table.add_column("Version", justify="center")
     table.add_column("Author", justify="left")
-    table.add_column("Parameters", justify="left", max_width=30)
     table.add_column("Description", justify="left", max_width=50)
+    table.add_column("Parameters", justify="left", max_width=30)
+    table.add_column("Module URL", justify="left", max_width=30)
+    table.add_column("Module Type", justify="left")
+    table.add_column("Module Version", justify="center")
 
     # Add rows
     for agent in agents:
         table.add_row(
             agent['name'],
             agent['id'],
-            agent['type'],
-            agent['version'],
             agent['author'],
+            agent['description'],
             str(agent['parameters']),
-            agent['description']
+            agent['module_url'],
+            agent['module_type'],
+            agent['module_version'],
         )
 
     # Print table and summary
@@ -139,22 +141,24 @@ async def list_orchestrators(naptha):
     # Define columns with specific formatting
     table.add_column("Name", justify="left", style="green")
     table.add_column("ID", justify="left")
-    table.add_column("Type", justify="left")
-    table.add_column("Version", justify="center")
     table.add_column("Author", justify="left")
-    table.add_column("Parameters", justify="left", max_width=30)
     table.add_column("Description", justify="left", max_width=50)
+    table.add_column("Parameters", justify="left", max_width=30)
+    table.add_column("Module URL", justify="left", max_width=30)
+    table.add_column("Module Type", justify="left")
+    table.add_column("Module Version", justify="center")
 
     # Add rows
     for orchestrator in orchestrators:
         table.add_row(
             orchestrator['name'],
             orchestrator['id'],
-            orchestrator['type'],
-            orchestrator['version'],
             orchestrator['author'],
+            orchestrator['description'],
             str(orchestrator['parameters']),
-            orchestrator['description']
+            orchestrator['module_url'],
+            orchestrator['module_type'],
+            orchestrator['module_version'],
         )
 
     # Print table and summary
@@ -183,22 +187,24 @@ async def list_environments(naptha):
     # Define columns with specific formatting
     table.add_column("Name", justify="left", style="green")
     table.add_column("ID", justify="left")
-    table.add_column("Type", justify="left")
-    table.add_column("Version", justify="center")
     table.add_column("Author", justify="left")
-    table.add_column("Parameters", justify="left", max_width=30)
     table.add_column("Description", justify="left", max_width=50)
+    table.add_column("Parameters", justify="left", max_width=30)
+    table.add_column("Module URL", justify="left", max_width=30)
+    table.add_column("Module Type", justify="left")
+    table.add_column("Module Version", justify="center")
 
     # Add rows
     for environment in environments:
         table.add_row(
             environment['name'],
             environment['id'],
-            environment['type'],
-            environment['version'],
             environment['author'],
+            environment['description'],
             str(environment['parameters']),
-            environment['description']
+            environment['module_url'],
+            environment['module_type'],
+            environment['module_version'],
         )
 
     # Print table and summary
@@ -227,20 +233,20 @@ async def list_personas(naptha):
     # Define columns with specific formatting
     table.add_column("Name", justify="left", style="green")
     table.add_column("ID", justify="left")
-    table.add_column("Version", justify="center")
     table.add_column("Author", justify="left")
     table.add_column("Description", justify="left", max_width=50)
-    table.add_column("URL", justify="left", max_width=40)
+    table.add_column("Module URL", justify="left", max_width=40)
+    table.add_column("Module Version", justify="center")
 
     # Add rows
     for persona in personas:
         table.add_row(
             persona['name'],
             persona['id'],
-            persona['version'],
             persona['author'],
             persona['description'],
-            persona['url']
+            persona['module_url'],
+            persona['module_version'],
         )
 
     # Print table and summary
@@ -321,7 +327,7 @@ async def list_kb_content(naptha, kb_name):
     # Add headers
     headers = list(rows['rows'][0].keys())
     for header in headers:
-        if header.lower() in ['id', 'url']:
+        if header.lower() in ['id', 'module_url']:
             table.add_column(header, justify="left", max_width=40)
         elif header.lower() in ['title', 'name']:
             table.add_column(header, justify="left", style="green", max_width=40)
@@ -553,7 +559,7 @@ async def run(
             name=module_name, 
             module={"name": module_name}, 
             worker_node_url=worker_node_urls[0], 
-            agent_config=AgentConfig(persona_module={"url": personas_urls})
+            agent_config=AgentConfig(persona_module={"module_url": personas_urls})
         )
 
         agent_run_input = {
@@ -772,7 +778,7 @@ async def main():
                             key, value = param.split('=')
                             parsed_params[key] = value
 
-                        required_metadata = ['description', 'parameters', 'url', 'type', 'version']
+                        required_metadata = ['description', 'parameters', 'module_url']
                         missing_metadata = [param for param in required_metadata if param not in parsed_params]
                         if missing_metadata:
                             print(f"Missing required metadata: {', '.join(missing_metadata)}")
@@ -784,9 +790,10 @@ async def main():
                             "description": parsed_params['description'],
                             "parameters": parsed_params['parameters'],
                             "author": naptha.hub.user_id,
-                            "url": parsed_params['url'],
-                            "type": parsed_params['type'],
-                            "version": parsed_params['version'],
+                            "module_url": parsed_params['module_url'],
+                            "module_type": parsed_params.get('module_type', 'package'),
+                            "module_version": parsed_params.get('module_version', '0.1'),
+                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py')
                         }
                         await create_agent(naptha, agent_config)
                 else:
@@ -804,7 +811,7 @@ async def main():
                             key, value = param.split('=')
                             parsed_params[key] = value
 
-                        required_metadata = ['description', 'parameters', 'url', 'type', 'version']
+                        required_metadata = ['description', 'parameters', 'module_url']
                         if not all(param in parsed_params for param in required_metadata):
                             print(f"Missing one or more of the following required metadata: {required_metadata}")
                             return
@@ -815,9 +822,10 @@ async def main():
                             "description": parsed_params['description'],
                             "parameters": parsed_params['parameters'],
                             "author": naptha.hub.user_id,
-                            "url": parsed_params['url'],
-                            "type": parsed_params['type'],
-                            "version": parsed_params['version'],
+                            "module_url": parsed_params['module_url'],
+                            "module_type": parsed_params.get('module_type', 'package'),
+                            "module_version": parsed_params.get('module_version', '0.1'),
+                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py')
                         }
                         await create_orchestrator(naptha, orchestrator_config)
                 else:
@@ -835,7 +843,7 @@ async def main():
                             key, value = param.split('=')
                             parsed_params[key] = value
 
-                        required_metadata = ['description', 'parameters', 'url', 'type', 'version']
+                        required_metadata = ['description', 'parameters', 'module_url']
                         if not all(param in parsed_params for param in required_metadata):
                             print(f"Missing one or more of the following required metadata: {required_metadata}")
                             return
@@ -846,9 +854,10 @@ async def main():
                             "description": parsed_params['description'],
                             "parameters": parsed_params['parameters'],
                             "author": naptha.hub.user_id,
-                            "url": parsed_params['url'],
-                            "type": parsed_params['type'],
-                            "version": parsed_params['version'],
+                            "module_url": parsed_params['module_url'],
+                            "module_type": parsed_params.get('module_type', 'package'),
+                            "module_version": parsed_params.get('module_version', '0.1'),
+                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py')
                         }
                         await create_environment(naptha, environment_config)
                 else:
@@ -866,7 +875,7 @@ async def main():
                             key, value = param.split('=')
                             parsed_params[key] = value
 
-                        required_metadata = ['description', 'parameters', 'url', 'type', 'version']
+                        required_metadata = ['description', 'module_url']
                         if not all(param in parsed_params for param in required_metadata):
                             print(f"Missing one or more of the following required metadata: {required_metadata}")
                             return
@@ -876,8 +885,8 @@ async def main():
                             "name": args.persona_name,
                             "description": parsed_params['description'],
                             "author": naptha.hub.user_id,
-                            "url": parsed_params['url'],
-                            "version": parsed_params['version'],
+                            "module_url": parsed_params['module_url'],
+                            "module_version": parsed_params.get('module_version', '0.1'),
                         }
                         await create_persona(naptha, persona_config)
                 else:

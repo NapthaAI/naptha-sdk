@@ -91,7 +91,7 @@ For each agent, you will see a url where you can check out the code.
 ### Create a New Agent
 
 ```bash
-naptha agents agent_name -p "description='Agent description' parameters='{tool_name: str, tool_input_data: str}' url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg' type='package' version='0.1'" 
+naptha agents agent_name -p "description='Agent description' parameters='{tool_name: str, tool_input_data: str}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
 ```
 
 ### Delete an Agent
@@ -136,7 +136,7 @@ For each orchestrator, you will see a url where you can check out the code.
 ### Create a New Agent Orchestrator
 
 ```bash
-naptha orchestrators orchestrator_name -p "description='Orchestrator description' parameters='{input_parameter_1: str, input_parameter_2: int}' url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg' type='package' version='0.1'" 
+naptha orchestrators orchestrator_name -p "description='Orchestrator description' parameters='{input_parameter_1: str, input_parameter_2: int}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
 ```
 
 ### Delete an Agent Orchestrator
@@ -201,7 +201,7 @@ naptha environments
 ### Create a New Environment Module
 
 ```bash
-naptha environments environment_name -p "description='Environment description' parameters='{input_parameter_1: str, input_parameter_2: int}' url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg' type='package' version='0.1' entrypoint='run.py'" 
+naptha environments environment_name -p "description='Environment description' parameters='{input_parameter_1: str, input_parameter_2: int}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
 ```
 
 ### Delete an Environment Module
@@ -241,7 +241,7 @@ naptha kbs -d kb_name
 ### Create a New Knowledge Base on a Node
 
 ```bash
-naptha create kb:wikipedia_kb --kb_node_urls "http://node.naptha.ai:7001" 
+naptha create kb:wikipedia_kb 
 ```
 
 ### List content in a Knowledge Base
@@ -253,7 +253,7 @@ naptha kbs wikipedia_kb -l
 ### Add to a Knowledge Base
 
 ```bash
-naptha kbs wikipedia_kb -a "url='https://en.wikipedia.org/wiki/Elon_Musk' title='Elon Musk' text='Elon Musk is a billionaire entrepreneur and the CEO of SpaceX and Tesla.'" 
+naptha kbs wikipedia_kb -a "module_url='https://en.wikipedia.org/wiki/Elon_Musk' title='Elon Musk' text='Elon Musk is a billionaire entrepreneur and the CEO of SpaceX and Tesla.'" 
 ```
 
 ### Run a Knowledge Base Module
@@ -277,7 +277,7 @@ For each persona, you will see a url where you can check out the data.
 ### Create a New Persona
 
 ```bash
-naptha personas persona_name -p "description='Persona description' url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg' version='0.1'" 
+naptha personas persona_name -p "description='Persona description' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
 ```
 
 ### Delete a Persona

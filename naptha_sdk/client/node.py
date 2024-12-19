@@ -54,7 +54,7 @@ class Node:
         logger.info(f"Node URL: {node_url}")
 
     async def create(self, module_type: str,
-                     module_request: Union[AgentDeployment, EnvironmentDeployment, OrchestratorDeployment]):
+                     module_request: Union[AgentDeployment, EnvironmentDeployment, KBDeployment, OrchestratorDeployment]):
         """Generic method to create either an agent, orchestrator, or environment.
 
         Args:
@@ -108,7 +108,7 @@ class Node:
         while True:
             run = await getattr(self, f'check_{module_type}_run')(run)
 
-            output = f"{run.status} {getattr(run, f'{module_type}_deployment').module['type']} {getattr(run, f'{module_type}_deployment').module['name']}"
+            output = f"{run.status} {getattr(run, f'{module_type}_deployment').module['module_type']} {getattr(run, f'{module_type}_deployment').module['name']}"
             print(output)
 
             results = run.results
