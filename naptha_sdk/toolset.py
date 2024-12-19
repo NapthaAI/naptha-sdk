@@ -1,9 +1,12 @@
 from naptha_sdk.client.node import Node, HTTP_TIMEOUT
 from naptha_sdk.schemas import ToolsetLoadRepoRequest, ToolsetListRequest, ToolsetList, SetToolsetRequest, ToolsetDetails, ToolsetRequest, ToolRunRequest, ToolRunResult
 from naptha_sdk.utils import get_logger
+
+from naptha_sdk.client.hub import Hub
 from httpx import HTTPStatusError, RemoteProtocolError
 import httpx
 import json
+import os
 
 logger = get_logger(__name__)
 
@@ -34,6 +37,42 @@ class Toolset:
                 )
                 load_repo_response.raise_for_status()
                 logger.info(f"Loaded repo {repo_url} into toolset {toolset_name}")
+        except (HTTPStatusError, RemoteProtocolError) as e:
+            print(f"Failed to load repo: {e}")
+            raise
+        except Exception as e:
+            print(f"Error loading repo: {e}")
+            raise
+
+    async def load_or_add_tool_repo_to_toolset_from_hub(self, toolset_name, toolset_hub_id):
+        logger.info(f"Loading tool repo to toolset on worker node {self.worker_node_url}")
+
+        # pull toolset from hub
+        hub_url = os.getenv("HUB_URL", None)
+        
+        hub = Hub(hub_url)
+        await hub.connect()
+        toolset = await hub.get_toolset(toolset_hub_id)
+        
+
+        print(f"toolset: {toolset}")
+
+        toolset_url = toolset["source_url"]
+
+        try:
+            request = ToolsetLoadRepoRequest(
+                agent_id=self.agent_id,
+                repo_url=toolset_url, 
+                toolset_name=toolset_name)
+
+
+            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+                load_repo_response = await client.post(
+                    f"{self.worker_node_url}/tool/add_tool_repo_to_toolset",
+                    json=request.model_dump()
+                )
+                load_repo_response.raise_for_status()
+                logger.info(f"Loaded repo {toolset_hub_id} from Hub into toolset {toolset_name}")
         except (HTTPStatusError, RemoteProtocolError) as e:
             print(f"Failed to load repo: {e}")
             raise

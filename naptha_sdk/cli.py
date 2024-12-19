@@ -763,14 +763,19 @@ async def main():
     # Toolset commands
     toolset_parser = subparsers.add_parser("toolset", help="List available tools.")
     toolset_parser.add_argument('-n', '--node_url', help='Node URL to connect to', type=str, default=None)
-
-    #i'm here and trying to figure out where the url comes from elsewhere in this file, because i don't think it should be a required argument
     toolset_parser.add_argument(
         '-lr', '--load_repo', 
         help='Load a github repository into the given toolset. will create a new toolset if not present.', 
         type=str, 
         nargs=2, 
         metavar=('toolset_name', 'repo_url')
+    )
+    toolset_parser.add_argument(
+        '-lh', '--load_hub',
+        help='Load a hub-registered tool into the given toolset. will create a new toolset if not present.',
+        type=str,
+        nargs=2,
+        metavar=('toolset_name', 'toolset_hub_id')
     )
     # set toolset
     toolset_parser.add_argument('-s', '--set_toolset', help='Set a toolset by name', type=str)
@@ -1016,6 +1021,9 @@ async def main():
                 if hasattr(args, 'load_repo') and args.load_repo is not None:
                     toolset_name, repo_url = args.load_repo
                     await toolset.load_or_add_tool_repo_to_toolset(toolset_name, repo_url)
+                elif hasattr(args, 'load_hub') and args.load_hub is not None:
+                    toolset_name, toolset_hub_id = args.load_hub
+                    await toolset.load_or_add_tool_repo_to_toolset_from_hub(toolset_name, toolset_hub_id)
                 elif hasattr(args, 'set_toolset') and args.set_toolset is not None:
                     toolset_name = args.set_toolset
                     await toolset.set_toolset(toolset_name)

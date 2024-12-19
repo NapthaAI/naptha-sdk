@@ -20,6 +20,7 @@ class Hub:
     """The Hub class is the entry point into Naptha AI Hub."""
 
     def __init__(self, hub_url, public_key=None, *args, **kwargs):
+        print("HUB URL: ", hub_url)
         self.hub_url = hub_url
         self.public_key = public_key
         self.ns = "naptha"
@@ -256,6 +257,42 @@ class Hub:
             return await self.surrealdb.create("agent", agent_config)
         else:
             return await self.surrealdb.update(agent_config.pop('id'), agent_config)
+
+    ############ TOOLSETS
+    async def list_toolsets(self, toolset_name=None) -> List:
+        if not toolset_name:
+            toolsets = await self.surrealdb.query("SELECT * FROM toolset;")
+            return toolsets[0]['result']
+        else:
+            toolset = await self.surrealdb.query("SELECT * FROM toolset WHERE name=$toolset_name;", {"toolset_name": toolset_name})
+            return toolset[0]['result']
+
+    async def get_toolset(self, toolset_id: str) -> Optional[Dict]:
+        print(f"Getting toolset: {toolset_id}")
+        toolsets = await self.surrealdb.query(f"SELECT * FROM agent;")
+        print(toolsets)
+        return toolsets[0]
+
+    async def create_toolset(self, toolset_config: Dict) -> Tuple[bool, Optional[Dict]]:
+        if not toolset_config.get('id'):
+            return await self.surrealdb.create("toolset", toolset_config)
+        else:
+            return await self.surrealdb.create(toolset_config.pop('id'), toolset_config)
+
+    async def update_toolset(self, toolset_config: Dict) -> Tuple[bool, Optional[Dict]]:
+        return await self.surrealdb.update("toolset", toolset_config)
+
+    async def delete_toolset(self, toolset_id: str) -> Tuple[bool, Optional[Dict]]:
+        if ":" not in toolset_id:
+            toolset_id = f"toolset:{toolset_id}".strip()
+        print(f"Deleting toolset: {toolset_id}")
+        success = await self.surrealdb.delete(toolset_id)
+        if success:
+            print("Deleted toolset")
+        else:
+            print("Failed to delete toolset")
+        return success
+    ########## END TOOLSETS
 
     async def close(self):
         """Close the database connection"""
