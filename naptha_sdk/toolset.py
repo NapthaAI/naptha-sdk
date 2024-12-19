@@ -49,15 +49,20 @@ class Toolset:
 
         # pull toolset from hub
         hub_url = os.getenv("HUB_URL", None)
+        print(f"hub_url: {hub_url}")
         
         hub = Hub(hub_url)
         await hub.connect()
+
+        # TODO: fix this
+        await hub.surrealdb.signin({"user": "root", "pass": "root"})
         toolset = await hub.get_toolset(toolset_hub_id)
         
 
-        print(f"toolset: {toolset}")
+        print(f"toolset: {toolset['result'][0]["source_url"]}")
+        print(type(toolset['result'][0]["source_url"]))
 
-        toolset_url = toolset["source_url"]
+        toolset_url = toolset['result'][0]["source_url"]
 
         try:
             request = ToolsetLoadRepoRequest(
