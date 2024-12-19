@@ -51,3 +51,22 @@ def generate_public_key(private_key_hex):
 def is_hex(string):
     # Check if the string matches the pattern for a hexadecimal key
     return bool(re.match(r'^[0-9a-fA-F]{64}$', string))
+
+def sign_consumer_id(consumer_id, private_key):
+    if private_key and is_hex(private_key):
+        private_key_hex = private_key
+    elif private_key and os.path.isfile(private_key):
+        with open(private_key) as file:
+            content = file.read().strip()
+            
+            if content:
+                private_key_hex = content
+            else:
+                return None
+    else:
+        return None
+    
+    private_key = SigningKey.from_string(bytes.fromhex(private_key_hex), curve=SECP256k1)
+    consumer_id_bytes = consumer_id.encode('utf-8')
+    signature = private_key.sign(consumer_id_bytes)
+    return signature.hex()

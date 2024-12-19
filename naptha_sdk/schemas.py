@@ -218,6 +218,7 @@ class AgentRunInput(BaseModel):
     environment_deployments: Optional[List[EnvironmentDeployment]] = None
     kb_deployment: Optional[KBDeployment] = None
     orchestrator_runs: List['OrchestratorRun'] = []
+    signature: str
 
     def model_dict(self):
         model_dict = self.dict()

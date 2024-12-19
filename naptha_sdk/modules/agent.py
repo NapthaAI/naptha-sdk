@@ -1,8 +1,10 @@
+from dotenv import load_dotenv
 from naptha_sdk.client.node import NodeClient
 from naptha_sdk.schemas import AgentRunInput
 from naptha_sdk.utils import get_logger
 
 logger = get_logger(__name__)
+load_dotenv(override=True)
 
 class Agent:
     def __init__(self, 
