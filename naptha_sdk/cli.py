@@ -282,9 +282,9 @@ async def list_kbs(naptha, kb_name=None):
             kb['id'],
             kb['author'],
             kb['description'],
-            kb['url'],
-            kb['type'],
-            kb['version']
+            kb['module_url'],
+            kb['module_type'],
+            kb['module_version']
         )
 
     # Print table and summary
