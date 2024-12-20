@@ -556,6 +556,8 @@ async def run(
 
     if module_type == "agent":
         print("Running Agent...")
+        if isinstance(kb_node_urls, str):
+            kb_node_urls = [kb_node_urls]
 
         kb_deployments = []
         for kb_node_url in kb_node_urls:
