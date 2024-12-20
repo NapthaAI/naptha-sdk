@@ -26,6 +26,17 @@ jobs:
         with:
           python-version: "3.x"
 
+      # Add these steps before building
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+
+      - name: Update version in pyproject.toml
+        run: |
+          sed -i "s/version = \".*\"/version = \"$VERSION\"/" pyproject.toml
+          # If you use setup.py instead, use this:
+          # sed -i "s/version=['\"].*['\"]/version='$VERSION'/" setup.py
+
       - name: Build release distributions
         run: |
           # NOTE: put your own distribution build steps here.
