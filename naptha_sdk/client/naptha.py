@@ -21,6 +21,7 @@ logger = get_logger(__name__)
 load_dotenv(override=True)
 
 class Naptha:
+
     """The entry point into Naptha."""
 
     def __init__(self):
