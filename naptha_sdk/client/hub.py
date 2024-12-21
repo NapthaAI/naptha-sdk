@@ -126,6 +126,14 @@ class Hub:
             agent = await self.surrealdb.query("SELECT * FROM agent WHERE id=$agent_name;", {"agent_name": agent_name})
             return agent[0]['result']
 
+    async def list_tools(self, tool_name=None) -> List:
+        if not tool_name:
+            tools = await self.surrealdb.query("SELECT * FROM tool;")
+            return tools[0]['result']
+        else:
+            tool = await self.surrealdb.query("SELECT * FROM tool WHERE name=$tool_name;", {"tool_name": tool_name})
+            return tool[0]['result']
+
     async def list_orchestrators(self, orchestrator_name=None) -> List:
         if not orchestrator_name:
             orchestrators = await self.surrealdb.query("SELECT * FROM orchestrator;")
@@ -171,6 +179,17 @@ class Hub:
             print("Deleted agent")
         else:
             print("Failed to delete agent")
+        return success
+
+    async def delete_tool(self, tool_id: str) -> Tuple[bool, Optional[Dict]]:
+        if ":" not in tool_id:
+            tool_id = f"tool:{tool_id}".strip()
+        print(f"Deleting tool: {tool_id}")
+        success = await self.surrealdb.delete(tool_id)
+        if success:
+            print("Deleted tool")
+        else:
+            print("Failed to delete tool")
         return success
 
     async def delete_orchestrator(self, orchestrator_id: str) -> Tuple[bool, Optional[Dict]]:
@@ -223,6 +242,12 @@ class Hub:
         else:
             return await self.surrealdb.create(agent_config.pop('id'), agent_config)
 
+    async def create_tool(self, tool_config: Dict) -> Tuple[bool, Optional[Dict]]:
+        if not tool_config.get('id'):
+            return await self.surrealdb.create("tool", tool_config)
+        else:
+            return await self.surrealdb.create(tool_config.pop('id'), tool_config)
+
     async def create_orchestrator(self, orchestrator_config: Dict) -> Tuple[bool, Optional[Dict]]:
         if not orchestrator_config.get('id'):
             return await self.surrealdb.create("orchestrator", orchestrator_config)
@@ -256,42 +281,6 @@ class Hub:
             return await self.surrealdb.create("agent", agent_config)
         else:
             return await self.surrealdb.update(agent_config.pop('id'), agent_config)
-
-    ############ TOOLSETS
-    async def list_toolsets(self, toolset_name=None) -> List:
-        if not toolset_name:
-            toolsets = await self.surrealdb.query("SELECT * FROM toolset;")
-            return toolsets[0]['result']
-        else:
-            toolset = await self.surrealdb.query("SELECT * FROM toolset WHERE name=$toolset_name;", {"toolset_name": toolset_name})
-            return toolset[0]['result']
-
-    async def get_toolset(self, toolset_id: str) -> Optional[Dict]:
-        print(f"Getting toolset: {toolset_id}")
-        toolsets = await self.surrealdb.query(f"SELECT * FROM toolset;")
-        print(toolsets)
-        return toolsets[0]
-
-    async def create_toolset(self, toolset_config: Dict) -> Tuple[bool, Optional[Dict]]:
-        if not toolset_config.get('id'):
-            return await self.surrealdb.create("toolset", toolset_config)
-        else:
-            return await self.surrealdb.create(toolset_config.pop('id'), toolset_config)
-
-    async def update_toolset(self, toolset_config: Dict) -> Tuple[bool, Optional[Dict]]:
-        return await self.surrealdb.update("toolset", toolset_config)
-
-    async def delete_toolset(self, toolset_id: str) -> Tuple[bool, Optional[Dict]]:
-        if ":" not in toolset_id:
-            toolset_id = f"toolset:{toolset_id}".strip()
-        print(f"Deleting toolset: {toolset_id}")
-        success = await self.surrealdb.delete(toolset_id)
-        if success:
-            print("Deleted toolset")
-        else:
-            print("Failed to delete toolset")
-        return success
-    ########## END TOOLSETS
 
     async def close(self):
         """Close the database connection"""
