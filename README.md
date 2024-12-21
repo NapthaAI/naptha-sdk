@@ -133,6 +133,34 @@ naptha orchestrators
 
 For each orchestrator, you will see a url where you can check out the code.
 
+## Tools
+
+### Interact with the Tool Hub
+
+You can also use the CLI to explore available tools that you can use with agents:
+
+```bash
+naptha tools
+```
+
+### Create a New Tool
+
+```bash
+naptha tools tool_name -p "description='Tool description' parameters='{input_parameter_1: str, input_parameter_2: int}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
+```
+
+### Delete a Tool
+
+```bash
+naptha tools -d tool_name
+```
+
+### Run a Tool
+
+```bash
+naptha run tool:wikipedia_tool -p "query='Socrates'"
+```
+
 ### Create a New Agent Orchestrator
 
 ```bash
