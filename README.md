@@ -133,6 +133,34 @@ naptha orchestrators
 
 For each orchestrator, you will see a url where you can check out the code.
 
+## Tools
+
+### Interact with the Tool Hub
+
+You can also use the CLI to explore available tools that you can use with agents:
+
+```bash
+naptha tools
+```
+
+### Create a New Tool
+
+```bash
+naptha tools tool_name -p "description='Tool description' parameters='{input_parameter_1: str, input_parameter_2: int}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
+```
+
+### Delete a Tool
+
+```bash
+naptha tools -d tool_name
+```
+
+### Run a Tool
+
+```bash
+naptha run tool:wikipedia_tool -p "query='Socrates'"
+```
+
 ### Create a New Agent Orchestrator
 
 ```bash
@@ -297,16 +325,6 @@ naptha personas persona_name -p "description='Persona description' module_url='i
 ```bash
 naptha personas -d persona_name
 ```
-
-## Toolsets
-Specially marked repos can be ingested directly to be made available to agents. These repos are loaded onto the active node and ran there.
-
-* load from hub: `naptha toolset -lh test toolset:test_toolset`
-* load from repo: `naptha toolset -lr test https://github.com/C0deMunk33/test_toolset`
-* list toolsets: `naptha toolset`
-* set toolset: `naptha toolset -s test`
-* get current toolset: `naptha toolset -g`
-* Run test function: `naptha toolset -r test add a=1,b=2`
 
 ## Inference 
 

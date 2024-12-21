@@ -127,6 +127,52 @@ async def list_agents(naptha):
     console.print(table)
     console.print(f"\n[green]Total agents:[/green] {len(agents)}")
 
+async def list_tools(naptha):
+    tools = await naptha.hub.list_tools()
+    
+    if not tools:
+        console = Console()
+        console.print("[red]No tools found.[/red]")
+        return
+
+    console = Console()
+    table = Table(
+        box=box.ROUNDED,
+        show_lines=True,
+        title="Available Tools", 
+        title_style="bold cyan",
+        header_style="bold blue",
+        row_styles=["", "dim"]  # Alternating row styles
+    )
+
+    # Define columns with specific formatting
+    table.add_column("Name", justify="left", style="green")
+    table.add_column("ID", justify="left")
+    table.add_column("Author", justify="left")
+    table.add_column("Description", justify="left", max_width=50)
+    table.add_column("Parameters", justify="left", max_width=30)
+    table.add_column("Module URL", justify="left", max_width=30)
+    table.add_column("Module Type", justify="left")
+    table.add_column("Module Version", justify="center")
+
+    # Add rows
+    for tool in tools:
+        table.add_row(
+            tool['name'],
+            tool['id'],
+            tool['author'],
+            tool['description'],
+            str(tool['parameters']),
+            tool['module_url'],
+            tool['module_type'],
+            tool['module_version'],
+        )
+
+    # Print table and summary
+    console.print()
+    console.print(table)
+    console.print(f"\n[green]Total tools:[/green] {len(tools)}")
+
 async def list_orchestrators(naptha):
     orchestrators = await naptha.hub.list_orchestrators()
     
@@ -713,6 +759,12 @@ async def main():
     personas_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
     personas_parser.add_argument('-d', '--delete', action='store_true', help='Delete a persona')
 
+    # Tool commands
+    tools_parser = subparsers.add_parser("tools", help="List available tools.")
+    tools_parser.add_argument('tool_name', nargs='?', help='Optional tool name')
+    tools_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
+    tools_parser.add_argument('-d', '--delete', action='store_true', help='Delete a tool')
+
     # Knowledge base commands
     kbs_parser = subparsers.add_parser("kbs", help="List available knowledge bases.")
     kbs_parser.add_argument('kb_name', nargs='?', help='Optional knowledge base name')
@@ -760,36 +812,6 @@ async def main():
     write_storage_parser.add_argument("--publish_to_ipns", help="Publish to IPNS", action="store_true")
     write_storage_parser.add_argument("--update_ipns_name", help="Update IPNS name")
 
-    # Toolset commands
-    toolset_parser = subparsers.add_parser("toolset", help="List available tools.")
-    toolset_parser.add_argument('-n', '--node_url', help='Node URL to connect to', type=str, default=None)
-    toolset_parser.add_argument(
-        '-lr', '--load_repo', 
-        help='Load a github repository into the given toolset. will create a new toolset if not present.', 
-        type=str, 
-        nargs=2, 
-        metavar=('toolset_name', 'repo_url')
-    )
-    toolset_parser.add_argument(
-        '-lh', '--load_hub',
-        help='Load a hub-registered tool into the given toolset. will create a new toolset if not present.',
-        type=str,
-        nargs=2,
-        metavar=('toolset_name', 'toolset_hub_id')
-    )
-    # set toolset
-    toolset_parser.add_argument('-s', '--set_toolset', help='Set a toolset by name', type=str)
-    # get current toolset
-    toolset_parser.add_argument('-g', '--current_toolset', help='Get the current toolset', action='store_true')
-    # run tool
-    toolset_parser.add_argument('-r', '--run_tool', 
-        help='Run a tool. Provide the toolset name, tool name, and parameters in "key=value" format.', 
-        type=str,
-        nargs=3,
-        metavar=('toolset_name', 'tool_name', 'params')
-    )
-
-
     # Signup command
     signup_parser = subparsers.add_parser("signup", help="Sign up a new user.")
 
@@ -801,7 +823,7 @@ async def main():
         args = _parse_str_args(args)
         if args.command == "signup":
             _, user_id = await user_setup_flow(hub_url, public_key)
-        elif args.command in ["nodes", "agents", "orchestrators", "environments", "personas", "kbs", "toolset", "run", "inference", "read_storage", "write_storage", "publish", "create"]:
+        elif args.command in ["nodes", "agents", "orchestrators", "environments", "personas", "kbs", "tools", "run", "inference", "read_storage", "write_storage", "publish", "create"]:
             if not naptha.hub.is_authenticated:
                 if not hub_username or not hub_password:
                     print(
@@ -908,6 +930,38 @@ async def main():
                         await create_environment(naptha, environment_config)
                 else:
                     print("Invalid command.")
+            elif args.command == "tools":
+                if not args.tool_name:
+                    await list_tools(naptha)
+                elif args.delete and len(args.tool_name.split()) == 1:
+                    await naptha.hub.delete_tool(args.tool_name)
+                elif len(args.tool_name.split()) == 1:
+                    if hasattr(args, 'metadata') and args.metadata is not None:
+                        params = shlex.split(args.metadata)
+                        parsed_params = {}
+                        for param in params:
+                            key, value = param.split('=')
+                            parsed_params[key] = value
+
+                        required_metadata = ['description', 'parameters', 'module_url']
+                        if not all(param in parsed_params for param in required_metadata):
+                            print(f"Missing one or more of the following required metadata: {required_metadata}")
+                            return
+                            
+                        tool_config = {
+                            "id": f"tool:{args.tool_name}",
+                            "name": args.tool_name,
+                            "description": parsed_params['description'],
+                            "parameters": parsed_params['parameters'],
+                            "author": naptha.hub.user_id,
+                            "module_url": parsed_params['module_url'],
+                            "module_type": parsed_params.get('module_type', 'package'),
+                            "module_version": parsed_params.get('module_version', '0.1'),
+                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py')
+                        }
+                        await naptha.hub.create_tool(tool_config)
+                else:
+                    print("Invalid command.")
             elif args.command == "personas":
                 if not args.persona_name:
                     await list_personas(naptha)
@@ -1009,39 +1063,7 @@ async def main():
                 await read_storage(naptha, args.agent_run_id, args.output_dir, args.ipfs)
             elif args.command == "write_storage":
                 await write_storage(naptha, args.storage_input, args.ipfs, args.publish_to_ipns, args.update_ipns_name)
-            elif args.command == "toolset":
 
-                toolset_node_url = naptha.node.node_url
-                agent_id = "1" # TODO: get agent id from user
-                if hasattr(args, 'node_url') and args.node_url is not None:
-                    toolset_node_url = args.node_url
-                
-                toolset = Toolset(toolset_node_url, agent_id)
-
-                if hasattr(args, 'load_repo') and args.load_repo is not None:
-                    toolset_name, repo_url = args.load_repo
-                    await toolset.load_or_add_tool_repo_to_toolset(toolset_name, repo_url)
-                elif hasattr(args, 'load_hub') and args.load_hub is not None:
-                    toolset_name, toolset_hub_id = args.load_hub
-                    await toolset.load_or_add_tool_repo_to_toolset_from_hub(toolset_name, toolset_hub_id)
-                elif hasattr(args, 'set_toolset') and args.set_toolset is not None:
-                    toolset_name = args.set_toolset
-                    await toolset.set_toolset(toolset_name)
-                elif hasattr(args, 'current_toolset') and args.current_toolset:
-                    await toolset.get_current_toolset()
-                elif hasattr(args, 'run_tool') and args.run_tool is not None:
-                    toolset_name, tool_name, params = args.run_tool
-                    # parse params p1=v1,p2=v2 to dict
-                    params = dict(param.split('=') for param in params.split(','))
-                    
-                    await toolset.run_tool(toolset_name, tool_name, params)
-                else:
-                    # Get toolset list
-                    result = await toolset.get_toolset_list()
-                    print("~"*50)
-                    print(result)
-                    print("~"*50)
-            
                 
             elif args.command == "publish":
                 await naptha.publish_agents()
