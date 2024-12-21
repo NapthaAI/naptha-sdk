@@ -671,6 +671,34 @@ class Node:
             response.raise_for_status()
             return response.json()
 
+    async def vector_search(
+        self,
+        table_name: str,
+        vector_column: str,
+        query_vector: List[float],
+        columns: Optional[List[str]] = None,
+        top_k: int = 5,
+        include_similarity: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Perform a pgvector-based similarity search on a table's vector column.
+        """
+        payload = {
+            "table_name": table_name,
+            "vector_column": vector_column,
+            "query_vector": query_vector,
+            "columns": columns or ["text"],
+            "top_k": top_k,
+            "include_similarity": include_similarity,
+        }
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+            response = await client.post(
+                f"{self.node_url}/local-db/vector_search",
+                json=payload
+            )
+            response.raise_for_status()
+            return response.json()
+
     async def connect_ws(self, action: str):
         client_id = str(uuid.uuid4())
         full_url = f"{self.node_url}/ws/{action}/{client_id}"
