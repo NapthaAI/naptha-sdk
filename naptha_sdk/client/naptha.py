@@ -67,17 +67,19 @@ class Naptha:
             else:
                 logger.error(f"Failed to create agent {name}")
 
-    async def publish_agents(self):
+    async def publish_agents(self, is_module = False):
         logger.info(f"Publishing Agent Packages...")
         start_time = time.time()
 
-        path = Path.cwd() / AGENT_DIR
-        agents = [item.name for item in path.iterdir() if item.is_dir()]
+        if(is_module):
+            agents = [Path.cwd().name]
+        else:
+            path = Path.cwd() / AGENT_DIR
+            agents = [item.name for item in path.iterdir() if item.is_dir()]
 
-        agent = agents[0]
         for agent in agents:
-            git_add_commit(agent)
-            _, response = await publish_ipfs_package(agent)
+            git_add_commit(agent, is_module)
+            _, response = await publish_ipfs_package(agent, is_module)
             logger.info(f"Published Agent: {agent}")
         
             # Register agent with hub
@@ -91,7 +93,8 @@ class Naptha:
                     "author": self.hub.user_id,
                     "module_url": f'ipfs://{response["ipfs_hash"]}',
                     "module_type": "package",
-                    "module_version": "0.1"
+                    "module_version": "0.1",
+                    "module_entrypoint": "run.py"
                 }
                 logger.info(f"Registering Agent {agent_config}")
                 agent = await self.hub.create_or_update_agent(agent_config)
