@@ -32,6 +32,9 @@ class AgentConfig(BaseModel):
     persona_module: Optional[Union[Dict, BaseModel]] = None
     system_prompt: Optional[Union[Dict, BaseModel]] = None
 
+class ToolConfig(BaseModel):
+    config_name: Optional[str] = None
+
 class OrchestratorConfig(BaseModel):
     config_name: Optional[str] = "orchestrator_config"
     max_rounds: Optional[int] = 5
@@ -60,6 +63,13 @@ class AgentDeployment(BaseModel):
     agent_config: Optional[AgentConfig] = AgentConfig()
     data_generation_config: Optional[DataGenerationConfig] = DataGenerationConfig()
     kb_deployments: Optional[List[KBDeployment]] = None
+
+class ToolDeployment(BaseModel):
+    name: Optional[str] = "tool_deployment"
+    module: Optional[Dict] = None
+    tool_node_url: Optional[str] = None
+    tool_config: Optional[ToolConfig] = ToolConfig()
+    data_generation_config: Optional[DataGenerationConfig] = DataGenerationConfig()
 
 class EnvironmentDeployment(BaseModel):
     name: Optional[str] = "environment_deployment"
@@ -145,7 +155,27 @@ class AgentRunInput(BaseModel):
     environment_deployments: Optional[List[EnvironmentDeployment]] = None
     kb_deployment: Optional[KBDeployment] = None
     orchestrator_runs: List['OrchestratorRun'] = []
-    
+class ToolRunInput(BaseModel):
+    consumer_id: str
+    inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
+    tool_deployment: ToolDeployment
+    agent_run: Optional[AgentRun] = None
+
+class ToolRun(BaseModel):
+    consumer_id: str
+    inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
+    tool_deployment: ToolDeployment
+    agent_run: Optional[AgentRun] = None
+    status: str = "pending"
+    error: bool = False
+    id: Optional[str] = None
+    results: list[str] = []
+    error_message: Optional[str] = None
+    created_time: Optional[str] = None
+    start_processing_time: Optional[str] = None
+    completed_time: Optional[str] = None
+    duration: Optional[float] = None
+
 class OrchestratorRunInput(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
