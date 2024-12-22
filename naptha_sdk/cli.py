@@ -22,7 +22,7 @@ from tabulate import tabulate
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.schemas import AgentConfig, AgentDeployment, ChatCompletionRequest, EnvironmentDeployment, \
-    OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, KBDeployment, KBRunInput
+    OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, KBDeployment, KBRunInput, ToolDeployment, ToolRunInput
 from naptha_sdk.user import get_public_key
 
 load_dotenv(override=True)
@@ -591,6 +591,8 @@ async def run(
         module_type = "orchestrator"
     elif "agent:" in module_name:
         module_type = "agent" 
+    elif "tool:" in module_name:
+        module_type = "tool"
     elif "environment:" in module_name:
         module_type = "environment"
     elif "kb:" in module_name:
@@ -633,6 +635,21 @@ async def run(
         print(f"Agent run input: {agent_run_input}")
 
         agent_run = await naptha.node.run_agent_and_poll(agent_run_input)
+
+    elif module_type == "tool":
+        print("Running Tool...")
+        tool_deployment = ToolDeployment(
+            name=module_name,
+            module={"name": module_name},
+            tool_node_url=worker_node_urls[0] if isinstance(worker_node_urls, list) else worker_node_urls
+        )
+
+        tool_run_input = ToolRunInput(
+            consumer_id=user_id,
+            inputs=parameters,
+            tool_deployment=tool_deployment
+        )
+        tool_run = await naptha.node.run_tool_and_poll(tool_run_input)
 
     elif module_type == "orchestrator":
         print("Running Orchestrator...")
