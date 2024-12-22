@@ -8,7 +8,7 @@ def load_llm_configs(llm_configs_path):
         llm_configs = json.loads(file.read())
     return [LLMConfig(**config) for config in llm_configs]
 
-def load_agent_deployments(agent_deployments_path, load_persona_data=True, load_persona_schema=True):
+def load_agent_deployments(agent_deployments_path, load_persona_data=False, load_persona_schema=False):
     with open(agent_deployments_path, "r") as file:
         agent_deployments = json.loads(file.read())
 

@@ -53,6 +53,12 @@ class DataGenerationConfig(BaseModel):
     save_inputs_location: Optional[str] = None
     default_filename: Optional[str] = None
 
+class ToolDeployment(BaseModel):
+    name: Optional[str] = "tool_deployment"
+    module: Optional[Dict] = None
+    tool_node_url: Optional[str] = None
+    tool_config: Optional[ToolConfig] = None
+    data_generation_config: Optional[DataGenerationConfig] = None
 
 class KBDeployment(BaseModel):
     name: Optional[str] = "kb_deployment"
@@ -66,14 +72,8 @@ class AgentDeployment(BaseModel):
     worker_node_url: Optional[str] = None
     agent_config: Optional[AgentConfig] = AgentConfig()
     data_generation_config: Optional[DataGenerationConfig] = DataGenerationConfig()
+    tool_deployments: Optional[List[ToolDeployment]] = None
     kb_deployments: Optional[List[KBDeployment]] = None
-
-class ToolDeployment(BaseModel):
-    name: Optional[str] = "tool_deployment"
-    module: Optional[Dict] = None
-    tool_node_url: Optional[str] = None
-    tool_config: Optional[ToolConfig] = None
-    data_generation_config: Optional[DataGenerationConfig] = None
 
 class EnvironmentDeployment(BaseModel):
     name: Optional[str] = "environment_deployment"
@@ -120,6 +120,7 @@ class AgentRun(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
     agent_deployment: AgentDeployment
+    tool_deployments: Optional[List[ToolDeployment]] = None
     environment_deployments: Optional[List[EnvironmentDeployment]] = None
     orchestrator_runs: List['OrchestratorRun'] = []
     status: str = "pending"
@@ -156,6 +157,7 @@ class AgentRunInput(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
     agent_deployment: AgentDeployment
+    tool_deployments: Optional[List[ToolDeployment]] = None
     environment_deployments: Optional[List[EnvironmentDeployment]] = None
     kb_deployment: Optional[KBDeployment] = None
     orchestrator_runs: List['OrchestratorRun'] = []
