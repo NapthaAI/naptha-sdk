@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 from naptha_sdk.package_manager import load_persona
-from naptha_sdk.schemas import AgentDeployment, EnvironmentDeployment, LLMConfig, OrchestratorDeployment
+from naptha_sdk.schemas import AgentDeployment, EnvironmentDeployment, LLMConfig, OrchestratorDeployment, ToolDeployment
 
 def load_llm_configs(llm_configs_path):
     with open(llm_configs_path, "r") as file:
@@ -27,6 +27,21 @@ def load_agent_deployments(agent_deployments_path, load_persona_data=True, load_
             deployment["agent_config"]["persona_module"]["data"] = input_schema(**persona_data)
 
     return [AgentDeployment(**deployment) for deployment in agent_deployments]
+
+def load_tool_deployments(tool_deployments_path):
+    with open(tool_deployments_path, "r") as file:
+        tool_deployments = json.loads(file.read())
+
+    for deployment in tool_deployments:
+        # Load LLM config if present
+        if "tool_config" in deployment and "llm_config" in deployment["tool_config"]:
+            config_name = deployment["tool_config"]["llm_config"]["config_name"]
+            config_path = f"{Path.cwd().name}/configs/llm_configs.json"
+            llm_configs = load_llm_configs(config_path)
+            llm_config = next(config for config in llm_configs if config.config_name == config_name)
+            deployment["tool_config"]["llm_config"] = llm_config
+
+    return [ToolDeployment(**deployment) for deployment in tool_deployments]
 
 def load_orchestrator_deployments(orchestrator_deployments_path):
     with open(orchestrator_deployments_path, "r") as file:
