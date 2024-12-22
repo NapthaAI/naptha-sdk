@@ -13,6 +13,7 @@ class LLMClientType(str, Enum):
     VLLM = "vllm"
     LITELLM = "litellm"
     OLLAMA = "ollama"
+    STABILITY = "stability"
 
 class LLMConfig(BaseModel):
     config_name: Optional[str] = "llm_config"
@@ -34,6 +35,7 @@ class AgentConfig(BaseModel):
 
 class ToolConfig(BaseModel):
     config_name: Optional[str] = None
+    llm_config: Optional[LLMConfig] = LLMConfig()
 
 class OrchestratorConfig(BaseModel):
     config_name: Optional[str] = "orchestrator_config"
@@ -49,6 +51,8 @@ class DataGenerationConfig(BaseModel):
     save_outputs_path: Optional[str] = None
     save_inputs: Optional[bool] = None
     save_inputs_location: Optional[str] = None
+    default_filename: Optional[str] = None
+
 
 class KBDeployment(BaseModel):
     name: Optional[str] = "kb_deployment"
@@ -155,6 +159,7 @@ class AgentRunInput(BaseModel):
     environment_deployments: Optional[List[EnvironmentDeployment]] = None
     kb_deployment: Optional[KBDeployment] = None
     orchestrator_runs: List['OrchestratorRun'] = []
+
 class ToolRunInput(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
@@ -254,49 +259,3 @@ class ChatCompletionRequest(BaseModel):
     presence_penalty: Optional[float] = None
     stop: Optional[List[str]] = None
     stream: Optional[bool] = None
-################# Toolset stuff####################
-class ToolDetails(BaseModel):
-    id: str
-    name: str
-    description: str
-    source_url: str
-
-class ToolsetDetails(BaseModel):
-    id: str
-    name: str
-    description: str
-    tools: List[ToolDetails]
-
-class ToolsetRequest(BaseModel):
-    agent_id: str
-
-class SetToolsetRequest(BaseModel):
-    agent_id: str
-    toolset_name: str
-
-class ToolsetListRequest(BaseModel):
-    agent_id: str
-
-class ToolsetLoadRepoRequest(BaseModel):
-    agent_id: str
-    repo_url: str
-    toolset_name: str
-
-class ToolsetList(BaseModel):
-    toolsets: List[ToolsetDetails]
-
-class ToolRunRequest(BaseModel):
-    tool_run_id: str
-    agent_id: str
-    toolset_id: str
-    tool_id: str
-    params: Optional[Dict] = None
-
-class ToolRunResult(BaseModel):
-    agent_id: str
-    toolset_id: str
-    tool_run_id: str
-    tool_id: str
-    params: Optional[Dict] = None
-    result: str
-################# End Toolset stuff####################
