@@ -20,6 +20,14 @@ def load_agent_deployments(agent_deployments_path, load_persona_data=False, load
         llm_config = next(config for config in llm_configs if config.config_name == config_name)
         deployment["agent_config"]["llm_config"] = llm_config   
 
+        # Load tool deployments if they exist
+        if "tool_deployments" in deployment and deployment["tool_deployments"]:
+            tool_deployment_name = deployment["tool_deployments"][0]["name"]
+            tool_deployment_path = f"{Path.cwd().name}/configs/tool_deployments.json"
+            tool_deployments = load_tool_deployments(tool_deployment_path)
+            tool_deployment = next(deployment for deployment in tool_deployments if deployment.name == tool_deployment_name)
+            deployment["tool_deployments"][0] = tool_deployment
+
         if load_persona_data:
             persona_data, input_schema = load_persona(deployment["agent_config"]["persona_module"]["module_url"])
             deployment["agent_config"]["persona_module"]["data"] = persona_data
