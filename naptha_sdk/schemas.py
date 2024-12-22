@@ -260,6 +260,7 @@ class OrchestratorRunInput(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
     deployment: OrchestratorDeployment
+    signature: str
 
     def model_dict(self):
         model_dict = self.dict()
@@ -286,6 +287,7 @@ class EnvironmentRunInput(BaseModel):
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
     deployment: EnvironmentDeployment
     orchestrator_runs: List['OrchestratorRun'] = []
+    signature: str
 
     def model_dict(self):
         model_dict = self.dict()
@@ -312,6 +314,7 @@ class KBRunInput(BaseModel):
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
     deployment: KBDeployment
     orchestrator_runs: List['OrchestratorRun'] = []
+    signature: str
 
     def model_dict(self):
         model_dict = self.dict()

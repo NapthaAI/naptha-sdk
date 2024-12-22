@@ -693,7 +693,7 @@ async def run(
             'consumer_id': user['id'],
             "inputs": parameters,
             "deployment": agent_deployment.model_dump(),
-            "signature": sign_consumer_id(user_id, os.getenv("PRIVATE_KEY"))
+            "signature": sign_consumer_id(user['id'], os.getenv("PRIVATE_KEY"))
         }
         print(f"Agent run input: {agent_run_input}")
 
@@ -726,7 +726,8 @@ async def run(
         orchestrator_run_input = OrchestratorRunInput(
             consumer_id=user['id'],
             inputs=parameters,
-            deployment=orchestrator_deployment
+            deployment=orchestrator_deployment,
+            signature=sign_consumer_id(user['id'], os.getenv("PRIVATE_KEY"))
         )
         orchestrator_run = await naptha.node.run_orchestrator_and_poll(orchestrator_run_input)
 
@@ -742,6 +743,7 @@ async def run(
             inputs=parameters,
             deployment=environment_deployment,
             consumer_id=user['id'],
+            signature=sign_consumer_id(user['id'], os.getenv("PRIVATE_KEY"))
         )
         environment_run = await naptha.node.run_environment_and_poll(environment_run_input)
 
@@ -756,7 +758,8 @@ async def run(
         kb_run_input = KBRunInput(
             consumer_id=user['id'],
             inputs=parameters,
-            deployment=kb_deployment
+            deployment=kb_deployment,
+            signature=sign_consumer_id(user['id'], os.getenv("PRIVATE_KEY"))
         )
         kb_run = await naptha.node.run_kb_and_poll(kb_run_input)
 
