@@ -19,7 +19,7 @@ from httpx import HTTPStatusError, RemoteProtocolError
 from naptha_sdk.client import grpc_server_pb2
 from naptha_sdk.client import grpc_server_pb2_grpc
 from naptha_sdk.schemas import AgentRun, AgentRunInput, ChatCompletionRequest, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, \
-    OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, KBDeployment, KBRunInput, KBRun
+    OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, KBDeployment, KBRunInput, KBRun, ToolRunInput, ToolRun
 from naptha_sdk.utils import get_logger
 
 logger = get_logger(__name__)
@@ -92,12 +92,12 @@ class Node:
             print(f"An unexpected error occurred: {e}")
             raise
 
-    async def _run_and_poll(self, run_input: Union[AgentRunInput, EnvironmentRunInput, OrchestratorRunInput, KBRunInput, Dict], module_type: str) -> Union[AgentRun, EnvironmentRun, OrchestratorRun, KBRun, Dict]:
-        """Generic method to run and poll either an agent, orchestrator, or environment.
+    async def _run_and_poll(self, run_input: Union[AgentRunInput, EnvironmentRunInput, OrchestratorRunInput, KBRunInput, ToolRunInput, Dict], module_type: str) -> Union[AgentRun, EnvironmentRun, OrchestratorRun, KBRun, ToolRun, Dict]:
+        """Generic method to run and poll either an agent, orchestrator, environment, tool or KB.
         
         Args:
-            run_input: Either AgentRunInput, OrchestratorRunInput, environment dict or KBDeployment
-            module_type: Either 'agent', 'orchestrator', 'environment' or 'kb'
+            run_input: Either AgentRunInput, OrchestratorRunInput, EnvironmentRunInput, KBRunInput, ToolRunInput or Dict
+            module_type: Either 'agent', 'orchestrator', 'environment', 'tool' or 'kb'
         """
         print(f"Run input: {run_input}")
         print(f"Module type: {module_type}")
@@ -134,6 +134,10 @@ class Node:
     async def run_agent_and_poll(self, agent_run_input: AgentRunInput) -> AgentRun:
         """Run an agent and poll for results until completion."""
         return await self._run_and_poll(agent_run_input, 'agent')
+
+    async def run_tool_and_poll(self, tool_run_input: ToolRunInput) -> ToolRun:
+        """Run a tool and poll for results until completion."""
+        return await self._run_and_poll(tool_run_input, 'tool')
 
     async def run_orchestrator_and_poll(self, orchestrator_run_input: OrchestratorRunInput) -> OrchestratorRun:
         """Run an orchestrator and poll for results until completion."""
@@ -254,13 +258,13 @@ class Node:
         else:
             return await self.register_user_http(user_input)
 
-    async def _run_module(self, run_input: Union[AgentRunInput, OrchestratorRunInput, EnvironmentRunInput], module_type: str) -> Union[AgentRun, OrchestratorRun, EnvironmentRun]:
+    async def _run_module(self, run_input: Union[AgentRunInput, OrchestratorRunInput, EnvironmentRunInput, ToolRunInput], module_type: str) -> Union[AgentRun, OrchestratorRun, EnvironmentRun, ToolRun]:
         """
-        Generic method to run either an agent, orchestrator, or environment on a node
+        Generic method to run either an agent, orchestrator, environment, or tool on a node
         
         Args:
-            run_input: Either AgentRunInput, OrchestratorRunInput, or EnvironmentRunInput
-            module_type: Either 'agent', 'orchestrator', or 'environment'
+            run_input: Either AgentRunInput, OrchestratorRunInput, EnvironmentRunInput, or ToolRunInput
+            module_type: Either 'agent', 'orchestrator', 'environment', or 'tool'
         """
         print(f"Running {module_type}...")
         print(f"Run input: {run_input}")
@@ -273,7 +277,8 @@ class Node:
             'agent': AgentRunInput,
             'orchestrator': OrchestratorRunInput,
             'environment': EnvironmentRunInput,
-            'kb': KBRunInput
+            'kb': KBRunInput,
+            'tool': ToolRunInput
         }[module_type]
         
         if isinstance(run_input, dict):
@@ -297,7 +302,8 @@ class Node:
                     'agent': AgentRun,
                     'orchestrator': OrchestratorRun,
                     'environment': EnvironmentRun,
-                    'kb': KBRun
+                    'kb': KBRun,
+                    'tool': ToolRun
                 }[module_type]
                 return return_class(**json.loads(response.text))
         except HTTPStatusError as e:
@@ -423,6 +429,10 @@ class Node:
     async def run_agent(self, agent_run_input: AgentRunInput) -> AgentRun:
         """Run an agent on a node"""
         return await self._run_module(agent_run_input, 'agent')
+
+    async def run_tool(self, tool_run_input: ToolRunInput) -> ToolRun:
+        """Run a tool on a node"""
+        return await self._run_module(tool_run_input, 'tool')
 
     async def run_orchestrator(self, orchestrator_run_input: OrchestratorRunInput) -> OrchestratorRun:
         """Run an orchestrator on a node"""
