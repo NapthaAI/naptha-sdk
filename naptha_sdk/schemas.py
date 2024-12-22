@@ -168,6 +168,13 @@ class ToolRunInput(BaseModel):
     tool_deployment: ToolDeployment
     agent_run: Optional[AgentRun] = None
 
+    def model_dict(self):
+        if isinstance(self.inputs, BaseModel):
+            self.inputs = self.inputs.model_dump()
+        model_dict = self.dict()
+        model_dict['inputs'] = self.inputs
+        return model_dict
+
 class ToolRun(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None

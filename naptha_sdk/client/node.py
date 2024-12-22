@@ -137,6 +137,7 @@ class Node:
 
     async def run_tool_and_poll(self, tool_run_input: ToolRunInput) -> ToolRun:
         """Run a tool and poll for results until completion."""
+
         return await self._run_and_poll(tool_run_input, 'tool')
 
     async def run_orchestrator_and_poll(self, orchestrator_run_input: OrchestratorRunInput) -> OrchestratorRun:
@@ -165,7 +166,6 @@ class Node:
             )
             response = await stub.CheckUser(request)
 
-            print("BBBBB", response)
             return MessageToDict(response, preserving_proto_field_name=True)
 
     async def check_user_http(self, user_input: Dict[str, Any]) -> Dict[str, Any]:
@@ -292,7 +292,7 @@ class Node:
                 }
                 response = await client.post(
                     endpoint,
-                    json=run_input.model_dump(),
+                    json=run_input.model_dict(),
                     headers=headers
                 )
                 response.raise_for_status()
