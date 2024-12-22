@@ -448,14 +448,14 @@ class Node:
 
     async def check_run(
         self, 
-        module_run: Union[AgentRun, OrchestratorRun, EnvironmentRun, KBRun], 
+        module_run: Union[AgentRun, OrchestratorRun, EnvironmentRun, KBRun, ToolRun], 
         module_type: str
-    ) -> Union[AgentRun, OrchestratorRun, EnvironmentRun, KBRun]:
+    ) -> Union[AgentRun, OrchestratorRun, EnvironmentRun, KBRun, ToolRun]:
         """Generic method to check the status of a module run.
         
         Args:
-            module_run: Either AgentRun, OrchestratorRun, EnvironmentRun, or KBRun object
-            module_type: Either 'agent', 'orchestrator', 'environment', or 'kb'
+            module_run: Either AgentRun, OrchestratorRun, EnvironmentRun, ToolRun or KBRun object
+            module_type: Either 'agent', 'orchestrator', 'environment', 'tool' or 'kb'
         """
         try:
             async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
@@ -469,7 +469,8 @@ class Node:
                 'agent': AgentRun,
                 'orchestrator': OrchestratorRun,
                 'environment': EnvironmentRun,
-                'kb': KBRun
+                'kb': KBRun,
+                'tool': ToolRun
             }[module_type]
             return return_class(**json.loads(response.text))
         except HTTPStatusError as e:
@@ -482,6 +483,9 @@ class Node:
     # Update existing methods to use the new generic one
     async def check_agent_run(self, agent_run: AgentRun) -> AgentRun:
         return await self.check_run(agent_run, 'agent')
+
+    async def check_tool_run(self, tool_run: ToolRun) -> ToolRun:
+        return await self.check_run(tool_run, 'tool')
 
     async def check_orchestrator_run(self, orchestrator_run: OrchestratorRun) -> OrchestratorRun:
         return await self.check_run(orchestrator_run, 'orchestrator')
