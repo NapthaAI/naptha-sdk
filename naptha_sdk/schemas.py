@@ -29,13 +29,13 @@ class AgentModuleType(str, Enum):
 
 class AgentConfig(BaseModel):
     config_name: Optional[str] = "agent_config"
-    llm_config: Optional[LLMConfig] = LLMConfig()
+    llm_config: Optional[LLMConfig] = None
     persona_module: Optional[Union[Dict, BaseModel]] = None
     system_prompt: Optional[Union[Dict, BaseModel]] = None
 
 class ToolConfig(BaseModel):
     config_name: Optional[str] = None
-    llm_config: Optional[LLMConfig] = LLMConfig()
+    llm_config: Optional[LLMConfig] = None
 
 class OrchestratorConfig(BaseModel):
     config_name: Optional[str] = "orchestrator_config"
@@ -72,8 +72,8 @@ class ToolDeployment(BaseModel):
     name: Optional[str] = "tool_deployment"
     module: Optional[Dict] = None
     tool_node_url: Optional[str] = None
-    tool_config: Optional[ToolConfig] = ToolConfig()
-    data_generation_config: Optional[DataGenerationConfig] = DataGenerationConfig()
+    tool_config: Optional[ToolConfig] = None
+    data_generation_config: Optional[DataGenerationConfig] = None
 
 class EnvironmentDeployment(BaseModel):
     name: Optional[str] = "environment_deployment"
