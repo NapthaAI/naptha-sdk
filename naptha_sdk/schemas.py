@@ -162,10 +162,14 @@ class AgentRunInput(BaseModel):
     kb_deployment: Optional[KBDeployment] = None
     orchestrator_runs: List['OrchestratorRun'] = []
 
+    def model_dict(self):
+        model_dict = self.dict()
+        return model_dict
+
 class ToolRunInput(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
-    tool_deployment: ToolDeployment
+    tool_deployment: Union[ToolDeployment, Dict]
     agent_run: Optional[AgentRun] = None
 
     def model_dict(self):
@@ -217,6 +221,10 @@ class EnvironmentRunInput(BaseModel):
     environment_deployment: EnvironmentDeployment
     orchestrator_runs: List['OrchestratorRun'] = []
 
+    def model_dict(self):
+        model_dict = self.dict()
+        return model_dict
+
 class EnvironmentRun(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
@@ -238,6 +246,10 @@ class KBRunInput(BaseModel):
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
     kb_deployment: KBDeployment
     orchestrator_runs: List['OrchestratorRun'] = []
+
+    def model_dict(self):
+        model_dict = self.dict()
+        return model_dict
 
 class KBRun(BaseModel):
     consumer_id: str
