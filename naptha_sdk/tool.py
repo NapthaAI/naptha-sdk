@@ -13,12 +13,15 @@ class Tool:
     ):
         self.tool_deployment = tool_deployment
         print("FFFFF", self.tool_deployment)
+        print("FFFFF1", type(self.tool_deployment))
+
         self.tool_node = Node(self.tool_deployment.tool_node_url)
 
     async def call_tool_func(self, module_run: Union[AgentRun, ToolRunInput]):
         logger.info(f"Running tool on worker node {self.tool_node.node_url}")
 
         print("GGGGG", self.tool_deployment)
+        print("GGGGG2", type(self.tool_deployment))
 
         tool_run_input = ToolRunInput(
             consumer_id=module_run.consumer_id,
