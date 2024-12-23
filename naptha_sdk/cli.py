@@ -638,7 +638,7 @@ async def create(
         naptha,
         module_name,
         agent_modules = None,
-        worker_node_urls = None,
+        worker_nodes = None,
         environment_modules = None,
         environment_node_urls = None
 ):
@@ -660,8 +660,8 @@ async def create(
             AgentDeployment(
                 name=agent_module,
                 module={"name": agent_module},
-                worker_node_url=worker_node_url
-            ) for agent_module, worker_node_url in zip(agent_modules or [], worker_node_urls or [])
+                worker_node=worker_node
+            ) for agent_module, worker_node in zip(agent_modules or [], worker_nodes or [])
         ],
         "environment_deployments": [
             EnvironmentDeployment(
@@ -671,7 +671,7 @@ async def create(
             ) for env_module, env_url in zip(environment_modules or [], environment_node_urls or [])
         ]
     }
-    
+
     # Define deployment configurations for each module type
     deployment_configs = {
         "agent": lambda: AgentDeployment(
@@ -716,7 +716,7 @@ async def run(
     module_name,
     user_id,
     parameters=None, 
-    worker_node_urls="http://localhost:7001",
+    worker_nodes=None,
     tool_node_urls=None,
     environment_node_urls=None,
     kb_node_urls=None,
@@ -771,7 +771,7 @@ async def run(
         agent_deployment = AgentDeployment(
             name=module_name, 
             module={"name": module_name}, 
-            worker_node_url=worker_node_urls[0], 
+            worker_node=worker_nodes[0], 
             agent_config=AgentConfig(persona_module={"module_url": personas_urls}),
             tool_deployments=tool_deployments,
             kb_deployments=kb_deployments,
@@ -805,8 +805,8 @@ async def run(
     elif module_type == "orchestrator":
         print("Running Orchestrator...")
         agent_deployments = []
-        for worker_node_url in worker_node_urls:
-            agent_deployments.append(AgentDeployment(worker_node_url=worker_node_url.strip()))
+        for worker_node in worker_nodes:
+            agent_deployments.append(AgentDeployment(worker_node=worker_node.strip()))
 
         environment_deployments = []
         for environment_node_url in environment_node_urls:
@@ -882,7 +882,7 @@ def _parse_list_arg(args, arg_name, default=None, split_char=','):
 
 def _parse_str_args(args):
     # Parse all list arguments
-    args.worker_node_urls = _parse_list_arg(args, 'worker_node_urls', default=["http://localhost:7001"])
+    args.worker_nodes = _parse_list_arg(args, 'worker_nodes', default=["http://localhost:7001"])
     args.environment_node_urls = _parse_list_arg(args, 'environment_node_urls', default=["http://localhost:7001"])
     args.agent_modules = _parse_list_arg(args, 'agent_modules', default=None)
     args.environment_modules = _parse_list_arg(args, 'environment_modules', default=None)
@@ -958,7 +958,7 @@ async def main():
     create_parser = subparsers.add_parser("create", help="Execute create command.")
     create_parser.add_argument("module", help="Select the module to create")
     create_parser.add_argument("-a", "--agent_modules", help="Agent modules to create")
-    create_parser.add_argument("-n", "--worker_node_urls", help="Agent nodes to take part in orchestrator runs.")
+    create_parser.add_argument("-n", "--worker_nodes", help="Agent nodes to take part in orchestrator runs.")
     create_parser.add_argument("-e", "--environment_modules", help="Environment module to create")
     create_parser.add_argument("-m", "--environment_node_urls", help="Environment nodes to store data during agent runs.")
 
@@ -966,7 +966,7 @@ async def main():
     run_parser = subparsers.add_parser("run", help="Execute run command.")
     run_parser.add_argument("agent", help="Select the agent to run")
     run_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
-    run_parser.add_argument("-n", "--worker_node_urls", help="Worker nodes to take part in agent runs.")
+    run_parser.add_argument("-n", "--worker_nodes", help="Worker nodes to take part in agent runs.")
     run_parser.add_argument("-t", "--tool_node_urls", help="Tool nodes to take part in agent runs.")
     run_parser.add_argument("-e", "--environment_node_urls", help="Environment nodes to store data during agent runs.")
     run_parser.add_argument("-m", "--memory_node_urls", help="memory node URLs", default=["http://localhost:7001"])
@@ -1265,7 +1265,7 @@ async def main():
                     await list_kbs(naptha, args.kb_name)
 
             elif args.command == "create":
-                await create(naptha, args.module, args.agent_modules, args.worker_node_urls, args.environment_modules, args.environment_node_urls)
+                await create(naptha, args.module, args.agent_modules, args.worker_nodes, args.environment_modules, args.environment_node_urls)
             
             elif args.command == "run":
                 if hasattr(args, 'parameters') and args.parameters is not None:
@@ -1280,7 +1280,7 @@ async def main():
                 else:
                     parsed_params = None
                     
-                await run(naptha, args.agent, user_id, parsed_params, args.worker_node_urls, args.tool_node_urls, args.environment_node_urls, args.kb_node_urls, args.file, args.personas_urls)
+                await run(naptha, args.agent, user_id, parsed_params, args.worker_nodes, args.tool_node_urls, args.environment_node_urls, args.kb_node_urls, args.file, args.personas_urls)
             elif args.command == "inference":
                 request = ChatCompletionRequest(
                     messages=[{"role": "user", "content": args.prompt}],
