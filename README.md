@@ -121,6 +121,45 @@ You can also run agents from docker images (if running your own node, make sure 
 naptha run docker_hello_world -p "docker_image=hello-world"
 ```
 
+## Tools
+
+### Interact with the Tool Hub
+
+You can also use the CLI to explore available tools that you can use:
+
+```bash
+naptha tools
+```
+
+For each tool, you will see a url where you can check out the code.
+
+### Create a New Tool
+
+```bash
+naptha tools tool_name -p "description='Tool description' parameters='{tool_input_1: str, tool_input_2: str}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
+```
+
+### Delete a Tool
+
+```bash
+naptha tools -d tool_name
+```
+
+### Run a Tool
+
+Now you've found a node and a tool you'd like to run, so let's run it locally! You can use the commandline tool to connect with the node and run the workflow. 
+
+```bash
+# usage: naptha run <tool_name> -p "<tool args>"
+naptha run tool:generate_image_tool -p "tool_name='generate_image_tool' tool_input_data='A beautiful image of a cat'"
+```
+
+### Run an Agent that interacts with the Tool
+
+```bash
+naptha run agent:generate_image_agent -p "tool_name='generate_image_tool' tool_input_data='A beautiful image of a cat'" --tool_node_urls "http://localhost:7001"
+```
+
 ## Agent Orchestrators
 
 ### Interact with the Agent Orchestrator Hub
@@ -132,34 +171,6 @@ naptha orchestrators
 ```
 
 For each orchestrator, you will see a url where you can check out the code.
-
-## Tools
-
-### Interact with the Tool Hub
-
-You can also use the CLI to explore available tools that you can use with agents:
-
-```bash
-naptha tools
-```
-
-### Create a New Tool
-
-```bash
-naptha tools tool_name -p "description='Tool description' parameters='{input_parameter_1: str, input_parameter_2: int}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
-```
-
-### Delete a Tool
-
-```bash
-naptha tools -d tool_name
-```
-
-### Run a Tool
-
-```bash
-naptha run tool:wikipedia_tool -p "query='Socrates'"
-```
 
 ### Create a New Agent Orchestrator
 

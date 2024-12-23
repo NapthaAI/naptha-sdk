@@ -2,22 +2,17 @@ import argparse
 import asyncio
 from dotenv import load_dotenv
 from naptha_sdk.client.naptha import Naptha
-from naptha_sdk.toolset import Toolset
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.user import get_public_key
 from naptha_sdk.schemas import AgentConfig, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput
 import os
 import shlex
-from textwrap import wrap
 from rich.console import Console
 from rich.table import Table
 from rich import box
-
 import json
-
 import yaml
 from dotenv import load_dotenv
-from tabulate import tabulate
 
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.client.naptha import Naptha
@@ -576,8 +571,9 @@ async def run(
     user_id,
     parameters=None, 
     worker_node_urls="http://localhost:7001",
-    environment_node_urls=["http://localhost:7001"],
-    kb_node_urls=["http://localhost:7001"],
+    tool_node_urls=None,
+    environment_node_urls=None,
+    kb_node_urls=None,
     yaml_file=None, 
     personas_urls=None
 ):   
@@ -614,16 +610,25 @@ async def run(
         if isinstance(kb_node_urls, str):
             kb_node_urls = [kb_node_urls]
 
-        kb_deployments = []
-        for kb_node_url in kb_node_urls:
-            kb_deployments.append(KBDeployment(kb_node_url=kb_node_url))
+        kb_deployments = None
+        if kb_node_urls:
+            kb_deployments = []
+            for kb_node_url in kb_node_urls:
+                kb_deployments.append(KBDeployment(kb_node_url=kb_node_url))
+
+        tool_deployments = None
+        if tool_node_urls:
+            tool_deployments = []
+            for tool_node_url in tool_node_urls:
+                tool_deployments.append(ToolDeployment(tool_node_url=tool_node_url))
 
         agent_deployment = AgentDeployment(
             name=module_name, 
             module={"name": module_name}, 
             worker_node_url=worker_node_urls[0], 
             agent_config=AgentConfig(persona_module={"module_url": personas_urls}),
-            kb_deployments=kb_deployments
+            tool_deployments=tool_deployments,
+            kb_deployments=kb_deployments,
         )
 
         agent_run_input = {
@@ -641,7 +646,7 @@ async def run(
         tool_deployment = ToolDeployment(
             name=module_name,
             module={"name": module_name},
-            tool_node_url=worker_node_urls[0] if isinstance(worker_node_urls, list) else worker_node_urls
+            tool_node_url=tool_node_urls[0] if isinstance(tool_node_urls, list) else tool_node_urls
         )
 
         tool_run_input = ToolRunInput(
@@ -805,6 +810,7 @@ async def main():
     run_parser.add_argument("agent", help="Select the agent to run")
     run_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
     run_parser.add_argument("-n", "--worker_node_urls", help="Worker nodes to take part in agent runs.")
+    run_parser.add_argument("-t", "--tool_node_urls", help="Tool nodes to take part in agent runs.")
     run_parser.add_argument("-e", "--environment_node_urls", help="Environment nodes to store data during agent runs.")
     run_parser.add_argument('-k', '--kb_node_urls', type=str, help='Knowledge base node URLs', default=["http://localhost:7001"])
     run_parser.add_argument("-u", "--personas_urls", help="Personas URLs to install before running the agent")
@@ -1069,7 +1075,7 @@ async def main():
                 else:
                     parsed_params = None
                     
-                await run(naptha, args.agent, user_id, parsed_params, args.worker_node_urls, args.environment_node_urls, args.kb_node_urls, args.file, args.personas_urls)
+                await run(naptha, args.agent, user_id, parsed_params, args.worker_node_urls, args.tool_node_urls, args.environment_node_urls, args.kb_node_urls, args.file, args.personas_urls)
             elif args.command == "inference":
                 request = ChatCompletionRequest(
                     messages=[{"role": "user", "content": args.prompt}],
