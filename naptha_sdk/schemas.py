@@ -199,6 +199,10 @@ class OrchestratorRunInput(BaseModel):
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
     orchestrator_deployment: OrchestratorDeployment
 
+    def model_dict(self):
+        model_dict = self.dict()
+        return model_dict
+
 class OrchestratorRun(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
