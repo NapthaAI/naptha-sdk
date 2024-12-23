@@ -114,6 +114,10 @@ class Hub:
     async def get_node(self, node_id: str) -> Optional[Dict]:
         return await self.surrealdb.select(node_id)
 
+    async def list_servers(self) -> List:
+        servers = await self.surrealdb.query("SELECT * FROM server;")
+        return servers[0]['result']
+
     async def list_nodes(self) -> List:
         nodes = await self.surrealdb.query("SELECT * FROM node;")
         return nodes[0]['result']

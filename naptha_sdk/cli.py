@@ -563,6 +563,43 @@ async def add_data_to_kb(naptha, kb_name, data, user_id=None, kb_node_url="http:
         console = Console()
         console.print(f"\n[red]Error adding data to knowledge base:[/red] {str(e)}")
 
+async def list_servers(naptha):
+    servers = await naptha.hub.list_servers()
+    
+    if not servers:
+        console = Console()
+        console.print("[red]No servers found.[/red]")
+        return
+
+    console = Console()
+    table = Table(
+        box=box.ROUNDED,
+        show_lines=True,
+        title="Available Servers",
+        title_style="bold cyan",
+        header_style="bold blue",
+        row_styles=["", "dim"]  # Alternating row styles
+    )
+
+    # Add columns
+    table.add_column("Name", justify="left", style="green")
+    table.add_column("ID", justify="left")
+    table.add_column("Connection", justify="left")
+    table.add_column("Node ID", justify="left", max_width=30)
+
+    # Add rows
+    for server in servers:
+        table.add_row(
+            server['name'],
+            server['id'],
+            server['connection_string'],
+            server['node_id'][:30] + "..."  # Truncate long node ID
+        )
+
+    # Print table and summary
+    console.print()
+    console.print(table)
+    console.print(f"\n[green]Total servers:[/green] {len(servers)}")
 
 async def create_agent(naptha, agent_config):
     print(f"Agent Config: {agent_config}")
@@ -865,6 +902,7 @@ async def main():
 
     # Node commands
     nodes_parser = subparsers.add_parser("nodes", help="List available nodes.")
+    nodes_parser.add_argument("-s", '--list_servers', action='store_true', help='List servers')
 
     # Agent commands
     agents_parser = subparsers.add_parser("agents", help="List available agents.")
@@ -975,7 +1013,10 @@ async def main():
                 _, _, user_id = await naptha.hub.signin(hub_username, hub_password)
 
             if args.command == "nodes":
-                await list_nodes(naptha)   
+                if not args.list_servers:
+                    await list_nodes(naptha)   
+                else:
+                    await list_servers(naptha)
             elif args.command == "agents":
                 if not args.agent_name:
                     await list_agents(naptha)
