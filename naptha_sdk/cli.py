@@ -660,11 +660,11 @@ async def run(
         print("Running Orchestrator...")
         agent_deployments = []
         for worker_node_url in worker_node_urls:
-            agent_deployments.append(AgentDeployment(worker_node_url=worker_node_url))
+            agent_deployments.append(AgentDeployment(worker_node_url=worker_node_url.strip()))
 
         environment_deployments = []
         for environment_node_url in environment_node_urls:
-            environment_deployments.append(EnvironmentDeployment(environment_node_url=environment_node_url))
+            environment_deployments.append(EnvironmentDeployment(environment_node_url=environment_node_url.strip()))
 
         orchestrator_deployment = OrchestratorDeployment(
             name=module_name, 
