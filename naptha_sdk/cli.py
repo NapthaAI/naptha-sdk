@@ -1,21 +1,23 @@
 import argparse
 import asyncio
-import json
+from dotenv import load_dotenv
+from naptha_sdk.client.naptha import Naptha
+from naptha_sdk.client.hub import user_setup_flow
+from naptha_sdk.user import get_public_key
+from naptha_sdk.schemas import AgentConfig, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput
 import os
 import shlex
-from textwrap import wrap
 from rich.console import Console
 from rich.table import Table
 from rich import box
-
+import json
 import yaml
 from dotenv import load_dotenv
-from tabulate import tabulate
 
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.schemas import AgentConfig, AgentDeployment, ChatCompletionRequest, EnvironmentDeployment, \
-    OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, KBDeployment, KBRunInput
+    OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, KBDeployment, KBRunInput, ToolDeployment, ToolRunInput
 from naptha_sdk.user import get_public_key
 
 load_dotenv(override=True)
@@ -119,6 +121,52 @@ async def list_agents(naptha):
     console.print()
     console.print(table)
     console.print(f"\n[green]Total agents:[/green] {len(agents)}")
+
+async def list_tools(naptha):
+    tools = await naptha.hub.list_tools()
+    
+    if not tools:
+        console = Console()
+        console.print("[red]No tools found.[/red]")
+        return
+
+    console = Console()
+    table = Table(
+        box=box.ROUNDED,
+        show_lines=True,
+        title="Available Tools", 
+        title_style="bold cyan",
+        header_style="bold blue",
+        row_styles=["", "dim"]  # Alternating row styles
+    )
+
+    # Define columns with specific formatting
+    table.add_column("Name", justify="left", style="green")
+    table.add_column("ID", justify="left")
+    table.add_column("Author", justify="left")
+    table.add_column("Description", justify="left", max_width=50)
+    table.add_column("Parameters", justify="left", max_width=30)
+    table.add_column("Module URL", justify="left", max_width=30)
+    table.add_column("Module Type", justify="left")
+    table.add_column("Module Version", justify="center")
+
+    # Add rows
+    for tool in tools:
+        table.add_row(
+            tool['name'],
+            tool['id'],
+            tool['author'],
+            tool['description'],
+            str(tool['parameters']),
+            tool['module_url'],
+            tool['module_type'],
+            tool['module_version'],
+        )
+
+    # Print table and summary
+    console.print()
+    console.print(table)
+    console.print(f"\n[green]Total tools:[/green] {len(tools)}")
 
 async def list_orchestrators(naptha):
     orchestrators = await naptha.hub.list_orchestrators()
@@ -523,8 +571,9 @@ async def run(
     user_id,
     parameters=None, 
     worker_node_urls="http://localhost:7001",
-    environment_node_urls=["http://localhost:7001"],
-    kb_node_urls=["http://localhost:7001"],
+    tool_node_urls=None,
+    environment_node_urls=None,
+    kb_node_urls=None,
     yaml_file=None, 
     personas_urls=None
 ):   
@@ -538,6 +587,8 @@ async def run(
         module_type = "orchestrator"
     elif "agent:" in module_name:
         module_type = "agent" 
+    elif "tool:" in module_name:
+        module_type = "tool"
     elif "environment:" in module_name:
         module_type = "environment"
     elif "kb:" in module_name:
@@ -559,16 +610,25 @@ async def run(
         if isinstance(kb_node_urls, str):
             kb_node_urls = [kb_node_urls]
 
-        kb_deployments = []
-        for kb_node_url in kb_node_urls:
-            kb_deployments.append(KBDeployment(kb_node_url=kb_node_url))
+        kb_deployments = None
+        if kb_node_urls:
+            kb_deployments = []
+            for kb_node_url in kb_node_urls:
+                kb_deployments.append(KBDeployment(kb_node_url=kb_node_url))
+
+        tool_deployments = None
+        if tool_node_urls:
+            tool_deployments = []
+            for tool_node_url in tool_node_urls:
+                tool_deployments.append(ToolDeployment(tool_node_url=tool_node_url))
 
         agent_deployment = AgentDeployment(
             name=module_name, 
             module={"name": module_name}, 
             worker_node_url=worker_node_urls[0], 
             agent_config=AgentConfig(persona_module={"module_url": personas_urls}),
-            kb_deployments=kb_deployments
+            tool_deployments=tool_deployments,
+            kb_deployments=kb_deployments,
         )
 
         agent_run_input = {
@@ -580,6 +640,21 @@ async def run(
         print(f"Agent run input: {agent_run_input}")
 
         agent_run = await naptha.node.run_agent_and_poll(agent_run_input)
+
+    elif module_type == "tool":
+        print("Running Tool...")
+        tool_deployment = ToolDeployment(
+            name=module_name,
+            module={"name": module_name},
+            tool_node_url=tool_node_urls[0] if isinstance(tool_node_urls, list) else tool_node_urls
+        )
+
+        tool_run_input = ToolRunInput(
+            consumer_id=user_id,
+            inputs=parameters,
+            tool_deployment=tool_deployment
+        )
+        tool_run = await naptha.node.run_tool_and_poll(tool_run_input)
 
     elif module_type == "orchestrator":
         print("Running Orchestrator...")
@@ -644,7 +719,6 @@ async def read_storage(naptha, hash_or_name, output_dir='./files', ipfs=False):
     except Exception as err:
         print(f"Error: {err}")
 
-
 async def write_storage(naptha, storage_input, ipfs=False, publish_to_ipns=False, update_ipns_name=None):
     """Write to storage, optionally to IPFS and/or IPNS."""
     try:
@@ -707,6 +781,12 @@ async def main():
     personas_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
     personas_parser.add_argument('-d', '--delete', action='store_true', help='Delete a persona')
 
+    # Tool commands
+    tools_parser = subparsers.add_parser("tools", help="List available tools.")
+    tools_parser.add_argument('tool_name', nargs='?', help='Optional tool name')
+    tools_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
+    tools_parser.add_argument('-d', '--delete', action='store_true', help='Delete a tool')
+
     # Knowledge base commands
     kbs_parser = subparsers.add_parser("kbs", help="List available knowledge bases.")
     kbs_parser.add_argument('kb_name', nargs='?', help='Optional knowledge base name')
@@ -730,6 +810,7 @@ async def main():
     run_parser.add_argument("agent", help="Select the agent to run")
     run_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
     run_parser.add_argument("-n", "--worker_node_urls", help="Worker nodes to take part in agent runs.")
+    run_parser.add_argument("-t", "--tool_node_urls", help="Tool nodes to take part in agent runs.")
     run_parser.add_argument("-e", "--environment_node_urls", help="Environment nodes to store data during agent runs.")
     run_parser.add_argument('-k', '--kb_node_urls', type=str, help='Knowledge base node URLs', default=["http://localhost:7001"])
     run_parser.add_argument("-u", "--personas_urls", help="Personas URLs to install before running the agent")
@@ -765,7 +846,7 @@ async def main():
         args = _parse_str_args(args)
         if args.command == "signup":
             _, user_id = await user_setup_flow(hub_url, public_key)
-        elif args.command in ["nodes", "agents", "orchestrators", "environments", "personas", "kbs", "run", "inference", "read_storage", "write_storage", "publish", "create"]:
+        elif args.command in ["nodes", "agents", "orchestrators", "environments", "personas", "kbs", "tools", "run", "inference", "read_storage", "write_storage", "publish", "create"]:
             if not naptha.hub.is_authenticated:
                 if not hub_username or not hub_password:
                     print(
@@ -872,6 +953,38 @@ async def main():
                         await create_environment(naptha, environment_config)
                 else:
                     print("Invalid command.")
+            elif args.command == "tools":
+                if not args.tool_name:
+                    await list_tools(naptha)
+                elif args.delete and len(args.tool_name.split()) == 1:
+                    await naptha.hub.delete_tool(args.tool_name)
+                elif len(args.tool_name.split()) == 1:
+                    if hasattr(args, 'metadata') and args.metadata is not None:
+                        params = shlex.split(args.metadata)
+                        parsed_params = {}
+                        for param in params:
+                            key, value = param.split('=')
+                            parsed_params[key] = value
+
+                        required_metadata = ['description', 'parameters', 'module_url']
+                        if not all(param in parsed_params for param in required_metadata):
+                            print(f"Missing one or more of the following required metadata: {required_metadata}")
+                            return
+                            
+                        tool_config = {
+                            "id": f"tool:{args.tool_name}",
+                            "name": args.tool_name,
+                            "description": parsed_params['description'],
+                            "parameters": parsed_params['parameters'],
+                            "author": naptha.hub.user_id,
+                            "module_url": parsed_params['module_url'],
+                            "module_type": parsed_params.get('module_type', 'package'),
+                            "module_version": parsed_params.get('module_version', '0.1'),
+                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py')
+                        }
+                        await naptha.hub.create_tool(tool_config)
+                else:
+                    print("Invalid command.")
             elif args.command == "personas":
                 if not args.persona_name:
                     await list_personas(naptha)
@@ -962,7 +1075,7 @@ async def main():
                 else:
                     parsed_params = None
                     
-                await run(naptha, args.agent, user_id, parsed_params, args.worker_node_urls, args.environment_node_urls, args.kb_node_urls, args.file, args.personas_urls)
+                await run(naptha, args.agent, user_id, parsed_params, args.worker_node_urls, args.tool_node_urls, args.environment_node_urls, args.kb_node_urls, args.file, args.personas_urls)
             elif args.command == "inference":
                 request = ChatCompletionRequest(
                     messages=[{"role": "user", "content": args.prompt}],
@@ -973,6 +1086,8 @@ async def main():
                 await read_storage(naptha, args.agent_run_id, args.output_dir, args.ipfs)
             elif args.command == "write_storage":
                 await write_storage(naptha, args.storage_input, args.ipfs, args.publish_to_ipns, args.update_ipns_name)
+
+                
             elif args.command == "publish":
                 await naptha.publish_agents()
         else:
