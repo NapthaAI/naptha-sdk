@@ -475,16 +475,8 @@ async def create(
         environment_modules = None,
         environment_node_urls = None
 ):
-    if "orchestrator:" in module_name:
-        module_type = "orchestrator"
-    elif "agent:" in module_name:
-        module_type = "agent"
-    elif "environment:" in module_name:
-        module_type = "environment"
-    elif "kb:" in module_name:
-        module_type = "kb"
-    else:
-        module_type = "agent"
+    module_type = module_name.split(":")[0] if ":" in module_name else "agent"
+    module_name = module_name.split(":")[-1]  # Remove prefix if exists
 
     user = await naptha.node.check_user(user_input={"public_key": naptha.hub.public_key})
 
@@ -495,75 +487,62 @@ async def create(
         user = await naptha.node.register_user(user_input=user)
         print(f"User registered: {user}.")
 
-    if agent_modules:
-        aux_agent_deployments = []
-        for agent_module, worker_node_url in zip(agent_modules, worker_node_urls):
-            aux_agent_deployments.append(AgentDeployment(
+    # Create auxiliary deployments if needed
+    aux_deployments = {
+        "agent_deployments": [
+            AgentDeployment(
                 name=agent_module,
                 module={"name": agent_module},
                 worker_node_url=worker_node_url
-            ))
-
-    if environment_modules:
-        aux_environment_deployments = []
-        for environment_module, environment_node_url in zip(environment_modules, environment_node_urls):
-            aux_environment_deployments.append(EnvironmentDeployment(
-                name=environment_module,
-                module={"name": environment_module},
-                environment_node_url=environment_node_url
-            ))
-
-    if module_type == "agent":
-        print("Creating Agent...")
-        agent_deployment = AgentDeployment(
+            ) for agent_module, worker_node_url in zip(agent_modules or [], worker_node_urls or [])
+        ],
+        "environment_deployments": [
+            EnvironmentDeployment(
+                name=env_module,
+                module={"name": env_module},
+                environment_node_url=env_url
+            ) for env_module, env_url in zip(environment_modules or [], environment_node_urls or [])
+        ]
+    }
+    
+    # Define deployment configurations for each module type
+    deployment_configs = {
+        "agent": lambda: AgentDeployment(
+            name=module_name,
+            module={"name": module_name}
+        ),
+        "tool": lambda: ToolDeployment(
             name=module_name,
             module={"name": module_name},
-        )
-        result = await naptha.node.create(module_type, agent_deployment)
-        print(f"Agent creation result: {result}")
-
-    elif module_type == "orchestrator":
-        print("Creating Orchestrator...")
-        orchestrator_deployment = OrchestratorDeployment(
+            tool_node_url=os.getenv("NODE_URL")
+        ),
+        "orchestrator": lambda: OrchestratorDeployment(
             name=module_name,
             module={"name": module_name},
             orchestrator_node_url=os.getenv("NODE_URL"),
-            agent_deployments=aux_agent_deployments,
-            environment_deployments=aux_environment_deployments
-        )
-        result = await naptha.node.create(module_type, orchestrator_deployment)
-        print(f"Orchestrator creation result: {result}")
-
-    elif module_type == "environment":
-        print("Creating Environment...")
-        if not environment_node_urls:
-            environment_node_urls = ["http://localhost:7001"]
-        elif isinstance(environment_node_urls, str):
-            environment_node_urls = [environment_node_urls]
-
-        environment_deployment = EnvironmentDeployment(
+            **aux_deployments
+        ),
+        "environment": lambda: EnvironmentDeployment(
             name=module_name,
             module={"name": module_name},
-            environment_node_url=environment_node_urls[0]
-        )
-
-        result = await naptha.node.create(module_type, environment_deployment)
-        print(f"Environment creation result: {result}")
-
-    elif module_type == "kb":
-        print("Creating Knowledge Base...")
-        if "kb:" in module_name:
-            module_name = module_name.split(":")[1]
-        else:
-            module_name = module_name
-
-        kb_deployment = KBDeployment(
+            environment_node_url=(environment_node_urls or ["http://localhost:7001"])[0]
+        ),
+        "kb": lambda: KBDeployment(
             name=module_name,
             module={"name": module_name},
             kb_node_url=os.getenv("NODE_URL")
         )
-        result = await naptha.node.create(module_type, kb_deployment)
-        print(f"Knowledge Base creation result: {result}")
+    }
+
+    # Get deployment configuration for module type
+    if module_type not in deployment_configs:
+        raise ValueError(f"Unsupported module type: {module_type}")
+
+    print(f"Creating {module_type.title()}...")
+    deployment = deployment_configs[module_type]()
+    result = await naptha.node.create(module_type, deployment)
+    print(f"{module_type.title()} creation result: {result}")
+
 
 async def run(
     naptha,
