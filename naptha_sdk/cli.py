@@ -729,18 +729,7 @@ async def run(
     if yaml_file:
         parameters = load_yaml_to_dict(yaml_file)
 
-    if "orchestrator:" in module_name:
-        module_type = "orchestrator"
-    elif "agent:" in module_name:
-        module_type = "agent" 
-    elif "tool:" in module_name:
-        module_type = "tool"
-    elif "environment:" in module_name:
-        module_type = "environment"
-    elif "kb:" in module_name:
-        module_type = "kb"
-    else:
-        module_type = "agent" # Default to agent for backwards compatibility
+    module_type = module_name.split(":")[0] if ":" in module_name else "agent" # Default to agent for backwards compatibility
 
     user = await naptha.node.check_user(user_input={"public_key": naptha.hub.public_key})
 
