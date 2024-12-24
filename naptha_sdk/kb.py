@@ -1,14 +1,15 @@
 from naptha_sdk.client.node import Node
-from naptha_sdk.schemas import KBDeployment, KBRunInput, KBRun
-from typing import Any, Dict, List, Union
+from naptha_sdk.schemas import KBDeployment, KBRunInput
+from naptha_sdk.utils import node_to_url
+from typing import Any, Dict
 import logging
-
 logger = logging.getLogger(__name__)
 
 class KnowledgeBase:
     def __init__(self, kb_deployment: KBDeployment):
         self.kb_deployment = kb_deployment
-        self.kb_node = Node(self.kb_deployment.kb_node_url)
+        self.kb_node_url = node_to_url(self.kb_deployment.kb_node)
+        self.kb_node = Node(self.kb_node_url)
         self.table_name = kb_deployment.kb_config['table_name']
         self.schema = kb_deployment.kb_config['schema']
         if "id_column" in kb_deployment.kb_config:
@@ -72,6 +73,6 @@ class KnowledgeBase:
             raise
         
     async def call_kb_func(self, kb_run_input: KBRunInput):
-        logger.info(f"Running knowledge base on knowledge base node {self.kb_node.node_url}")
+        logger.info(f"Running knowledge base on knowledge base node {self.kb_node_url}")
         kb_run = await self.kb_node.run_kb_and_poll(kb_run_input)
         return kb_run

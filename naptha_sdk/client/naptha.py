@@ -14,7 +14,7 @@ from naptha_sdk.package_manager import AGENT_DIR, add_files_to_package, add_depe
 from naptha_sdk.schemas import User
 from naptha_sdk.scrape import scrape_init, scrape_func, scrape_func_params
 from naptha_sdk.user import get_public_key
-from naptha_sdk.utils import get_logger
+from naptha_sdk.utils import get_logger, url_to_node
 
 logger = get_logger(__name__)
 
@@ -28,15 +28,7 @@ class Naptha:
         self.user = User(id=f"user:{self.public_key}")
         self.hub_username = os.getenv("HUB_USERNAME", None)
         self.hub_url = os.getenv("HUB_URL", None)
-        self.node_url = os.getenv("NODE_URL", None)
-        self.routing_url = os.getenv("ROUTING_URL", None)
-        self.indirect_node_id = os.getenv("INDIRECT_NODE_ID", None)
-        self.node = Node(
-            node_url=self.node_url,
-            routing_url=self.routing_url,
-            indirect_node_id=self.indirect_node_id
-        )
-        self.services = Services()
+        self.node = Node(url_to_node(os.getenv("NODE_URL", None)))
         self.hub = Hub(self.hub_url, self.public_key)  
 
     async def __aenter__(self):

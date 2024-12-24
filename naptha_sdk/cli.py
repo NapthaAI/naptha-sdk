@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.user import get_public_key
-from naptha_sdk.schemas import AgentConfig, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput
+from naptha_sdk.schemas import AgentConfig, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, NodeSchema
 import os
 import shlex
 from rich.console import Console
@@ -523,7 +523,7 @@ async def list_kb_content(naptha, kb_name):
     console.print(table)
     console.print(f"\n[green]Total rows:[/green] {len(rows['rows'])}")
 
-async def add_data_to_kb(naptha, kb_name, data, user_id=None, kb_node_url="http://localhost:7001"):
+async def add_data_to_kb(naptha, kb_name, data, user_id=None, kb_node=None):
     try:
         # Parse the data string into a dictionary
         data_dict = {}
@@ -550,7 +550,7 @@ async def add_data_to_kb(naptha, kb_name, data, user_id=None, kb_node_url="http:
                 "module": {
                     "name": kb_name
                 },
-                "kb_node_url": kb_node_url
+                "kb_node": kb_node
             }
         }
 
@@ -640,7 +640,7 @@ async def create(
         agent_modules = None,
         worker_nodes = None,
         environment_modules = None,
-        environment_node_urls = None
+        environment_nodes = None
 ):
     module_type = module_name.split(":")[0] if ":" in module_name else "agent"
     module_name = module_name.split(":")[-1]  # Remove prefix if exists
@@ -660,15 +660,15 @@ async def create(
             AgentDeployment(
                 name=agent_module,
                 module={"name": agent_module},
-                worker_node=worker_node
+                worker_node=NodeSchema(ip=worker_node)
             ) for agent_module, worker_node in zip(agent_modules or [], worker_nodes or [])
         ],
         "environment_deployments": [
             EnvironmentDeployment(
                 name=env_module,
                 module={"name": env_module},
-                environment_node_url=env_url
-            ) for env_module, env_url in zip(environment_modules or [], environment_node_urls or [])
+                environment_node=NodeSchema(ip=env_node)
+            ) for env_module, env_node in zip(environment_modules or [], environment_nodes or [])
         ]
     }
 
@@ -676,28 +676,29 @@ async def create(
     deployment_configs = {
         "agent": lambda: AgentDeployment(
             name=module_name,
-            module={"name": module_name}
+            module={"name": module_name},
+            worker_node=NodeSchema(ip=os.getenv("NODE_URL")),
         ),
         "tool": lambda: ToolDeployment(
             name=module_name,
             module={"name": module_name},
-            tool_node_url=os.getenv("NODE_URL")
+            tool_node=NodeSchema(ip=os.getenv("NODE_URL"))
         ),
         "orchestrator": lambda: OrchestratorDeployment(
             name=module_name,
             module={"name": module_name},
-            orchestrator_node_url=os.getenv("NODE_URL"),
+            orchestrator_node=NodeSchema(ip=os.getenv("NODE_URL")),
             **aux_deployments
         ),
         "environment": lambda: EnvironmentDeployment(
             name=module_name,
             module={"name": module_name},
-            environment_node_url=(environment_node_urls or ["http://localhost:7001"])[0]
+            environment_node=NodeSchema(ip=os.getenv("NODE_URL"))
         ),
         "kb": lambda: KBDeployment(
             name=module_name,
             module={"name": module_name},
-            kb_node_url=os.getenv("NODE_URL")
+            kb_node=NodeSchema(ip=os.getenv("NODE_URL"))
         )
     }
 
@@ -717,9 +718,9 @@ async def run(
     user_id,
     parameters=None, 
     worker_nodes=None,
-    tool_node_urls=None,
-    environment_node_urls=None,
-    kb_node_urls=None,
+    tool_nodes=None,
+    environment_nodes=None,
+    kb_nodes=None,
     yaml_file=None, 
     personas_urls=None
 ):   
@@ -740,30 +741,36 @@ async def run(
         user = await naptha.node.register_user(user_input=user)
         print(f"User registered: {user}.")
 
+    # Handle sub-deployments
+    agent_deployments = []
+    if worker_nodes:
+        for worker_node in worker_nodes:
+            agent_deployments.append(AgentDeployment(worker_node=NodeSchema(ip=worker_node.strip())))
+    tool_deployments = []
+    if tool_nodes:
+        for tool_node in tool_nodes:
+            tool_deployments.append(ToolDeployment(tool_node=NodeSchema(ip=tool_node.strip())))
+    environment_deployments = []
+    if environment_nodes:
+        for environment_node in environment_nodes:
+            environment_deployments.append(EnvironmentDeployment(environment_node=NodeSchema(ip=environment_node.strip())))
+    kb_deployments = []
+    if kb_nodes:
+        for kb_node in kb_nodes:
+            kb_deployments.append(KBDeployment(kb_node=NodeSchema(ip=kb_node.strip())))
+
+
     if module_type == "agent":
         print("Running Agent...")
-        if isinstance(kb_node_urls, str):
-            kb_node_urls = [kb_node_urls]
-
-        kb_deployments = None
-        if kb_node_urls:
-            kb_deployments = []
-            for kb_node_url in kb_node_urls:
-                kb_deployments.append(KBDeployment(kb_node_url=kb_node_url))
-
-        tool_deployments = None
-        if tool_node_urls:
-            tool_deployments = []
-            for tool_node_url in tool_node_urls:
-                tool_deployments.append(ToolDeployment(tool_node_url=tool_node_url))
 
         agent_deployment = AgentDeployment(
             name=module_name, 
             module={"name": module_name}, 
-            worker_node=worker_nodes[0], 
+            worker_node=NodeSchema(ip=worker_nodes[0]), 
             agent_config=AgentConfig(persona_module={"module_url": personas_urls}),
             tool_deployments=tool_deployments,
             kb_deployments=kb_deployments,
+            environment_deployments=environment_deployments
         )
 
         agent_run_input = {
@@ -781,7 +788,7 @@ async def run(
         tool_deployment = ToolDeployment(
             name=module_name,
             module={"name": module_name},
-            tool_node_url=tool_node_urls[0] if isinstance(tool_node_urls, list) else tool_node_urls
+            tool_node=NodeSchema(ip=tool_nodes[0])
         )
 
         tool_run_input = ToolRunInput(
@@ -793,20 +800,14 @@ async def run(
 
     elif module_type == "orchestrator":
         print("Running Orchestrator...")
-        agent_deployments = []
-        for worker_node in worker_nodes:
-            agent_deployments.append(AgentDeployment(worker_node=worker_node.strip()))
-
-        environment_deployments = []
-        for environment_node_url in environment_node_urls:
-            environment_deployments.append(EnvironmentDeployment(environment_node_url=environment_node_url.strip()))
 
         orchestrator_deployment = OrchestratorDeployment(
             name=module_name, 
             module={"name": module_name}, 
-            orchestrator_node_url=os.getenv("NODE_URL"),
+            orchestrator_node=NodeSchema(ip=os.getenv("NODE_URL")),
             agent_deployments=agent_deployments,
-            environment_deployments=environment_deployments
+            environment_deployments=environment_deployments,
+            kb_deployments=kb_deployments
         )
 
         orchestrator_run_input = OrchestratorRunInput(
@@ -822,7 +823,7 @@ async def run(
         environment_deployment = EnvironmentDeployment(
             name=module_name, 
             module={"name": module_name}, 
-            environment_node_url=environment_node_urls[0] if isinstance(environment_node_urls, list) else environment_node_urls
+            environment_node=NodeSchema(ip=environment_nodes[0])
         )
 
         environment_run_input = EnvironmentRunInput(
@@ -834,10 +835,11 @@ async def run(
 
     elif module_type == "kb":
         print("Running Knowledge Base...")
+
         kb_deployment = KBDeployment(
             name=module_name, 
             module={"name": module_name}, 
-            kb_node_url=os.getenv("NODE_URL")
+            kb_node=NodeSchema(ip=os.getenv("NODE_URL"))
         )
 
         kb_run_input = KBRunInput(
@@ -872,7 +874,7 @@ def _parse_list_arg(args, arg_name, default=None, split_char=','):
 def _parse_str_args(args):
     # Parse all list arguments
     args.worker_nodes = _parse_list_arg(args, 'worker_nodes', default=["http://localhost:7001"])
-    args.environment_node_urls = _parse_list_arg(args, 'environment_node_urls', default=["http://localhost:7001"])
+    args.environment_nodes = _parse_list_arg(args, 'environment_nodes', default=["http://localhost:7001"])
     args.agent_modules = _parse_list_arg(args, 'agent_modules', default=None)
     args.environment_modules = _parse_list_arg(args, 'environment_modules', default=None)
     args.personas_urls = _parse_list_arg(args, 'personas_urls', default=None)
@@ -941,7 +943,7 @@ async def main():
     kbs_parser.add_argument('-l', '--list', action='store_true', help='List content in a knowledge base')
     kbs_parser.add_argument('-a', '--add', action='store_true', help='Add data to a knowledge base')
     kbs_parser.add_argument('-c', '--content', type=str, help='Content to add to a knowledge base', required=False)
-    kbs_parser.add_argument('-k', '--kb_node_urls', type=str, help='Knowledge base node URLs', default=["http://localhost:7001"])
+    kbs_parser.add_argument('-k', '--kb_nodes', type=str, help='Knowledge base node URLs')
 
     # Create command
     create_parser = subparsers.add_parser("create", help="Execute create command.")
@@ -949,17 +951,18 @@ async def main():
     create_parser.add_argument("-a", "--agent_modules", help="Agent modules to create")
     create_parser.add_argument("-n", "--worker_nodes", help="Agent nodes to take part in orchestrator runs.")
     create_parser.add_argument("-e", "--environment_modules", help="Environment module to create")
-    create_parser.add_argument("-m", "--environment_node_urls", help="Environment nodes to store data during agent runs.")
+    create_parser.add_argument("-m", "--environment_nodes", help="Environment nodes to store data during agent runs.")
 
     # Run command
     run_parser = subparsers.add_parser("run", help="Execute run command.")
     run_parser.add_argument("agent", help="Select the agent to run")
     run_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
     run_parser.add_argument("-n", "--worker_nodes", help="Worker nodes to take part in agent runs.")
-    run_parser.add_argument("-t", "--tool_node_urls", help="Tool nodes to take part in agent runs.")
-    run_parser.add_argument("-e", "--environment_node_urls", help="Environment nodes to store data during agent runs.")
-    run_parser.add_argument("-m", "--memory_node_urls", help="memory node URLs", default=["http://localhost:7001"])
-    run_parser.add_argument('-k', '--kb_node_urls', type=str, help='Knowledge base node URLs', default=["http://localhost:7001"])
+    run_parser.add_argument("-t", "--tool_nodes", help="Tool nodes to take part in agent runs.")
+    run_parser.add_argument("-e", "--environment_nodes", help="Environment nodes to store data during agent runs.")
+    run_parser.add_argument('-k', '--kb_nodes', type=str, help='Knowledge base nodes')
+    run_parser.add_argument('-m', '--memory_nodes', type=str, help='Memory nodes')
+    
     run_parser.add_argument("-u", "--personas_urls", help="Personas URLs to install before running the agent")
     run_parser.add_argument("-f", "--file", help="YAML file with agent run parameters")
 
@@ -1221,7 +1224,7 @@ async def main():
                         console = Console()
                         console.print("[red]Data is required for add command.[/red]")
                         return
-                    await add_data_to_kb(naptha, args.kb_name, args.content, user_id=user_id, kb_node_url=args.kb_node_urls[0])
+                    await add_data_to_kb(naptha, args.kb_name, args.content, user_id=user_id, kb_node=args.kb_nodes[0])
                 elif args.delete and len(args.kb_name.split()) == 1:
                     await naptha.hub.delete_kb(args.kb_name)
                 elif len(args.kb_name.split()) == 1:
@@ -1254,7 +1257,7 @@ async def main():
                     await list_kbs(naptha, args.kb_name)
 
             elif args.command == "create":
-                await create(naptha, args.module, args.agent_modules, args.worker_nodes, args.environment_modules, args.environment_node_urls)
+                await create(naptha, args.module, args.agent_modules, args.worker_nodes, args.environment_modules, args.environment_nodes)
             
             elif args.command == "run":
                 if hasattr(args, 'parameters') and args.parameters is not None:
@@ -1269,7 +1272,7 @@ async def main():
                 else:
                     parsed_params = None
                     
-                await run(naptha, args.agent, user_id, parsed_params, args.worker_nodes, args.tool_node_urls, args.environment_node_urls, args.kb_node_urls, args.file, args.personas_urls)
+                await run(naptha, args.agent, user_id, parsed_params, args.worker_nodes, args.tool_nodes, args.environment_nodes, args.kb_nodes, args.file, args.personas_urls)
             elif args.command == "inference":
                 request = ChatCompletionRequest(
                     messages=[{"role": "user", "content": args.prompt}],

@@ -1,6 +1,6 @@
 from naptha_sdk.client.node import Node
 from naptha_sdk.schemas import AgentRun, ToolRunInput
-from naptha_sdk.utils import get_logger
+from naptha_sdk.utils import get_logger, node_to_url
 from typing import Union
 
 logger = get_logger(__name__)
@@ -12,10 +12,11 @@ class Tool:
         **kwargs
     ):
         self.tool_deployment = tool_deployment
-        self.tool_node = Node(self.tool_deployment.tool_node_url)
+        self.tool_node_url = node_to_url(self.tool_deployment.tool_node)
+        self.tool_node = Node(self.tool_node_url)
 
     async def call_tool_func(self, module_run: Union[AgentRun, ToolRunInput]):
-        logger.info(f"Running tool on worker node {self.tool_node.node_url}")
+        logger.info(f"Running tool on worker node {self.tool_node_url}")
 
         tool_run_input = ToolRunInput(
             consumer_id=module_run.consumer_id,
