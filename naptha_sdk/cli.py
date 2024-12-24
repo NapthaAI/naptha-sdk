@@ -873,8 +873,10 @@ def _parse_list_arg(args, arg_name, default=None, split_char=','):
 
 def _parse_str_args(args):
     # Parse all list arguments
-    args.worker_nodes = _parse_list_arg(args, 'worker_nodes', default=["http://localhost:7001"])
-    args.environment_nodes = _parse_list_arg(args, 'environment_nodes', default=["http://localhost:7001"])
+    args.worker_nodes = _parse_list_arg(args, 'worker_nodes', default=None)
+    args.tool_nodes = _parse_list_arg(args, 'tool_nodes', default=None)
+    args.environment_nodes = _parse_list_arg(args, 'environment_nodes', default=None)
+    args.kb_nodes = _parse_list_arg(args, 'kb_nodes', default=None)
     args.agent_modules = _parse_list_arg(args, 'agent_modules', default=None)
     args.environment_modules = _parse_list_arg(args, 'environment_modules', default=None)
     args.personas_urls = _parse_list_arg(args, 'personas_urls', default=None)
