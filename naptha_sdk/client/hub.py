@@ -157,6 +157,14 @@ class Hub:
         else:
             persona = await self.surrealdb.query("SELECT * FROM persona WHERE id=$persona_name;", {"persona_name": persona_name})
             return persona[0]['result']
+    
+    async def list_memories(self, memory_name=None) -> List:
+        if not memory_name:
+            memories = await self.surrealdb.query("SELECT * FROM memory;")
+            return memories[0]['result']
+        else:
+            memory = await self.surrealdb.query("SELECT * FROM memory WHERE id=$memory_name;", {"memory_name": memory_name})
+            return memory[0]['result']
 
     async def list_kbs(self, kb_name=None) -> List:
         if not kb_name:
@@ -224,6 +232,17 @@ class Hub:
         else:
             print("Failed to delete persona")
         return success
+    
+    async def delete_memory(self, memory_id: str) -> Tuple[bool, Optional[Dict]]:
+        if ":" not in memory_id:
+            memory_id = f"memory:{memory_id}".strip()
+        print(f"Deleting memory: {memory_id}")
+        success = await self.surrealdb.delete(memory_id)
+        if success:
+            print("Deleted memory")
+        else:
+            print("Failed to delete memory")
+        return success
 
     async def delete_kb(self, kb_id: str) -> Tuple[bool, Optional[Dict]]:
         if ":" not in kb_id:
@@ -265,6 +284,12 @@ class Hub:
             return await self.surrealdb.create("persona", persona_config)
         else:
             return await self.surrealdb.create(persona_config.pop('id'), persona_config)
+        
+    async def create_memory(self, memory_config: Dict) -> Tuple[bool, Optional[Dict]]:
+        if not memory_config.get('id'):
+            return await self.surrealdb.create("memory", memory_config)
+        else:
+            return await self.surrealdb.create(memory_config.pop('id'), memory_config)
 
     async def create_kb(self, kb_config: Dict) -> Tuple[bool, Optional[Dict]]:
         if not kb_config.get('id'):
