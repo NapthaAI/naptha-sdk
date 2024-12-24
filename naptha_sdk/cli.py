@@ -19,6 +19,7 @@ from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.schemas import AgentConfig, AgentDeployment, ChatCompletionRequest, EnvironmentDeployment, \
     OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, KBDeployment, KBRunInput, ToolDeployment, ToolRunInput
 from naptha_sdk.user import get_public_key
+from naptha_sdk.utils import url_to_node
 
 load_dotenv(override=True)
 
@@ -677,28 +678,28 @@ async def create(
         "agent": lambda: AgentDeployment(
             name=module_name,
             module={"name": module_name},
-            worker_node=NodeSchema(ip=os.getenv("NODE_URL")),
+            worker_node=url_to_node(os.getenv("NODE_URL")),
         ),
         "tool": lambda: ToolDeployment(
             name=module_name,
             module={"name": module_name},
-            tool_node=NodeSchema(ip=os.getenv("NODE_URL"))
+            tool_node=url_to_node(os.getenv("NODE_URL"))
         ),
         "orchestrator": lambda: OrchestratorDeployment(
             name=module_name,
             module={"name": module_name},
-            orchestrator_node=NodeSchema(ip=os.getenv("NODE_URL")),
+            orchestrator_node=url_to_node(os.getenv("NODE_URL")),
             **aux_deployments
         ),
         "environment": lambda: EnvironmentDeployment(
             name=module_name,
             module={"name": module_name},
-            environment_node=NodeSchema(ip=os.getenv("NODE_URL"))
+            environment_node=url_to_node(os.getenv("NODE_URL"))
         ),
         "kb": lambda: KBDeployment(
             name=module_name,
             module={"name": module_name},
-            kb_node=NodeSchema(ip=os.getenv("NODE_URL"))
+            kb_node=url_to_node(os.getenv("NODE_URL"))
         )
     }
 
@@ -766,8 +767,7 @@ async def run(
         agent_deployment = AgentDeployment(
             name=module_name, 
             module={"name": module_name}, 
-            worker_node=NodeSchema(ip=worker_nodes[0]), 
-            agent_config=AgentConfig(persona_module={"module_url": personas_urls}),
+            worker_node=url_to_node(os.getenv("NODE_URL")), 
             tool_deployments=tool_deployments,
             kb_deployments=kb_deployments,
             environment_deployments=environment_deployments
@@ -788,8 +788,7 @@ async def run(
         tool_deployment = ToolDeployment(
             name=module_name,
             module={"name": module_name},
-            tool_node=NodeSchema(ip=tool_nodes[0])
-        )
+            tool_node=url_to_node(os.getenv("NODE_URL")))
 
         tool_run_input = ToolRunInput(
             consumer_id=user_id,
@@ -804,7 +803,7 @@ async def run(
         orchestrator_deployment = OrchestratorDeployment(
             name=module_name, 
             module={"name": module_name}, 
-            orchestrator_node=NodeSchema(ip=os.getenv("NODE_URL")),
+            orchestrator_node=url_to_node(os.getenv("NODE_URL")),
             agent_deployments=agent_deployments,
             environment_deployments=environment_deployments,
             kb_deployments=kb_deployments
@@ -823,7 +822,7 @@ async def run(
         environment_deployment = EnvironmentDeployment(
             name=module_name, 
             module={"name": module_name}, 
-            environment_node=NodeSchema(ip=environment_nodes[0])
+            environment_node=url_to_node(os.getenv("NODE_URL"))
         )
 
         environment_run_input = EnvironmentRunInput(
@@ -839,7 +838,7 @@ async def run(
         kb_deployment = KBDeployment(
             name=module_name, 
             module={"name": module_name}, 
-            kb_node=NodeSchema(ip=os.getenv("NODE_URL"))
+            kb_node=url_to_node(os.getenv("NODE_URL"))
         )
 
         kb_run_input = KBRunInput(
