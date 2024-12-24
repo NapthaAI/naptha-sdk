@@ -1,6 +1,6 @@
 from naptha_sdk.client.node import Node
 from naptha_sdk.schemas import AgentRunInput
-from naptha_sdk.utils import get_logger
+from naptha_sdk.utils import get_logger, node_to_url
 
 logger = get_logger(__name__)
 
@@ -13,8 +13,9 @@ class Agent:
     ):
         self.orchestrator_run = orchestrator_run
         self.agent_index = agent_index
-        worker_node_url = self.orchestrator_run.orchestrator_deployment.agent_deployments[self.agent_index].worker_node_url
-        self.worker_node = Node(worker_node_url)
+        worker_node = self.orchestrator_run.deployment.agent_deployments[self.agent_index].node
+        self.worker_node_url = node_to_url(worker_node)
+        self.worker_node = Node(self.worker_node_url)
 
     async def call_agent_func(self, *args, **kwargs):
         logger.info(f"Running agent on worker node {self.worker_node.node_url}")
@@ -22,7 +23,7 @@ class Agent:
         agent_run_input = AgentRunInput(
             consumer_id=self.orchestrator_run.consumer_id,
             inputs=kwargs,
-            agent_deployment=self.orchestrator_run.orchestrator_deployment.agent_deployments[self.agent_index].model_dump(),
+            deployment=self.orchestrator_run.deployment.agent_deployments[self.agent_index].model_dump(),
         )
         
         agent_run = await self.worker_node.run_agent_in_node(agent_run_input)

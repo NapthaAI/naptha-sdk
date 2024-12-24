@@ -89,7 +89,7 @@ class Node:
         while True:
             run = await getattr(self, f'check_{module_type}_run')(run)
 
-            output = f"{run.status} {getattr(run, f'{module_type}_deployment').module['module_type']} {getattr(run, f'{module_type}_deployment').module['name']}"
+            output = f"{run.status} {getattr(run, f'deployment').module['module_type']} {getattr(run, f'deployment').module['name']}"
             print(output)
 
             results = run.results
@@ -360,19 +360,19 @@ class Node:
             
             # Create agent module and deployment
             agent_module = grpc_server_pb2.AgentModule(
-                name=agent_run_input.agent_deployment.module['name']
+                name=agent_run_input.deployment.module['name']
             )
             
             agent_deployment = grpc_server_pb2.AgentDeployment(
-                name=agent_run_input.agent_deployment.name,
+                name=agent_run_input.deployment.name,
                 module=agent_module,
-                worker_node=agent_run_input.agent_deployment.worker_node
+                worker_node=agent_run_input.deployment.worker_node
             )
             
             # Create request
             request = grpc_server_pb2.AgentRunInput(
                 consumer_id=agent_run_input.consumer_id,
-                agent_deployment=agent_deployment,
+                deployment=agent_deployment,
                 input_struct=input_struct
             )
             
@@ -384,7 +384,7 @@ class Node:
             return AgentRun(
                 consumer_id=agent_run_input.consumer_id,
                 inputs=agent_run_input.inputs,
-                agent_deployment=agent_run_input.agent_deployment,
+                deployment=agent_run_input.deployment,
                 orchestrator_runs=[],
                 status=final_response.status,
                 error=final_response.status == "error",

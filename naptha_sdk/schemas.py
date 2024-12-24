@@ -9,7 +9,7 @@ class User(BaseModel):
 class NodeSchema(BaseModel):
     ip: str
     server_type: Optional[str] = None
-    port: Optional[int] = None
+    http_port: Optional[int] = None
 
 class LLMClientType(str, Enum):
     OPENAI = "openai"
@@ -59,26 +59,26 @@ class DataGenerationConfig(BaseModel):
     default_filename: Optional[str] = None
 
 class ToolDeployment(BaseModel):
-    tool_node: NodeSchema
+    node: NodeSchema
     name: Optional[str] = "tool_deployment"
     module: Optional[Dict] = None
     tool_config: Optional[ToolConfig] = None
     data_generation_config: Optional[DataGenerationConfig] = None
 
 class KBDeployment(BaseModel):
-    kb_node: NodeSchema
+    node: NodeSchema
     name: Optional[str] = "kb_deployment"
     module: Optional[Dict] = None
     kb_config: Optional[Dict] = None
 
 class EnvironmentDeployment(BaseModel):
-    environment_node: NodeSchema
+    node: NodeSchema
     name: Optional[str] = "environment_deployment"
     module: Optional[Dict] = None
     environment_config: Optional[EnvironmentConfig] = None
 
 class AgentDeployment(BaseModel):
-    worker_node: NodeSchema
+    node: NodeSchema
     name: Optional[str] = "agent_deployment"
     module: Optional[Dict] = None
     agent_config: Optional[AgentConfig] = None
@@ -88,7 +88,7 @@ class AgentDeployment(BaseModel):
     kb_deployments: Optional[List[KBDeployment]] = None
 
 class OrchestratorDeployment(BaseModel):
-    orchestrator_node: NodeSchema
+    node: NodeSchema
     name: Optional[str] = "orchestrator_deployment"
     module: Optional[Dict] = None
     orchestrator_config: Optional[OrchestratorConfig] = None
@@ -126,7 +126,7 @@ class DockerParams(BaseModel):
 class AgentRun(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
-    agent_deployment: AgentDeployment
+    deployment: AgentDeployment
     tool_deployments: Optional[List[ToolDeployment]] = None
     environment_deployments: Optional[List[EnvironmentDeployment]] = None
     orchestrator_runs: List['OrchestratorRun'] = []
@@ -163,7 +163,7 @@ class AgentRun(BaseModel):
 class AgentRunInput(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
-    agent_deployment: AgentDeployment
+    deployment: AgentDeployment
     tool_deployments: Optional[List[ToolDeployment]] = None
     environment_deployments: Optional[List[EnvironmentDeployment]] = None
     kb_deployment: Optional[KBDeployment] = None
@@ -176,7 +176,7 @@ class AgentRunInput(BaseModel):
 class ToolRunInput(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
-    tool_deployment: Union[ToolDeployment, Dict]
+    deployment: Union[ToolDeployment, Dict]
     agent_run: Optional[AgentRun] = None
 
     def model_dict(self):
@@ -189,7 +189,7 @@ class ToolRunInput(BaseModel):
 class ToolRun(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
-    tool_deployment: ToolDeployment
+    deployment: ToolDeployment
     agent_run: Optional[AgentRun] = None
     status: str = "pending"
     error: bool = False
@@ -204,7 +204,7 @@ class ToolRun(BaseModel):
 class OrchestratorRunInput(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
-    orchestrator_deployment: OrchestratorDeployment
+    deployment: OrchestratorDeployment
 
     def model_dict(self):
         model_dict = self.dict()
@@ -213,7 +213,7 @@ class OrchestratorRunInput(BaseModel):
 class OrchestratorRun(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
-    orchestrator_deployment: OrchestratorDeployment
+    deployment: OrchestratorDeployment
     status: str = "pending"
     error: bool = False
     id: Optional[str] = None
@@ -229,7 +229,7 @@ class OrchestratorRun(BaseModel):
 class EnvironmentRunInput(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
-    environment_deployment: EnvironmentDeployment
+    deployment: EnvironmentDeployment
     orchestrator_runs: List['OrchestratorRun'] = []
 
     def model_dict(self):
@@ -239,7 +239,7 @@ class EnvironmentRunInput(BaseModel):
 class EnvironmentRun(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
-    environment_deployment: EnvironmentDeployment
+    deployment: EnvironmentDeployment
     orchestrator_runs: List['OrchestratorRun'] = []
     status: str = "pending"
     error: bool = False
@@ -255,7 +255,7 @@ class EnvironmentRun(BaseModel):
 class KBRunInput(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
-    kb_deployment: KBDeployment
+    deployment: KBDeployment
     orchestrator_runs: List['OrchestratorRun'] = []
 
     def model_dict(self):
@@ -265,7 +265,7 @@ class KBRunInput(BaseModel):
 class KBRun(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
-    kb_deployment: KBDeployment
+    deployment: KBDeployment
     orchestrator_runs: List['OrchestratorRun'] = []
     status: str = "pending"
     error: bool = False

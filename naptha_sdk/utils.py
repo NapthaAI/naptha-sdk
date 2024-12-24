@@ -108,13 +108,10 @@ class AsyncMixin:
         return self.__initobj().__await__()
     
 def node_to_url(node_schema: NodeSchema):
-    if node_schema.server_type == 'grpc':
-        return f"{node_schema.ip}:{node_schema.port}"
-    else:
-        return f"{node_schema.server_type}://{node_schema.ip}:{node_schema.port}"
+    return f"http://{node_schema.ip}:{node_schema.http_port}"
     
 def url_to_node(url: str):
     protocol = url.split('://')[0]
     host = url.split('://')[1].split(':')[0] 
-    port = int(url.split(':')[-1])
-    return NodeSchema(ip=host, port=port, server_type=protocol)
+    http_port = int(url.split(':')[-1])
+    return NodeSchema(ip=host, http_port=http_port, server_type=protocol)

@@ -661,14 +661,14 @@ async def create(
             AgentDeployment(
                 name=agent_module,
                 module={"name": agent_module},
-                worker_node=NodeSchema(ip=worker_node)
+                node=url_to_node(worker_node)
             ) for agent_module, worker_node in zip(agent_modules or [], worker_nodes or [])
         ],
         "environment_deployments": [
             EnvironmentDeployment(
                 name=env_module,
                 module={"name": env_module},
-                environment_node=NodeSchema(ip=env_node)
+                node=url_to_node(env_node)
             ) for env_module, env_node in zip(environment_modules or [], environment_nodes or [])
         ]
     }
@@ -678,28 +678,28 @@ async def create(
         "agent": lambda: AgentDeployment(
             name=module_name,
             module={"name": module_name},
-            worker_node=url_to_node(os.getenv("NODE_URL")),
+            node=url_to_node(os.getenv("NODE_URL")),
         ),
         "tool": lambda: ToolDeployment(
             name=module_name,
             module={"name": module_name},
-            tool_node=url_to_node(os.getenv("NODE_URL"))
+            node=url_to_node(os.getenv("NODE_URL"))
         ),
         "orchestrator": lambda: OrchestratorDeployment(
             name=module_name,
             module={"name": module_name},
-            orchestrator_node=url_to_node(os.getenv("NODE_URL")),
+            node=url_to_node(os.getenv("NODE_URL")),
             **aux_deployments
         ),
         "environment": lambda: EnvironmentDeployment(
             name=module_name,
             module={"name": module_name},
-            environment_node=url_to_node(os.getenv("NODE_URL"))
+            node=url_to_node(os.getenv("NODE_URL"))
         ),
         "kb": lambda: KBDeployment(
             name=module_name,
             module={"name": module_name},
-            kb_node=url_to_node(os.getenv("NODE_URL"))
+            node=url_to_node(os.getenv("NODE_URL"))
         )
     }
 
@@ -746,19 +746,19 @@ async def run(
     agent_deployments = []
     if worker_nodes:
         for worker_node in worker_nodes:
-            agent_deployments.append(AgentDeployment(worker_node=NodeSchema(ip=worker_node.strip())))
+            agent_deployments.append(AgentDeployment(node=NodeSchema(ip=worker_node.strip())))
     tool_deployments = []
     if tool_nodes:
         for tool_node in tool_nodes:
-            tool_deployments.append(ToolDeployment(tool_node=NodeSchema(ip=tool_node.strip())))
+            tool_deployments.append(ToolDeployment(node=NodeSchema(ip=tool_node.strip())))
     environment_deployments = []
     if environment_nodes:
         for environment_node in environment_nodes:
-            environment_deployments.append(EnvironmentDeployment(environment_node=NodeSchema(ip=environment_node.strip())))
+            environment_deployments.append(EnvironmentDeployment(node=NodeSchema(ip=environment_node.strip())))
     kb_deployments = []
     if kb_nodes:
         for kb_node in kb_nodes:
-            kb_deployments.append(KBDeployment(kb_node=NodeSchema(ip=kb_node.strip())))
+            kb_deployments.append(KBDeployment(node=NodeSchema(ip=kb_node.strip())))
 
 
     if module_type == "agent":
@@ -767,7 +767,7 @@ async def run(
         agent_deployment = AgentDeployment(
             name=module_name, 
             module={"name": module_name}, 
-            worker_node=url_to_node(os.getenv("NODE_URL")), 
+            node=url_to_node(os.getenv("NODE_URL")), 
             tool_deployments=tool_deployments,
             kb_deployments=kb_deployments,
             environment_deployments=environment_deployments
@@ -776,7 +776,7 @@ async def run(
         agent_run_input = {
             'consumer_id': user_id,
             "inputs": parameters,
-            "agent_deployment": agent_deployment.model_dump(),
+            "deployment": agent_deployment.model_dump(),
             "personas_urls": personas_urls
         }
         print(f"Agent run input: {agent_run_input}")
@@ -788,12 +788,12 @@ async def run(
         tool_deployment = ToolDeployment(
             name=module_name,
             module={"name": module_name},
-            tool_node=url_to_node(os.getenv("NODE_URL")))
+            node=url_to_node(ip=os.getenv("NODE_URL")))
 
         tool_run_input = ToolRunInput(
             consumer_id=user_id,
             inputs=parameters,
-            tool_deployment=tool_deployment
+            deployment=tool_deployment
         )
         tool_run = await naptha.node.run_tool_and_poll(tool_run_input)
 
@@ -803,7 +803,7 @@ async def run(
         orchestrator_deployment = OrchestratorDeployment(
             name=module_name, 
             module={"name": module_name}, 
-            orchestrator_node=url_to_node(os.getenv("NODE_URL")),
+            node=url_to_node(os.getenv("NODE_URL")),
             agent_deployments=agent_deployments,
             environment_deployments=environment_deployments,
             kb_deployments=kb_deployments
@@ -812,7 +812,7 @@ async def run(
         orchestrator_run_input = OrchestratorRunInput(
             consumer_id=user_id,
             inputs=parameters,
-            orchestrator_deployment=orchestrator_deployment
+            deployment=orchestrator_deployment
         )
         orchestrator_run = await naptha.node.run_orchestrator_and_poll(orchestrator_run_input)
 
@@ -822,12 +822,12 @@ async def run(
         environment_deployment = EnvironmentDeployment(
             name=module_name, 
             module={"name": module_name}, 
-            environment_node=url_to_node(os.getenv("NODE_URL"))
+            node=url_to_node(os.getenv("NODE_URL"))
         )
 
         environment_run_input = EnvironmentRunInput(
             inputs=parameters,
-            environment_deployment=environment_deployment,
+            deployment=environment_deployment,
             consumer_id=user_id,
         )
         environment_run = await naptha.node.run_environment_and_poll(environment_run_input)
@@ -838,13 +838,13 @@ async def run(
         kb_deployment = KBDeployment(
             name=module_name, 
             module={"name": module_name}, 
-            kb_node=url_to_node(os.getenv("NODE_URL"))
+            node=url_to_node(os.getenv("NODE_URL"))
         )
 
         kb_run_input = KBRunInput(
             consumer_id=user_id,
             inputs=parameters,
-            kb_deployment=kb_deployment
+            deployment=kb_deployment
         )
         kb_run = await naptha.node.run_kb_and_poll(kb_run_input)
 

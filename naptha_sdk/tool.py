@@ -12,7 +12,7 @@ class Tool:
         **kwargs
     ):
         self.tool_deployment = tool_deployment
-        self.tool_node_url = node_to_url(self.tool_deployment.tool_node)
+        self.tool_node_url = node_to_url(self.tool_deployment.node)
         self.tool_node = Node(self.tool_node_url)
 
     async def call_tool_func(self, module_run: Union[AgentRun, ToolRunInput]):
@@ -21,7 +21,7 @@ class Tool:
         tool_run_input = ToolRunInput(
             consumer_id=module_run.consumer_id,
             inputs=module_run.inputs,
-            tool_deployment=self.tool_deployment.model_dump(),
+            deployment=self.tool_deployment.model_dump(),
         )
         
         tool_run = await self.tool_node.run_tool_and_poll(tool_run_input)

@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 class Environment:
     def __init__(self, environment_deployment: EnvironmentDeployment):
         self.environment_deployment = environment_deployment
-        self.environment_node_url = node_to_url(self.environment_deployment.environment_node)
+        self.environment_node_url = node_to_url(self.environment_deployment.node)
         self.environment_node = Node(self.environment_node_url)
         self.table_name = "multi_chat_simulations"
 

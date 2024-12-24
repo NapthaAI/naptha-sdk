@@ -8,9 +8,9 @@ async def test_tool():
 
     tool_deployment = ToolDeployment(
         module={"name": "generate_image_tool"},
-        tool_node=NodeSchema(
+        node=NodeSchema(
             ip="localhost",
-            port=7001,
+            http_port=7001,
             server_type="http"
         )
     )
@@ -25,7 +25,7 @@ async def test_tool():
     tool_run_input = ToolRunInput(
         consumer_id=naptha.user.id,
         inputs=input_params,
-        tool_deployment=tool_deployment
+        deployment=tool_deployment
     )
 
     response = await tool.call_tool_func(tool_run_input)
