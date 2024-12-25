@@ -313,6 +313,28 @@ naptha run kb:wikipedia_kb -p "mode='query' query='Socrates'"
 naptha run agent:wikipedia_agent -p "query='Socrates' question='Who is Socrates?'" --kb_node_urls "http://localhost:7001"
 ```
 
+## Memory Modules
+
+### Interact with the Memory Hub
+
+You can also use the CLI to explore available memory modules that you can use with agents:
+
+```bash
+naptha memories   
+```
+
+### Register a New Memory Module on the Hub
+
+```bash
+naptha memories memory_name -p "description='Memory description' parameters='{input_parameter_1: str, input_parameter_2: int}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
+```
+
+### Delete a Memory Module
+
+```bash
+naptha memories -d memory_name
+```
+
 ## Personas
 
 ### Interact with the Persona Hub
