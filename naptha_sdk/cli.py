@@ -325,7 +325,7 @@ async def list_memories(naptha, memory_name=None):
     table.add_column("Author", justify="left")
     table.add_column("Description", justify="left", max_width=50)
     table.add_column("Parameters", justify="left", max_width=40)
-    table.add_column("Module URL", justify="left", max_with=40)
+    table.add_column("Module URL", justify="left", max_width=40)
     table.add_column("Module Type", justify="left")
     table.add_column("Module Version", justify="center")
 
@@ -966,7 +966,7 @@ async def main():
         args = _parse_str_args(args)
         if args.command == "signup":
             _, user_id = await user_setup_flow(hub_url, public_key)
-        elif args.command in ["nodes", "agents", "orchestrators", "environments", "personas", "kbs", "tools", "run", "inference", "read_storage", "write_storage", "publish", "create"]:
+        elif args.command in ["nodes", "agents", "orchestrators", "environments", "personas", "kbs", "memories", "tools", "run", "inference", "read_storage", "write_storage", "publish", "create"]:
             if not naptha.hub.is_authenticated:
                 if not hub_username or not hub_password:
                     print(
