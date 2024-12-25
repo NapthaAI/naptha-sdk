@@ -157,7 +157,7 @@ naptha run tool:generate_image_tool -p "tool_name='generate_image_tool' tool_inp
 ### Run an Agent that interacts with the Tool
 
 ```bash
-naptha run agent:generate_image_agent -p "tool_name='generate_image_tool' tool_input_data='A beautiful image of a cat'" --tool_node_urls "http://localhost:7001"
+naptha run agent:generate_image_agent -p "tool_name='generate_image_tool' tool_input_data='A beautiful image of a cat'" --tool_nodes "localhost"
 ```
 
 ## Agent Orchestrators
@@ -189,23 +189,23 @@ naptha orchestrators -d orchestrator_name
 You can download and install the modules for an orchestrator without running first using:
 
 ```bash
-naptha create orchestrator:multiagent_chat --agent_modules "agent:simple_chat_agent,agent:simple_chat_agent" --worker_node_urls "http://node.naptha.ai:7001,http://node1.naptha.ai:7001" --environment_modules "environment:groupchat_environment" --environment_node_urls "http://node.naptha.ai:7001"
+naptha create orchestrator:multiagent_chat --agent_modules "agent:simple_chat_agent,agent:simple_chat_agent" --worker_nodes "node.naptha.ai,node1.naptha.ai" --environment_modules "environment:groupchat_environment" --environment_nodes "node.naptha.ai"
 ```
 
 You can run the orchestrator module on hosted nodes using:
 
 ```bash
-naptha run orchestrator:multiagent_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --worker_node_urls "http://node.naptha.ai:7001,http://node1.naptha.ai:7001" --environment_node_urls "http://node.naptha.ai"
+naptha run orchestrator:multiagent_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --worker_nodes "node.naptha.ai,node1.naptha.ai" --environment_nodes "node.naptha.ai"
 ```
 
 Or on local nodes:
 
 ```bash
-naptha run orchestrator:multiagent_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --worker_node_urls "http://localhost:7001,http://localhost:7001" --environment_node_urls "http://localhost:7001"
+naptha run orchestrator:multiagent_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --worker_nodes "localhost,localhost" --environment_nodes "localhost"
 ```
 
 ```bash
-naptha run orchestrator:babyagi -p "objective='Research the history of football'" --worker_node_urls "http://node.naptha.ai:7001,http://node1.naptha.ai:7001"
+naptha run orchestrator:babyagi -p "objective='Research the history of football'" --worker_nodes "node.naptha.ai,node1.naptha.ai"
 ```
 
 ```bash
@@ -216,7 +216,7 @@ Tesla stock was lower to start a new week of trading, falling as investors worry
 
 News Summary 2:
 Tesla faces growing competition and softening demand, impacting its stock price which is trading 43% below its all-time high. The company’s profitability is declining, with earnings per share shrinking 46% year-over-year in Q2 2024. Despite recent price cuts and a plan to produce a low-cost EV model, sales growth has decelerated. Tesla is also involved in autonomous self-driving software, humanoid robots, and solar energy, but these segments may take years to significantly impact revenue.
-'" --worker_node_urls "http://node.naptha.ai:7001"
+'" --worker_nodes "node.naptha.ai,node1.naptha.ai"
 ```
 
 ## Environment Modules
@@ -310,7 +310,7 @@ naptha run kb:wikipedia_kb -p "mode='query' query='Socrates'"
 ### Run an Agent that interacts with the Knowledge Base
 
 ```bash
-naptha run agent:wikipedia_agent -p "query='Socrates' question='Who is Socrates?'" --kb_node_urls "http://localhost:7001"
+naptha run agent:wikipedia_agent -p "query='Socrates' question='Who is Socrates?'" --kb_nodes "http://localhost:7001"
 ```
 
 ## Memory Modules
