@@ -12,11 +12,10 @@ class Tool:
         **kwargs
     ):
         self.tool_deployment = tool_deployment
-        self.tool_node_url = node_to_url(self.tool_deployment.node)
-        self.tool_node = Node(self.tool_node_url)
+        self.tool_node = Node(self.tool_deployment.node)
 
     async def call_tool_func(self, module_run: Union[AgentRun, ToolRunInput]):
-        logger.info(f"Running tool on worker node {self.tool_node_url}")
+        logger.info(f"Running tool on worker node {self.tool_node}")
 
         tool_run_input = ToolRunInput(
             consumer_id=module_run.consumer_id,
