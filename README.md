@@ -304,13 +304,13 @@ naptha kbs wikipedia_kb -a -c "url='https://en.wikipedia.org/wiki/Socrates' titl
 ### Query the Knowledge Base Module
 
 ```bash
-naptha run kb:wikipedia_kb -p "mode='query' query='Socrates'"
+naptha run kb:wikipedia_kb -p "mode='query' query='Elon Musk'"
 ```
 
 ### Run an Agent that interacts with the Knowledge Base
 
 ```bash
-naptha run agent:wikipedia_agent -p "query='Socrates' question='Who is Socrates?'" --kb_nodes "http://localhost:7001"
+naptha run agent:wikipedia_agent -p "query='Elon Musk' question='Who is Elon Musk?'" --kb_nodes "localhost"
 ```
 
 ## Memory Modules
