@@ -546,12 +546,12 @@ async def add_data_to_kb(naptha, kb_name, data, user_id=None, kb_node=None):
                 "mode": "add_data",
                 "data": json.dumps(data_dict)
             },
-            "kb_deployment": {
+            "deployment": {
                 "name": kb_name,
                 "module": {
                     "name": kb_name
                 },
-                "kb_node": kb_node
+                "node": url_to_node(kb_node)
             }
         }
 
@@ -788,7 +788,7 @@ async def run(
         tool_deployment = ToolDeployment(
             name=module_name,
             module={"name": module_name},
-            node=url_to_node(ip=os.getenv("NODE_URL")))
+            node=url_to_node(os.getenv("NODE_URL")))
 
         tool_run_input = ToolRunInput(
             consumer_id=user_id,
@@ -1225,7 +1225,7 @@ async def main():
                         console = Console()
                         console.print("[red]Data is required for add command.[/red]")
                         return
-                    await add_data_to_kb(naptha, args.kb_name, args.content, user_id=user_id, kb_node=args.kb_nodes[0])
+                    await add_data_to_kb(naptha, args.kb_name, args.content, user_id=user_id, kb_node=os.getenv("NODE_URL"))
                 elif args.delete and len(args.kb_name.split()) == 1:
                     await naptha.hub.delete_kb(args.kb_name)
                 elif len(args.kb_name.split()) == 1:
