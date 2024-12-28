@@ -19,40 +19,20 @@ from httpx import HTTPStatusError, RemoteProtocolError
 from naptha_sdk.client import grpc_server_pb2
 from naptha_sdk.client import grpc_server_pb2_grpc
 from naptha_sdk.schemas import AgentRun, AgentRunInput, ChatCompletionRequest, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, \
-    OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, KBDeployment, KBRunInput, KBRun, ToolRunInput, ToolRun
-from naptha_sdk.utils import get_logger
+    OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, KBDeployment, KBRunInput, KBRun, ToolRunInput, ToolRun, NodeSchema
+from naptha_sdk.utils import get_logger, node_to_url
 
 logger = get_logger(__name__)
 HTTP_TIMEOUT = 300
 
 class Node:
-    def __init__(self, node_url: Optional[str] = None, indirect_node_id: Optional[str] = None, routing_url: Optional[str] = None):
-        self.node_url = node_url
-        self.indirect_node_id = indirect_node_id
-        self.routing_url = routing_url
+    def __init__(self, node: NodeSchema):
+        self.node = node
+        self.node_url = node_to_url(node)
         self.connections = {}
-
-        if self.node_url.startswith('ws://'):
-            self.server_type = 'ws'
-        elif self.node_url.startswith('http://'):
-            self.server_type = 'http'
-        elif self.node_url.startswith('grpc://'):
-            self.node_url = self.node_url.replace('grpc://', '')
-            self.server_type = 'grpc'
-            self.node_url = self.node_url.replace('grpc://', '')
-        else:
-            raise ValueError("Invalid node URL")
-        
-        # at least one of node_url and indirect_node_id must be set
-        if not node_url and not indirect_node_id:
-            raise ValueError("Either node_url or indirect_node_id must be set")
-        
-        # if indirect_node_id is set, we need the routing_url to be set
-        if indirect_node_id and not routing_url:
-            raise ValueError("routing_url must be set if indirect_node_id is set")
         
         self.access_token = None
-        logger.info(f"Node URL: {node_url}")
+        logger.info(f"Node URL: {self.node_url}")
 
     async def create(self, module_type: str,
                      module_request: Union[AgentDeployment, EnvironmentDeployment, KBDeployment, OrchestratorDeployment]):
@@ -109,7 +89,7 @@ class Node:
         while True:
             run = await getattr(self, f'check_{module_type}_run')(run)
 
-            output = f"{run.status} {getattr(run, f'{module_type}_deployment').module['module_type']} {getattr(run, f'{module_type}_deployment').module['name']}"
+            output = f"{run.status} {getattr(run, f'deployment').module['module_type']} {getattr(run, f'deployment').module['name']}"
             print(output)
 
             results = run.results
@@ -197,9 +177,9 @@ class Node:
             raise
 
     async def check_user(self, user_input: Dict[str, Any]) -> Dict[str, Any]:
-        if self.server_type == 'ws':
+        if self.node.server_type == 'ws':
             return await self.check_user_ws(user_input)
-        elif self.server_type == 'grpc':
+        elif self.node.server_type == 'grpc':
             return await self.check_user_grpc(user_input)
         else:
             return await self.check_user_http(user_input)
@@ -251,9 +231,9 @@ class Node:
             raise
 
     async def register_user(self, user_input: Dict[str, Any]) -> Dict[str, Any]:
-        if self.server_type == 'ws':
+        if self.node.server_type == 'ws':
             return await self.register_user_ws(user_input)
-        elif self.server_type == 'grpc':
+        elif self.node.server_type == 'grpc':
             return await self.register_user_grpc(user_input)
         else:
             return await self.register_user_http(user_input)
@@ -380,19 +360,19 @@ class Node:
             
             # Create agent module and deployment
             agent_module = grpc_server_pb2.AgentModule(
-                name=agent_run_input.agent_deployment.module['name']
+                name=agent_run_input.deployment.module['name']
             )
             
             agent_deployment = grpc_server_pb2.AgentDeployment(
-                name=agent_run_input.agent_deployment.name,
+                name=agent_run_input.deployment.name,
                 module=agent_module,
-                worker_node_url=agent_run_input.agent_deployment.worker_node_url
+                worker_node=agent_run_input.deployment.worker_node
             )
             
             # Create request
             request = grpc_server_pb2.AgentRunInput(
                 consumer_id=agent_run_input.consumer_id,
-                agent_deployment=agent_deployment,
+                deployment=agent_deployment,
                 input_struct=input_struct
             )
             
@@ -404,7 +384,7 @@ class Node:
             return AgentRun(
                 consumer_id=agent_run_input.consumer_id,
                 inputs=agent_run_input.inputs,
-                agent_deployment=agent_run_input.agent_deployment,
+                deployment=agent_run_input.deployment,
                 orchestrator_runs=[],
                 status=final_response.status,
                 error=final_response.status == "error",
@@ -419,9 +399,9 @@ class Node:
             )
 
     async def run_agent_in_node(self, agent_run_input: AgentRunInput) -> AgentRun:
-        if self.server_type == 'ws':
+        if self.node.server_type == 'ws':
             return await self.run_agent_ws(agent_run_input)
-        elif self.server_type == 'grpc':
+        elif self.node.server_type == 'grpc':
             return await self.run_agent_grpc(agent_run_input)
         else:
             raise ValueError("Invalid server type. Server type must be either 'ws' or 'grpc'.")

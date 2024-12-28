@@ -1,8 +1,7 @@
 import logging
 import os
-
 import yaml
-
+from naptha_sdk.schemas import NodeSchema
 
 def get_logger(name):
     logger = logging.getLogger(name)
@@ -107,3 +106,12 @@ class AsyncMixin:
 
     def __await__(self):
         return self.__initobj().__await__()
+    
+def node_to_url(node_schema: NodeSchema):
+    return f"http://{node_schema.ip}:{node_schema.http_port}"
+    
+def url_to_node(url: str):
+    protocol = url.split('://')[0]
+    host = url.split('://')[1].split(':')[0] 
+    http_port = int(url.split(':')[-1])
+    return NodeSchema(ip=host, http_port=http_port, server_type=protocol)
