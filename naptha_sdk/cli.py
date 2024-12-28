@@ -765,8 +765,7 @@ async def run(
         print("Running Agent...")
 
         agent_deployment = AgentDeployment(
-            name=module_name, 
-            module={"name": module_name}, 
+            module={"id": module_name, "name": module_name.split(":")[-1]}, 
             node=url_to_node(os.getenv("NODE_URL")), 
             tool_deployments=tool_deployments,
             kb_deployments=kb_deployments,
@@ -786,8 +785,7 @@ async def run(
     elif module_type == "tool":
         print("Running Tool...")
         tool_deployment = ToolDeployment(
-            name=module_name,
-            module={"name": module_name},
+            module={"id": module_name, "name": module_name.split(":")[-1]},
             node=url_to_node(os.getenv("NODE_URL")))
 
         tool_run_input = ToolRunInput(
@@ -801,8 +799,7 @@ async def run(
         print("Running Orchestrator...")
 
         orchestrator_deployment = OrchestratorDeployment(
-            name=module_name, 
-            module={"name": module_name}, 
+            module={"id": module_name, "name": module_name.split(":")[-1]}, 
             node=url_to_node(os.getenv("NODE_URL")),
             agent_deployments=agent_deployments,
             environment_deployments=environment_deployments,
@@ -820,8 +817,7 @@ async def run(
         print("Running Environment...")
 
         environment_deployment = EnvironmentDeployment(
-            name=module_name, 
-            module={"name": module_name}, 
+            module={"id": module_name, "name": module_name.split(":")[-1]}, 
             node=url_to_node(os.getenv("NODE_URL"))
         )
 
@@ -836,8 +832,7 @@ async def run(
         print("Running Knowledge Base...")
 
         kb_deployment = KBDeployment(
-            name=module_name, 
-            module={"name": module_name}, 
+            module={"id": module_name, "name": module_name.split(":")[-1]}, 
             node=url_to_node(os.getenv("NODE_URL"))
         )
 
