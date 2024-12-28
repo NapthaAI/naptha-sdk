@@ -865,6 +865,27 @@ def _parse_list_arg(args, arg_name, default=None, split_char=','):
         return value.split(split_char) if split_char in value else [value]
     return default
 
+def _parse_parameters(args):
+    if hasattr(args, 'parameters') and args.parameters is not None:
+        try:
+            parsed_params = json.loads(args.parameters)
+        except json.JSONDecodeError:
+            params = shlex.split(args.parameters)
+            parsed_params = {}
+            for param in params:
+                key, value = param.split('=')
+                # Try to parse value as JSON if it looks like a dict
+                try:
+                    if value.startswith('{') and value.endswith('}'):
+                        value = json.loads(value)
+                except json.JSONDecodeError:
+                    pass
+                parsed_params[key] = value
+        print("Parsed parameters:", parsed_params)
+    else:
+        parsed_params = None
+    return parsed_params
+
 def _parse_str_args(args):
     # Parse all list arguments
     args.worker_nodes = _parse_list_arg(args, 'worker_nodes', default=None)
@@ -874,6 +895,7 @@ def _parse_str_args(args):
     args.agent_modules = _parse_list_arg(args, 'agent_modules', default=None)
     args.environment_modules = _parse_list_arg(args, 'environment_modules', default=None)
     args.personas_urls = _parse_list_arg(args, 'personas_urls', default=None)
+    args.parameters = _parse_parameters(args)
     return args
 
 async def main():
@@ -1254,21 +1276,8 @@ async def main():
 
             elif args.command == "create":
                 await create(naptha, args.module, args.agent_modules, args.worker_nodes, args.environment_modules, args.environment_nodes)
-            
-            elif args.command == "run":
-                if hasattr(args, 'parameters') and args.parameters is not None:
-                    try:
-                        parsed_params = json.loads(args.parameters)
-                    except json.JSONDecodeError:
-                        params = shlex.split(args.parameters)
-                        parsed_params = {}
-                        for param in params:
-                            key, value = param.split('=')
-                            parsed_params[key] = value
-                else:
-                    parsed_params = None
-                    
-                await run(naptha, args.agent, user_id, parsed_params, args.worker_nodes, args.tool_nodes, args.environment_nodes, args.kb_nodes, args.file, args.personas_urls)
+            elif args.command == "run":                    
+                await run(naptha, args.agent, user_id, args.parameters, args.worker_nodes, args.tool_nodes, args.environment_nodes, args.kb_nodes, args.file, args.personas_urls)
             elif args.command == "inference":
                 request = ChatCompletionRequest(
                     messages=[{"role": "user", "content": args.prompt}],

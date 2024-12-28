@@ -310,7 +310,7 @@ naptha run kb:wikipedia_kb -p "mode='query' query='Elon Musk'"
 ### Run an Agent that interacts with the Knowledge Base
 
 ```bash
-naptha run agent:wikipedia_agent -p "query='Elon Musk' question='Who is Elon Musk?'" --kb_nodes "localhost"
+naptha run agent:wikipedia_agent -p "tool_name='answer_question_from_content' tool_input_data='{\"query\": \"Elon Musk\", \"question\": \"Who is Elon Musk?\"}'" --kb_nodes "localhost"
 ```
 
 ## Memory Modules
