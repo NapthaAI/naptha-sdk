@@ -62,26 +62,26 @@ class DataGenerationConfig(BaseModel):
     default_filename: Optional[str] = None
 
 class ToolDeployment(BaseModel):
-    node: NodeSchema
+    node: Union[NodeSchema, Dict]
     name: Optional[str] = None
     module: Optional[Dict] = None
     config: Optional[ToolConfig] = None
     data_generation_config: Optional[DataGenerationConfig] = None
 
 class KBDeployment(BaseModel):
-    node: NodeSchema
+    node: Union[NodeSchema, Dict]
     name: Optional[str] = None
     module: Optional[Dict] = None
     config: Optional[Dict] = None
 
 class EnvironmentDeployment(BaseModel):
-    node: NodeSchema
+    node: Union[NodeSchema, Dict]
     name: Optional[str] = None
     module: Optional[Dict] = None
     config: Optional[EnvironmentConfig] = None
 
 class AgentDeployment(BaseModel):
-    node: NodeSchema
+    node: Union[NodeSchema, Dict]
     name: Optional[str] = None
     module: Optional[Dict] = None
     config: Optional[AgentConfig] = None
@@ -91,7 +91,7 @@ class AgentDeployment(BaseModel):
     kb_deployments: Optional[List[KBDeployment]] = None
 
 class OrchestratorDeployment(BaseModel):
-    node: NodeSchema
+    node: Union[NodeSchema, Dict]
     name: Optional[str] = None
     module: Optional[Dict] = None
     config: Optional[OrchestratorConfig] = None

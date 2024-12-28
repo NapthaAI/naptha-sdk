@@ -1,67 +1,97 @@
 import json
 from pathlib import Path
 from naptha_sdk.package_manager import load_persona
-from naptha_sdk.schemas import AgentDeployment, EnvironmentDeployment, LLMConfig, OrchestratorDeployment, ToolDeployment
+from naptha_sdk.schemas import AgentDeployment, EnvironmentDeployment, LLMConfig, OrchestratorDeployment, ToolDeployment, KBDeployment
+from naptha_sdk.utils import url_to_node
 
 def load_llm_configs(llm_configs_path):
     with open(llm_configs_path, "r") as file:
         llm_configs = json.loads(file.read())
     return [LLMConfig(**config) for config in llm_configs]
 
-def load_agent_deployments(agent_deployments_path, load_persona_data=False, load_persona_schema=False):
-    with open(agent_deployments_path, "r") as file:
-        agent_deployments = json.loads(file.read())
+def load_node_metadata(deployment, node_url):
+    print(f"Loading node metadata for {deployment['node']['ip']}")
+    deployment["node"] = url_to_node(node_url)
+    print(f"Node metadata loaded {deployment['node']}")
+    return deployment
 
-    for deployment in agent_deployments:
-        # Load LLM config
-        config_name = deployment["agent_config"]["llm_config"]["config_name"]
+def load_module_config_data(deployment, load_persona_data=False, load_persona_schema=False):
+
+    if "llm_config" in deployment["config"] and deployment["config"]["llm_config"] is not None:
+        config_name = deployment["config"]["llm_config"]["config_name"]
         config_path = f"{Path.cwd().name}/configs/llm_configs.json"
         llm_configs = load_llm_configs(config_path)
         llm_config = next(config for config in llm_configs if config.config_name == config_name)
-        deployment["agent_config"]["llm_config"] = llm_config   
+        deployment["config"]["llm_config"] = llm_config
+    if load_persona_data:
+        persona_data, input_schema = load_persona(deployment["agent_config"]["persona_module"]["module_url"])
+        deployment["agent_config"]["persona_module"]["data"] = persona_data
+    if load_persona_schema:
+        deployment["agent_config"]["persona_module"]["data"] = input_schema(**persona_data)
 
-        # Load tool deployments if they exist
-        if "tool_deployments" in deployment and deployment["tool_deployments"]:
-            tool_deployment_name = deployment["tool_deployments"][0]["name"]
-            tool_deployment_path = f"{Path.cwd().name}/configs/tool_deployments.json"
-            tool_deployments = load_tool_deployments(tool_deployment_path)
-            tool_deployment = next(deployment for deployment in tool_deployments if deployment.name == tool_deployment_name)
-            deployment["tool_deployments"][0] = tool_deployment
+    return deployment
 
-        if load_persona_data:
-            persona_data, input_schema = load_persona(deployment["agent_config"]["persona_module"]["module_url"])
-            deployment["agent_config"]["persona_module"]["data"] = persona_data
-        if load_persona_schema:
-            deployment["agent_config"]["persona_module"]["data"] = input_schema(**persona_data)
+def load_subdeployments(deployment, node_url):
 
-    return [AgentDeployment(**deployment) for deployment in agent_deployments]
+    configs_path = Path(f"{Path.cwd().name}/configs")
 
-def load_tool_deployments(tool_deployments_path):
-    with open(tool_deployments_path, "r") as file:
-        tool_deployments = json.loads(file.read())
+    if "agent_deployments" in deployment and deployment["agent_deployments"]:
+        # Update defaults with non-None values from input
+        agent_deployments = []
+        for i, agent_deployment in enumerate(deployment["agent_deployments"]):
+            deployment_name = deployment["agent_deployments"][i]["name"]
+            agent_deployment = setup_module_deployment("agent", configs_path / "agent_deployments.json", node_url, deployment_name)
+            agent_deployments.append(agent_deployment)
+        deployment["agent_deployments"] = agent_deployments
+    if "tool_deployments" in deployment and deployment["tool_deployments"]:
+        tool_deployments = []
+        for i, tool_deployment in enumerate(deployment["tool_deployments"]):
+            deployment_name = deployment["tool_deployments"][i]["name"]
+            tool_deployment = setup_module_deployment("tool", configs_path / "tool_deployments.json", node_url, deployment_name)
+            tool_deployments.append(tool_deployment)
+        deployment["tool_deployments"] = tool_deployments
+    if "environment_deployments" in deployment and deployment["environment_deployments"]:
+        environment_deployments = []
+        for i, environment_deployment in enumerate(deployment["environment_deployments"]):
+            deployment_name = deployment["environment_deployments"][i]["name"]
+            environment_deployment = setup_module_deployment("environment", configs_path / "environment_deployments.json", node_url, deployment_name)
+            environment_deployments.append(environment_deployment)
+        deployment["environment_deployments"] = environment_deployments
+    if "kb_deployments" in deployment and deployment["kb_deployments"]:
+        kb_deployments = []
+        for i, kb_deployment in enumerate(deployment["kb_deployments"]):
+            deployment_name = deployment["kb_deployments"][i]["name"]
+            kb_deployment = setup_module_deployment("kb", configs_path / "kb_deployments.json", node_url, deployment_name)
+            kb_deployments.append(kb_deployment)
+        deployment["kb_deployments"] = kb_deployments
+    print(f"Subdeployments loaded {deployment}")
+    return deployment
 
-    for deployment in tool_deployments:
-        # Load LLM config if present
-        if "tool_config" in deployment and "llm_config" in deployment["tool_config"]:
-            config_name = deployment["tool_config"]["llm_config"]["config_name"]
-            config_path = f"{Path.cwd().name}/configs/llm_configs.json"
-            llm_configs = load_llm_configs(config_path)
-            llm_config = next(config for config in llm_configs if config.config_name == config_name)
-            deployment["tool_config"]["llm_config"] = llm_config
+def setup_module_deployment(module_type: str, deployment_path: str, node_url: str, deployment_name: str = None):
 
-    return [ToolDeployment(**deployment) for deployment in tool_deployments]
+    # Map deployment types to their corresponding classes
+    deployment_map = {
+        "agent": AgentDeployment,
+        "tool": ToolDeployment,
+        "environment": EnvironmentDeployment,
+        "kb": KBDeployment,
+        "orchestrator": OrchestratorDeployment
+    }
 
-def load_orchestrator_deployments(orchestrator_deployments_path):
-    with open(orchestrator_deployments_path, "r") as file:
-        orchestrator_deployments = json.loads(file.read())
-    return [OrchestratorDeployment(**deployment) for deployment in orchestrator_deployments]
+    # Load default deployment config from module
+    with open(deployment_path, "r") as file:
+        deployment = json.loads(file.read())
 
-def load_environment_deployments(environment_deployments_path, config_schema=None):
-    with open(environment_deployments_path, "r") as file:
-        environment_deployments = json.loads(file.read())
-    
-    if config_schema:
-        for deployment in environment_deployments:
-            deployment["environment_config"] = config_schema
+    if deployment_name is None:
+        deployment = deployment[0]
+    else:
+        # Get the first deployment with matching name
+        deployment = next((d for d in deployment if d["name"] == deployment_name), None)
+        if deployment is None:
+            raise ValueError(f"No deployment found with name {deployment_name}")
 
-    return [EnvironmentDeployment(**deployment) for deployment in environment_deployments]
+    deployment = load_node_metadata(deployment, node_url)
+    deployment = load_module_config_data(deployment)
+    deployment = load_subdeployments(deployment, node_url)
+
+    return deployment_map[module_type](**deployment)
