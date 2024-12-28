@@ -50,6 +50,9 @@ class EnvironmentConfig(BaseModel):
     config_name: Optional[str] = "environment_config"
     environment_type: Optional[str] = None
 
+class KBConfig(BaseModel):
+    config_name: Optional[str] = None
+
 class DataGenerationConfig(BaseModel):
     save_outputs: Optional[bool] = None
     save_outputs_location: Optional[str] = None
@@ -60,26 +63,26 @@ class DataGenerationConfig(BaseModel):
 
 class ToolDeployment(BaseModel):
     node: NodeSchema
-    name: Optional[str] = "tool_deployment"
+    name: Optional[str] = None
     module: Optional[Dict] = None
     tool_config: Optional[ToolConfig] = None
     data_generation_config: Optional[DataGenerationConfig] = None
 
 class KBDeployment(BaseModel):
     node: NodeSchema
-    name: Optional[str] = "kb_deployment"
+    name: Optional[str] = None
     module: Optional[Dict] = None
     kb_config: Optional[Dict] = None
 
 class EnvironmentDeployment(BaseModel):
     node: NodeSchema
-    name: Optional[str] = "environment_deployment"
+    name: Optional[str] = None
     module: Optional[Dict] = None
     environment_config: Optional[EnvironmentConfig] = None
 
 class AgentDeployment(BaseModel):
     node: NodeSchema
-    name: Optional[str] = "agent_deployment"
+    name: Optional[str] = None
     module: Optional[Dict] = None
     agent_config: Optional[AgentConfig] = None
     data_generation_config: Optional[DataGenerationConfig] = None
@@ -89,7 +92,7 @@ class AgentDeployment(BaseModel):
 
 class OrchestratorDeployment(BaseModel):
     node: NodeSchema
-    name: Optional[str] = "orchestrator_deployment"
+    name: Optional[str] = None
     module: Optional[Dict] = None
     orchestrator_config: Optional[OrchestratorConfig] = None
     agent_deployments: Optional[List[AgentDeployment]] = None
