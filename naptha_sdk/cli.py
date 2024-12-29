@@ -276,8 +276,10 @@ async def list_personas(naptha):
     table.add_column("ID", justify="left")
     table.add_column("Author", justify="left")
     table.add_column("Description", justify="left", max_width=50)
+    table.add_column("Parameters", justify="left", max_width=30)
     table.add_column("Module URL", justify="left", max_width=40)
     table.add_column("Module Version", justify="center")
+    table.add_column("Module Entrypoint", justify="center")
 
     # Add rows
     for persona in personas:
@@ -286,8 +288,10 @@ async def list_personas(naptha):
             persona['id'],
             persona['author'],
             persona['description'],
+            persona['parameters'],
             persona['module_url'],
             persona['module_version'],
+            persona['module_entrypoint']
         )
 
     # Print table and summary
@@ -926,7 +930,6 @@ async def main():
     # Persona commands
     personas_parser = subparsers.add_parser("personas", help="List available personas.")
     personas_parser.add_argument('persona_name', nargs='?', help='Optional persona name')
-    personas_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
     personas_parser.add_argument('-d', '--delete', action='store_true', help='Delete a persona')
 
     # Tool commands
