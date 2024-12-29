@@ -566,7 +566,6 @@ async def add_data_to_kb(naptha, kb_name, data, user_id=None, kb_node=None):
 
 async def list_servers(naptha):
     servers = await naptha.hub.list_servers()
-    
     if not servers:
         console = Console()
         console.print("[red]No servers found.[/red]")
@@ -582,18 +581,18 @@ async def list_servers(naptha):
         row_styles=["", "dim"]  # Alternating row styles
     )
 
-    # Add columns
-    table.add_column("Name", justify="left", style="green")
-    table.add_column("ID", justify="left")
-    table.add_column("Connection", justify="left")
+    # Add columns based on actual data structure
+    table.add_column("ID", justify="left", style="green")
+    table.add_column("Server Type", justify="left")
+    table.add_column("Port", justify="left")
     table.add_column("Node ID", justify="left", max_width=30)
 
-    # Add rows
+    # Add rows with the actual data fields
     for server in servers:
         table.add_row(
-            server['name'],
             server['id'],
-            server['connection_string'],
+            server['server_type'],
+            str(server['port']),
             server['node_id'][:30] + "..."  # Truncate long node ID
         )
 
