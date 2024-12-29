@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 
 from naptha_sdk.client.hub import Hub
 from naptha_sdk.client.node import Node
-from naptha_sdk.client.services import Services
 from naptha_sdk.package_manager import AGENT_DIR, add_files_to_package, add_dependencies_to_pyproject, git_add_commit, \
     init_agent_package, publish_ipfs_package, render_agent_code, write_code_to_package
 from naptha_sdk.schemas import User

@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.client.naptha import Naptha
-from naptha_sdk.schemas import AgentConfig, AgentDeployment, ChatCompletionRequest, EnvironmentDeployment, \
+from naptha_sdk.schemas import AgentDeployment, ChatCompletionRequest, EnvironmentDeployment, \
     OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, KBDeployment, KBRunInput, ToolDeployment, ToolRunInput
 from naptha_sdk.user import get_public_key
 from naptha_sdk.utils import url_to_node
@@ -28,14 +28,6 @@ def load_yaml_to_dict(file_path):
         # Load the YAML content into a Python dictionary
         yaml_content = yaml.safe_load(file)
     return yaml_content
-
-def creds(naptha):
-    return naptha.services.show_credits()
-
-def list_services(naptha):
-    services = naptha.services.list_services()
-    for service in services:
-        print(service) 
 
 async def list_nodes(naptha):
     nodes = await naptha.hub.list_nodes()
