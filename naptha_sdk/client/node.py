@@ -19,7 +19,7 @@ from httpx import HTTPStatusError, RemoteProtocolError
 from naptha_sdk.client import grpc_server_pb2
 from naptha_sdk.client import grpc_server_pb2_grpc
 from naptha_sdk.schemas import AgentRun, AgentRunInput, ChatCompletionRequest, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, \
-    OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, KBDeployment, KBRunInput, KBRun, ToolRunInput, ToolRun, NodeSchema
+    OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, KBDeployment, KBRunInput, KBRun, ToolRunInput, ToolRun, NodeSchema, ModelResponse
 from naptha_sdk.utils import get_logger, node_to_url
 
 logger = get_logger(__name__)
@@ -297,7 +297,7 @@ class Node:
             print(f"An unexpected error occurred: {e}")
             raise
 
-    async def run_inference(self, inference_input: Union[ChatCompletionRequest, Dict]) -> Dict:
+    async def run_inference(self, inference_input: Union[ChatCompletionRequest, Dict]) -> ModelResponse:
         """
         Run inference on a node
         
@@ -322,7 +322,7 @@ class Node:
                 )
                 print("Response: ", response.text)
                 response.raise_for_status()
-                return json.loads(response.text)
+                return ModelResponse(**json.loads(response.text))
         except HTTPStatusError as e:
             logger.info(f"HTTP error occurred: {e}")
             raise

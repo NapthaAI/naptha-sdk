@@ -354,8 +354,6 @@ async def load_persona(persona_module):
             
         _ = Repo.clone_from(persona_url, to_path=str(repo_path))
         
-
-        # Look for files in data subdirectory
         persona_file = repo_path / persona['module_entrypoint']
         if not persona_file.exists():
             logger.error(f"Persona file not found in repository {repo_name}")

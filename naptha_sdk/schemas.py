@@ -294,3 +294,15 @@ class ChatCompletionRequest(BaseModel):
     presence_penalty: Optional[float] = None
     stop: Optional[List[str]] = None
     stream: Optional[bool] = None
+
+class Choices(BaseModel):
+    message: ChatMessage
+    finish_reason: str
+    index: int
+
+class ModelResponse(BaseModel):
+    id: str
+    choices: List[Choices]
+    created: int
+    model: str
+    object: str
