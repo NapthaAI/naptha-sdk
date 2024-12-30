@@ -159,6 +159,8 @@ class Hub:
             personas = await self.surrealdb.query("SELECT * FROM persona;")
             return personas[0]['result']
         else:
+            if not "persona:" in persona_name:
+                persona_name = f"persona:{persona_name}"
             persona = await self.surrealdb.query("SELECT * FROM persona WHERE id=$persona_name;", {"persona_name": persona_name})
             return persona[0]['result']
     
