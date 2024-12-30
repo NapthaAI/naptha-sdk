@@ -365,6 +365,10 @@ naptha personas -d persona_name
 naptha run agent:simple_chat_agent -p "tool_name='chat' tool_input_data='who are you?'" --persona_modules "interstellarninja_twitter"
 ```
 
+```bash
+naptha run agent:simple_chat_agent -p "tool_name='chat' tool_input_data='who are you?'" --persona_modules "marketagents_aileenmay"
+```
+
 ## Inference 
 
 ```bash
