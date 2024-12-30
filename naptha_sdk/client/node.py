@@ -41,9 +41,9 @@ class NodeClient:
         if len(ports) == 0:
             raise ValueError("No ports found for node")
         if node.server_type == 'ws':
-            return f"ws://{node.host}:{random.choice(ports)}"
+            return f"ws://{node.ip}:{random.choice(ports)}"
         elif node.server_type == 'grpc':
-            return f"grpc://{node.host}:{random.choice(ports)}"
+            return f"{node.ip}:{random.choice(ports)}"
         else:
             raise ValueError("Invalid server type. Server type must be either 'ws' or 'grpc'.")
 
