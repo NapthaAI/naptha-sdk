@@ -129,15 +129,54 @@ class NodeClient:
                     input_data = agent_run_input.inputs.dict() if hasattr(agent_run_input.inputs, 'dict') else agent_run_input.inputs
                     input_struct.update(input_data)
             
-            # Create agent module and deployment
-            agent_module = grpc_server_pb2.AgentModule(
-                name=agent_run_input.deployment.module['name']
+            # Convert deployment node to NodeConfigInput
+            node_config = grpc_server_pb2.NodeConfigInput(
+                ip=agent_run_input.deployment.node.ip,
+                http_port=agent_run_input.deployment.node.http_port,
+                server_type=agent_run_input.deployment.node.server_type
             )
             
+            # Create agent module with all fields
+            agent_module = grpc_server_pb2.AgentModule(
+                id=agent_run_input.deployment.module.get('id', ''),
+                name=agent_run_input.deployment.module.get('name', ''),
+                description=agent_run_input.deployment.module.get('description', ''),
+                author=agent_run_input.deployment.module.get('author', ''),
+                module_url=agent_run_input.deployment.module.get('module_url', ''),
+                module_type=agent_run_input.deployment.module.get('module_type', ''),
+                module_version=agent_run_input.deployment.module.get('module_version', ''),
+                module_entrypoint=agent_run_input.deployment.module.get('module_entrypoint', ''),
+                personas_urls=agent_run_input.deployment.module.get('personas_urls', [])
+            )
+
+            # Create LLMConfig if exists
+            llm_config = None
+            if agent_run_input.deployment.config and agent_run_input.deployment.config.llm_config:
+                llm_config = grpc_server_pb2.LLMConfig(
+                    config_name=agent_run_input.deployment.config.llm_config.config_name,
+                    client=agent_run_input.deployment.config.llm_config.client,
+                    model=agent_run_input.deployment.config.llm_config.model,
+                    max_tokens=agent_run_input.deployment.config.llm_config.max_tokens,
+                    temperature=agent_run_input.deployment.config.llm_config.temperature,
+                    api_base=agent_run_input.deployment.config.llm_config.api_base
+                )
+
+            # Create AgentConfig
+            agent_config = None
+            if agent_run_input.deployment.config:
+                agent_config = grpc_server_pb2.AgentConfig(
+                    config_name=agent_run_input.deployment.config.config_name,
+                    config_schema=agent_run_input.deployment.config.config_schema,
+                    llm_config=llm_config
+                )
+            
+            # Create agent deployment
             agent_deployment = grpc_server_pb2.AgentDeployment(
+                node=node_config,
                 name=agent_run_input.deployment.name,
                 module=agent_module,
-                worker_node=agent_run_input.deployment.worker_node
+                config=agent_config,
+                initialized=agent_run_input.deployment.initialized
             )
             
             # Create request
@@ -150,7 +189,7 @@ class NodeClient:
             final_response = None
             async for response in stub.RunAgent(request):
                 final_response = response
-                logger.info(f"Got response: {final_response}")
+                logger.info(f"Got response: {response}")
                 
             return AgentRun(
                 consumer_id=agent_run_input.consumer_id,
@@ -158,7 +197,7 @@ class NodeClient:
                 deployment=agent_run_input.deployment,
                 orchestrator_runs=[],
                 status=final_response.status,
-                error=final_response.status == "error",
+                error=final_response.error,
                 id=final_response.id,
                 results=list(final_response.results),
                 error_message=final_response.error_message,
