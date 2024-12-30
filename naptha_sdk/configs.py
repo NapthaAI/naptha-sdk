@@ -15,7 +15,7 @@ def load_node_metadata(deployment, node_url):
     print(f"Node metadata loaded {deployment['node']}")
     return deployment
 
-def load_module_config_data(deployment, load_persona_data=False, load_persona_schema=False):
+async def load_module_config_data(deployment, load_persona_data=False, load_persona_schema=False):
 
     if "llm_config" in deployment["config"] and deployment["config"]["llm_config"] is not None:
         config_name = deployment["config"]["llm_config"]["config_name"]
@@ -24,10 +24,10 @@ def load_module_config_data(deployment, load_persona_data=False, load_persona_sc
         llm_config = next(config for config in llm_configs if config.config_name == config_name)
         deployment["config"]["llm_config"] = llm_config
     if load_persona_data:
-        persona_data, input_schema = load_persona(deployment["agent_config"]["persona_module"]["module_url"])
-        deployment["agent_config"]["persona_module"]["data"] = persona_data
+        persona_data, input_schema = await load_persona(deployment["config"]["persona_module"])
+        deployment["config"]["system_prompt"]["persona"] = persona_data
     if load_persona_schema:
-        deployment["agent_config"]["persona_module"]["data"] = input_schema(**persona_data)
+        deployment["config"]["persona_module"]["data"] = input_schema(**persona_data)
 
     return deployment
 
@@ -67,7 +67,7 @@ def load_subdeployments(deployment, node_url):
     print(f"Subdeployments loaded {deployment}")
     return deployment
 
-def setup_module_deployment(module_type: str, deployment_path: str, node_url: str, deployment_name: str = None):
+async def setup_module_deployment(module_type: str, deployment_path: str, node_url: str, deployment_name: str = None, load_persona_data=False, load_persona_schema=False):
 
     # Map deployment types to their corresponding classes
     deployment_map = {
@@ -91,7 +91,6 @@ def setup_module_deployment(module_type: str, deployment_path: str, node_url: st
             raise ValueError(f"No deployment found with name {deployment_name}")
 
     deployment = load_node_metadata(deployment, node_url)
-    deployment = load_module_config_data(deployment)
+    deployment = await load_module_config_data(deployment, load_persona_data, load_persona_schema)
     deployment = load_subdeployments(deployment, node_url)
-
     return deployment_map[module_type](**deployment)

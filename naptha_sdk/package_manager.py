@@ -1,7 +1,9 @@
+from dotenv import load_dotenv
 from git import Repo
 import importlib.util
 import ipfshttpclient
 import json
+from naptha_sdk.client.hub import Hub
 from naptha_sdk.utils import get_logger
 import os
 from pathlib import Path
@@ -14,6 +16,7 @@ import tomlkit
 import yaml
 import zipfile
 
+load_dotenv()
 logger = get_logger(__name__)
 
 IPFS_GATEWAY_URL="/dns/provider.akash.pro/tcp/31832/http"
@@ -319,9 +322,27 @@ def load_input_schema(repo_name):
     input_schema = getattr(schemas_module, "Persona")
     return input_schema
 
-def load_persona(persona_url):
+async def load_persona(persona_module):
     """Load persona from a JSON or YAML file in a git repository."""
     try:
+
+        hub_username = os.getenv("HUB_USERNAME")
+        hub_password = os.getenv("HUB_PASSWORD")
+        hub_url = os.getenv("HUB_URL")
+
+        if not hub_username or not hub_password or not hub_url:
+            raise ValueError("HUB_USERNAME, HUB_PASSWORD, and HUB_URL environment variables must be set")
+
+        async with Hub(hub_url) as hub:
+            try:
+                _, _, _ = await hub.signin(hub_username, hub_password)
+            except Exception as auth_error:
+                raise ConnectionError(f"Failed to authenticate with Hub: {str(auth_error)}")            
+
+            personas = await hub.list_personas(persona_module['name'])
+        persona = personas[0]
+        persona_url = persona['module_url']
+
         # Clone the repo
         repo_name = persona_url.split('/')[-1]
         repo_path = Path(f"{AGENT_DIR}/{repo_name}")
@@ -333,20 +354,13 @@ def load_persona(persona_url):
             
         _ = Repo.clone_from(persona_url, to_path=str(repo_path))
         
+
         # Look for files in data subdirectory
-        data_dir = repo_path / repo_name / "data"
-        if not data_dir.exists():
-            logger.error(f"No data directory found in repository {repo_name}")
+        persona_file = repo_path / persona['module_entrypoint']
+        if not persona_file.exists():
+            logger.error(f"Persona file not found in repository {repo_name}")
             return None
-            
-        # Get first file in data dir
-        data_files = list(data_dir.iterdir())
-        if not data_files:
-            logger.error(f"No files found in data directory of repository {repo_name}")
-            return None
-            
-        persona_file = data_files[0]
-        
+                
         # Load based on file extension
         with persona_file.open('r') as f:
             if persona_file.suffix == '.json':
@@ -357,10 +371,9 @@ def load_persona(persona_url):
                 logger.error(f"Unsupported file type {persona_file.suffix} in {repo_name}")
                 return None
             
-        subprocess.run(["poetry", "add", f"git+{persona_url}"], check=True, capture_output=True, text=True)
 
-        input_schema = load_input_schema(repo_name)
-        return persona_data, input_schema
+        # input_schema = load_input_schema(repo_name)
+        return persona_data
         
     except Exception as e:
         logger.error(f"Error loading persona from {persona_url}: {e}")
