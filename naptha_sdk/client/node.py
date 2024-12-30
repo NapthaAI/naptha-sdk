@@ -184,7 +184,6 @@ class NodeClient:
                 name=agent_run_input.deployment.name,
                 module=agent_module,
                 config=agent_config,
-                initialized=agent_run_input.deployment.initialized
             )
             
             # Create request
