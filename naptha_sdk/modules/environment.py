@@ -1,4 +1,4 @@
-from naptha_sdk.client.node import Node
+from naptha_sdk.client.node import UserClient
 from naptha_sdk.schemas import EnvironmentDeployment, EnvironmentRunInput
 from typing import Any, Dict, List
 import logging
@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 class Environment:
     def __init__(self, environment_deployment: EnvironmentDeployment):
         self.environment_deployment = environment_deployment
-        self.environment_node = Node(self.environment_deployment.node)
+        self.environment_node = UserClient(self.environment_deployment.node)
         self.table_name = "multi_chat_simulations"
 
     @classmethod
