@@ -1289,7 +1289,7 @@ async def main():
                     messages=[{"role": "user", "content": args.prompt}],
                     model=args.model,
                 )
-                await naptha.node.run_inference(request)
+                await naptha.inference_client.run_inference(request)
             elif args.command == "read_storage":
                 await read_storage(naptha, args.agent_run_id, args.output_dir, args.ipfs)
             elif args.command == "write_storage":

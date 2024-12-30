@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 
 from naptha_sdk.client.hub import Hub
 from naptha_sdk.client.node import UserClient
+from naptha_sdk.client.inference import InferenceClient
 from naptha_sdk.package_manager import AGENT_DIR, add_files_to_package, add_dependencies_to_pyproject, git_add_commit, \
     init_agent_package, publish_ipfs_package, render_agent_code, write_code_to_package
 from naptha_sdk.schemas import User
@@ -28,6 +29,7 @@ class Naptha:
         self.hub_username = os.getenv("HUB_USERNAME", None)
         self.hub_url = os.getenv("HUB_URL", None)
         self.node = UserClient(url_to_node(os.getenv("NODE_URL", None)))
+        self.inference_client = InferenceClient(url_to_node(os.getenv("NODE_URL", None)))
         self.hub = Hub(self.hub_url, self.public_key)  
 
     async def __aenter__(self):
