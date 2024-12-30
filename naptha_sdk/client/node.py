@@ -152,23 +152,31 @@ class NodeClient:
             # Create LLMConfig if exists
             llm_config = None
             if agent_run_input.deployment.config and agent_run_input.deployment.config.llm_config:
-                llm_config = grpc_server_pb2.LLMConfig(
-                    config_name=agent_run_input.deployment.config.llm_config.config_name,
-                    client=agent_run_input.deployment.config.llm_config.client,
-                    model=agent_run_input.deployment.config.llm_config.model,
-                    max_tokens=agent_run_input.deployment.config.llm_config.max_tokens,
-                    temperature=agent_run_input.deployment.config.llm_config.temperature,
-                    api_base=agent_run_input.deployment.config.llm_config.api_base
-                )
+                llm_config_data = agent_run_input.deployment.config.llm_config
+                if isinstance(llm_config_data, dict):
+                    llm_config = grpc_server_pb2.LLMConfig(**llm_config_data)
+                else:
+                    llm_config = grpc_server_pb2.LLMConfig(
+                        config_name=getattr(llm_config_data, 'config_name', None),
+                        client=getattr(llm_config_data, 'client', None),
+                        model=getattr(llm_config_data, 'model', None),
+                        max_tokens=getattr(llm_config_data, 'max_tokens', None),
+                        temperature=getattr(llm_config_data, 'temperature', None),
+                        api_base=getattr(llm_config_data, 'api_base', None)
+                    )
 
             # Create AgentConfig
             agent_config = None
             if agent_run_input.deployment.config:
-                agent_config = grpc_server_pb2.AgentConfig(
-                    config_name=agent_run_input.deployment.config.config_name,
-                    config_schema=agent_run_input.deployment.config.config_schema,
-                    llm_config=llm_config
-                )
+                config_data = agent_run_input.deployment.config
+                if isinstance(config_data, dict):
+                    agent_config = grpc_server_pb2.AgentConfig(**config_data)
+                else:
+                    agent_config = grpc_server_pb2.AgentConfig(
+                        config_name=getattr(config_data, 'config_name', None),
+                        config_schema=getattr(config_data, 'config_schema', None),
+                        llm_config=llm_config
+                    )
             
             # Create agent deployment
             agent_deployment = grpc_server_pb2.AgentDeployment(
