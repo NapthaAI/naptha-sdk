@@ -719,7 +719,7 @@ async def run(
     environment_nodes=None,
     kb_nodes=None,
     yaml_file=None, 
-    personas_urls=None
+    persona_modules=None
 ):   
     if yaml_file and parameters:
         raise ValueError("Cannot pass both yaml_file and parameters")
@@ -763,6 +763,7 @@ async def run(
         agent_deployment = AgentDeployment(
             module={"id": module_name, "name": module_name.split(":")[-1]}, 
             node=url_to_node(os.getenv("NODE_URL")), 
+            config=AgentConfig(persona_module={"name": persona_modules[0]} if persona_modules else None),
             tool_deployments=tool_deployments,
             kb_deployments=kb_deployments,
             environment_deployments=environment_deployments
@@ -772,7 +773,6 @@ async def run(
             'consumer_id': user_id,
             "inputs": parameters,
             "deployment": agent_deployment.model_dump(),
-            "personas_urls": personas_urls
         }
         print(f"Agent run input: {agent_run_input}")
 
@@ -890,7 +890,7 @@ def _parse_str_args(args):
     args.kb_nodes = _parse_list_arg(args, 'kb_nodes', default=None)
     args.agent_modules = _parse_list_arg(args, 'agent_modules', default=None)
     args.environment_modules = _parse_list_arg(args, 'environment_modules', default=None)
-    args.personas_urls = _parse_list_arg(args, 'personas_urls', default=None)
+    args.persona_modules = _parse_list_arg(args, 'persona_modules', default=None)
     args.parameters = _parse_parameters(args)
     return args
 
@@ -975,8 +975,7 @@ async def main():
     run_parser.add_argument("-e", "--environment_nodes", help="Environment nodes to store data during agent runs.")
     run_parser.add_argument('-k', '--kb_nodes', type=str, help='Knowledge base nodes')
     run_parser.add_argument('-m', '--memory_nodes', type=str, help='Memory nodes')
-    
-    run_parser.add_argument("-u", "--personas_urls", help="Personas URLs to install before running the agent")
+    run_parser.add_argument("-pm", "--persona_modules", help="Personas URLs to install before running the agent")
     run_parser.add_argument("-f", "--file", help="YAML file with agent run parameters")
 
     # Inference command
@@ -1272,7 +1271,7 @@ async def main():
             elif args.command == "create":
                 await create(naptha, args.module, args.agent_modules, args.worker_nodes, args.environment_modules, args.environment_nodes)
             elif args.command == "run":                    
-                await run(naptha, args.agent, user_id, args.parameters, args.worker_nodes, args.tool_nodes, args.environment_nodes, args.kb_nodes, args.file, args.personas_urls)
+                await run(naptha, args.agent, user_id, args.parameters, args.worker_nodes, args.tool_nodes, args.environment_nodes, args.kb_nodes, args.file, args.persona_modules)
             elif args.command == "inference":
                 request = ChatCompletionRequest(
                     messages=[{"role": "user", "content": args.prompt}],
