@@ -1,6 +1,6 @@
 import asyncio
 from naptha_sdk.client.naptha import Naptha
-from naptha_sdk.tool import Tool
+from naptha_sdk.modules.tool import Tool
 from naptha_sdk.schemas import ToolDeployment, ToolRunInput, NodeSchema
 
 async def test_tool():
