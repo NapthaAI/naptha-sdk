@@ -359,6 +359,12 @@ naptha personas persona_name -p "description='Persona description' module_url='i
 naptha personas -d persona_name
 ```
 
+### Run an Agent with a Persona
+
+```bash
+naptha run agent:simple_chat_agent -p "tool_name='chat' tool_input_data='who are you?'" --persona_modules "interstellarninja_twitter"
+```
+
 ## Inference 
 
 ```bash
