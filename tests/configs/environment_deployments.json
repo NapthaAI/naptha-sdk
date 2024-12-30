@@ -1,0 +1,11 @@
+[
+    {
+        "name": "environment_deployment_1",
+        "module": {"name":"groupchat_environment"},
+        "node": {"ip": "localhost"},
+        "config": {
+            "config_name": "environment_config_1",
+            "environment_type": "groupchat"
+        }
+    }
+]

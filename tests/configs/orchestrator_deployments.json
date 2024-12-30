@@ -1,0 +1,18 @@
+[
+    {
+        "name": "orchestrator_1",
+        "module":{"name": "multiagent_chat"},
+        "node": {"ip": "localhost"},
+        "config": {
+            "config_name": "orchestrator_config_1",
+            "max_rounds": 10
+        },
+        "agent_deployments": [
+            {"name": "agent_deployment_1"},
+            {"name": "agent_deployment_2"}
+        ],
+        "environment_deployments": [
+            {"name": "environment_deployment_1"}
+        ]
+    }
+]

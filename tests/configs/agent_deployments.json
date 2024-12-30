@@ -1,0 +1,30 @@
+[
+    {
+        "name": "agent_deployment_1",
+        "module": {"name": "simple_chat_agent"},
+        "node": {"ip": "localhost"},
+        "config": {
+            "config_name": "agent_config_1",
+            "llm_config": {"config_name": "model_2"},
+            "persona_module" : {"module_url": "https://huggingface.co/datasets/richardblythman/characterfile_richardblythman"},
+            "system_prompt": {
+                "role": "You are a helpful AI assistant.",
+                "persona": ""
+            }
+        }
+    },
+    {
+        "name": "agent_deployment_2",
+        "module": {"name": "simple_chat_agent"},
+        "node": {"ip": "localhost"},
+        "config": {
+            "config_name": "agent_config_2",
+            "llm_config": {"config_name": "model_2"},
+            "persona_module" : {"module_url": "https://huggingface.co/datasets/richardblythman/characterfile_richardblythman"},
+            "system_prompt": {
+                "role": "You are a helpful AI assistant.",
+                "persona": ""
+            }
+        }
+    }
+]

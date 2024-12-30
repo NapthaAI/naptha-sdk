@@ -19,7 +19,7 @@ async def load_module_config_data(deployment, load_persona_data=False, load_pers
 
     if "llm_config" in deployment["config"] and deployment["config"]["llm_config"] is not None:
         config_name = deployment["config"]["llm_config"]["config_name"]
-        config_path = f"{Path.cwd().name}/configs/llm_configs.json"
+        config_path = f"configs/llm_configs.json"
         llm_configs = load_llm_configs(config_path)
         llm_config = next(config for config in llm_configs if config.config_name == config_name)
         deployment["config"]["llm_config"] = llm_config
@@ -31,37 +31,37 @@ async def load_module_config_data(deployment, load_persona_data=False, load_pers
 
     return deployment
 
-def load_subdeployments(deployment, node_url):
+async def load_subdeployments(deployment, node_url):
 
-    configs_path = Path(f"{Path.cwd().name}/configs")
+    configs_path = Path(f"configs")
 
     if "agent_deployments" in deployment and deployment["agent_deployments"]:
         # Update defaults with non-None values from input
         agent_deployments = []
         for i, agent_deployment in enumerate(deployment["agent_deployments"]):
             deployment_name = deployment["agent_deployments"][i]["name"]
-            agent_deployment = setup_module_deployment("agent", configs_path / "agent_deployments.json", node_url, deployment_name)
+            agent_deployment = await setup_module_deployment("agent", configs_path / "agent_deployments.json", node_url, deployment_name)
             agent_deployments.append(agent_deployment)
         deployment["agent_deployments"] = agent_deployments
     if "tool_deployments" in deployment and deployment["tool_deployments"]:
         tool_deployments = []
         for i, tool_deployment in enumerate(deployment["tool_deployments"]):
             deployment_name = deployment["tool_deployments"][i]["name"]
-            tool_deployment = setup_module_deployment("tool", configs_path / "tool_deployments.json", node_url, deployment_name)
+            tool_deployment = await setup_module_deployment("tool", configs_path / "tool_deployments.json", node_url, deployment_name)
             tool_deployments.append(tool_deployment)
         deployment["tool_deployments"] = tool_deployments
     if "environment_deployments" in deployment and deployment["environment_deployments"]:
         environment_deployments = []
         for i, environment_deployment in enumerate(deployment["environment_deployments"]):
             deployment_name = deployment["environment_deployments"][i]["name"]
-            environment_deployment = setup_module_deployment("environment", configs_path / "environment_deployments.json", node_url, deployment_name)
+            environment_deployment = await setup_module_deployment("environment", configs_path / "environment_deployments.json", node_url, deployment_name)
             environment_deployments.append(environment_deployment)
         deployment["environment_deployments"] = environment_deployments
     if "kb_deployments" in deployment and deployment["kb_deployments"]:
         kb_deployments = []
         for i, kb_deployment in enumerate(deployment["kb_deployments"]):
             deployment_name = deployment["kb_deployments"][i]["name"]
-            kb_deployment = setup_module_deployment("kb", configs_path / "kb_deployments.json", node_url, deployment_name)
+            kb_deployment = await setup_module_deployment("kb", configs_path / "kb_deployments.json", node_url, deployment_name)
             kb_deployments.append(kb_deployment)
         deployment["kb_deployments"] = kb_deployments
     print(f"Subdeployments loaded {deployment}")
@@ -92,5 +92,5 @@ async def setup_module_deployment(module_type: str, deployment_path: str, node_u
 
     deployment = load_node_metadata(deployment, node_url)
     deployment = await load_module_config_data(deployment, load_persona_data, load_persona_schema)
-    deployment = load_subdeployments(deployment, node_url)
+    deployment = await load_subdeployments(deployment, node_url)
     return deployment_map[module_type](**deployment)
