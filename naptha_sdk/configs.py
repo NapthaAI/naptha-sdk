@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from naptha_sdk.package_manager import load_persona
+from naptha_sdk.module_manager import load_persona
 from naptha_sdk.schemas import AgentDeployment, EnvironmentDeployment, LLMConfig, OrchestratorDeployment, ToolDeployment, KBDeployment
 from naptha_sdk.utils import url_to_node
 

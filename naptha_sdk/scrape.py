@@ -1,6 +1,6 @@
 import ast
 import inspect
-from naptha_sdk.package_manager import sort_modules, extract_dependencies
+from naptha_sdk.module_manager import sort_modules, extract_dependencies
 import os
 from pathlib import Path
 import sys
