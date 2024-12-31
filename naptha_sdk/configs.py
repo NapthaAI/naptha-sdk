@@ -19,7 +19,7 @@ async def load_module_config_data(deployment, load_persona_data=False, load_pers
 
     if "llm_config" in deployment["config"] and deployment["config"]["llm_config"] is not None:
         config_name = deployment["config"]["llm_config"]["config_name"]
-        config_path = f"configs/llm_configs.json"
+        config_path = f"{Path.cwd().name}/configs/llm_configs.json"
         llm_configs = load_llm_configs(config_path)
         llm_config = next(config for config in llm_configs if config.config_name == config_name)
         deployment["config"]["llm_config"] = llm_config
@@ -33,7 +33,7 @@ async def load_module_config_data(deployment, load_persona_data=False, load_pers
 
 async def load_subdeployments(deployment, node_url):
 
-    configs_path = Path(f"configs")
+    configs_path = Path(f"{Path.cwd().name}/configs")
 
     if "agent_deployments" in deployment and deployment["agent_deployments"]:
         # Update defaults with non-None values from input
