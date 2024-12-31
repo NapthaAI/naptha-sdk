@@ -1,6 +1,6 @@
 from enum import Enum
 from pydantic import BaseModel, Field
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional, Union, List
 
 class StorageType(str, Enum):
     DATABASE = "db"
@@ -28,11 +28,26 @@ class CreateTableRequest(BaseStorageRequest):
 class CreateRowRequest(BaseStorageRequest):
     data: Dict[str, Any]
 
+class DatabaseReadOptions(BaseModel):
+    """Options specific to database reads"""
+    columns: Optional[List[str]] = None
+    conditions: Optional[List[Dict[str, Any]]] = None
+    order_by: Optional[str] = None
+    order_direction: Optional[str] = "asc"
+    limit: Optional[int] = None
+    offset: Optional[int] = None
+    # Added fields for QA/vector search
+    query_col: Optional[str] = None  # Column to search against
+    answer_col: Optional[str] = None  # Column to return as answer
+    vector_col: Optional[str] = None  # Column containing vectors
+    top_k: Optional[int] = Field(default=5, ge=1)  # Number of results for vector search
+    include_similarity: Optional[bool] = Field(default=True)  # Include similarity scores
+
 class ReadStorageRequest(BaseModel):
     """Unified read request schema"""
-    path: str
     storage_type: StorageType
-    condition: Optional[Dict[str, Any]] = None
+    path: str
+    db_options: Optional[DatabaseReadOptions] = None
 
 class UpdateStorageRequest(BaseModel):
     data: Union[Dict[str, Any], bytes]

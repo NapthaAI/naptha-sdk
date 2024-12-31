@@ -5,6 +5,7 @@ import httpx
 import json
 from typing import Optional, Union, Dict, Any, List
 from httpx import HTTPStatusError, RemoteProtocolError
+from naptha_sdk.storage.schemas import ReadStorageRequest
 
 HTTP_TIMEOUT = 300
 
@@ -75,36 +76,21 @@ class StorageProvider:
 
     async def read(
         self,
-        storage_type: StorageType,
-        path: str,
-        columns: Optional[str] = None,
-        condition: Optional[Dict[str, Any]] = None,
-        limit: Optional[int] = None,
-        order_by: Optional[str] = None
+        read_storage_request: ReadStorageRequest,
     ) -> Dict[str, Any]:
         """
         Read from storage (query DB, read file, or fetch IPFS content)
         
         Args:
-            storage_type: Type of storage ('database', 'filesystem', or 'ipfs')
-            path: Storage path/identifier
-            columns: Comma-separated columns for DB queries
-            condition: Query condition for DB
-            limit: Result limit for DB queries
-            order_by: Order by field for DB queries
+            read_storage_request: ReadStorageRequest
         """
-        endpoint = f"{self.node_url}/storage/{storage_type}/read/{path}"
+        endpoint = f"{self.node_url}/storage/{read_storage_request.storage_type.value}/read/{read_storage_request.path}"
 
         try:
             async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-                params = {
-                    'columns': columns,
-                    'condition': json.dumps(condition) if condition else None,
-                    'limit': limit,
-                    'order_by': order_by
-                }
-                # Remove None values
-                params = {k: v for k, v in params.items() if v is not None}
+                params = read_storage_request.db_options.model_dump(exclude_none=True)
+
+                print("TTTTT", params)
 
                 response = await client.get(endpoint, params=params)
                 response.raise_for_status()
