@@ -19,7 +19,7 @@ from httpx import HTTPStatusError, RemoteProtocolError
 from naptha_sdk.client import grpc_server_pb2
 from naptha_sdk.client import grpc_server_pb2_grpc
 from naptha_sdk.schemas import AgentRun, AgentRunInput, ChatCompletionRequest, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, \
-    OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, KBDeployment, KBRunInput, KBRun, ToolRunInput, ToolRun, NodeSchema, ModelResponse
+    OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, KBDeployment, KBRunInput, KBRun, ToolRunInput, ToolRun, NodeSchema, ModelResponse, ToolDeployment
 from naptha_sdk.utils import get_logger, node_to_url
 
 logger = get_logger(__name__)
@@ -35,12 +35,12 @@ class Node:
         logger.info(f"Node URL: {self.node_url}")
 
     async def create(self, module_type: str,
-                     module_request: Union[AgentDeployment, EnvironmentDeployment, KBDeployment, OrchestratorDeployment]):
-        """Generic method to create either an agent, orchestrator, or environment.
+                     module_request: Union[AgentDeployment, EnvironmentDeployment, KBDeployment, OrchestratorDeployment, ToolDeployment]):
+        """Generic method to create either an agent, orchestrator, environment, tool, kb or memory.
 
         Args:
-            module_type: Either agent, orchestrator or environment
-            module_request: Either AgentDeployment, EnvironmentDeployment, or OrchestratorDeployment
+            module_type: Either agent, orchestrator, environment, tool, kb or memory
+            module_request: Either AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, ToolDeployment, KBDeployment or MemoryDeployment
         """
 
         print(f"Creating {module_type}...")

@@ -84,7 +84,7 @@ class AgentDeployment(BaseModel):
     node: Union[NodeSchema, Dict]
     name: Optional[str] = None
     module: Optional[Dict] = None
-    config: Optional[AgentConfig] = None
+    config: Optional[Union[AgentConfig, Dict]] = None
     data_generation_config: Optional[DataGenerationConfig] = None
     tool_deployments: Optional[List[ToolDeployment]] = None
     environment_deployments: Optional[List[EnvironmentDeployment]] = None

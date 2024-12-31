@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.user import get_public_key
-from naptha_sdk.schemas import AgentConfig, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, NodeSchema
+from naptha_sdk.schemas import AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, NodeSchema
 import os
 import shlex
 from rich.console import Console
@@ -94,7 +94,6 @@ async def list_agents(naptha):
     table.add_column("Description", justify="left", max_width=50)
     table.add_column("Parameters", justify="left", max_width=30)
     table.add_column("Module URL", justify="left", max_width=30)
-    table.add_column("Module Type", justify="left")
     table.add_column("Module Version", justify="center")
 
     # Add rows
@@ -106,7 +105,6 @@ async def list_agents(naptha):
             agent['description'],
             str(agent['parameters']),
             agent['module_url'],
-            agent['module_type'],
             agent['module_version'],
         )
 
@@ -140,7 +138,6 @@ async def list_tools(naptha):
     table.add_column("Description", justify="left", max_width=50)
     table.add_column("Parameters", justify="left", max_width=30)
     table.add_column("Module URL", justify="left", max_width=30)
-    table.add_column("Module Type", justify="left")
     table.add_column("Module Version", justify="center")
 
     # Add rows
@@ -152,7 +149,6 @@ async def list_tools(naptha):
             tool['description'],
             str(tool['parameters']),
             tool['module_url'],
-            tool['module_type'],
             tool['module_version'],
         )
 
@@ -186,7 +182,6 @@ async def list_orchestrators(naptha):
     table.add_column("Description", justify="left", max_width=50)
     table.add_column("Parameters", justify="left", max_width=30)
     table.add_column("Module URL", justify="left", max_width=30)
-    table.add_column("Module Type", justify="left")
     table.add_column("Module Version", justify="center")
 
     # Add rows
@@ -198,7 +193,6 @@ async def list_orchestrators(naptha):
             orchestrator['description'],
             str(orchestrator['parameters']),
             orchestrator['module_url'],
-            orchestrator['module_type'],
             orchestrator['module_version'],
         )
 
@@ -232,7 +226,6 @@ async def list_environments(naptha):
     table.add_column("Description", justify="left", max_width=50)
     table.add_column("Parameters", justify="left", max_width=30)
     table.add_column("Module URL", justify="left", max_width=30)
-    table.add_column("Module Type", justify="left")
     table.add_column("Module Version", justify="center")
 
     # Add rows
@@ -244,7 +237,6 @@ async def list_environments(naptha):
             environment['description'],
             str(environment['parameters']),
             environment['module_url'],
-            environment['module_type'],
             environment['module_version'],
         )
 
@@ -323,7 +315,6 @@ async def list_memories(naptha, memory_name=None):
     table.add_column("Description", justify="left", max_width=50)
     table.add_column("Parameters", justify="left", max_width=40)
     table.add_column("Module URL", justify="left", max_width=40)
-    table.add_column("Module Type", justify="left")
     table.add_column("Module Version", justify="center")
 
     # Add rows
@@ -335,7 +326,6 @@ async def list_memories(naptha, memory_name=None):
             memory['description'],
             memory['parameters'],
             memory['module_url'],
-            memory['module_type'],
             memory['module_version']
         )
 
@@ -761,9 +751,9 @@ async def run(
         print("Running Agent...")
 
         agent_deployment = AgentDeployment(
-            module={"id": module_name, "name": module_name.split(":")[-1]}, 
+            module={"id": module_name, "name": module_name.split(":")[-1], "module_type": module_type}, 
             node=url_to_node(os.getenv("NODE_URL")), 
-            config=AgentConfig(persona_module={"name": persona_modules[0]} if persona_modules else None),
+            config={"persona_module": {"name": persona_modules[0]}} if persona_modules else None,
             tool_deployments=tool_deployments,
             kb_deployments=kb_deployments,
             environment_deployments=environment_deployments
@@ -781,7 +771,7 @@ async def run(
     elif module_type == "tool":
         print("Running Tool...")
         tool_deployment = ToolDeployment(
-            module={"id": module_name, "name": module_name.split(":")[-1]},
+            module={"id": module_name, "name": module_name.split(":")[-1], "module_type": module_type},
             node=url_to_node(os.getenv("NODE_URL")))
 
         tool_run_input = ToolRunInput(
@@ -795,7 +785,7 @@ async def run(
         print("Running Orchestrator...")
 
         orchestrator_deployment = OrchestratorDeployment(
-            module={"id": module_name, "name": module_name.split(":")[-1]}, 
+            module={"id": module_name, "name": module_name.split(":")[-1], "module_type": module_type}, 
             node=url_to_node(os.getenv("NODE_URL")),
             agent_deployments=agent_deployments,
             environment_deployments=environment_deployments,
@@ -813,7 +803,7 @@ async def run(
         print("Running Environment...")
 
         environment_deployment = EnvironmentDeployment(
-            module={"id": module_name, "name": module_name.split(":")[-1]}, 
+            module={"id": module_name, "name": module_name.split(":")[-1], "module_type": module_type}, 
             node=url_to_node(os.getenv("NODE_URL"))
         )
 
@@ -828,7 +818,7 @@ async def run(
         print("Running Knowledge Base...")
 
         kb_deployment = KBDeployment(
-            module={"id": module_name, "name": module_name.split(":")[-1]}, 
+            module={"id": module_name, "name": module_name.split(":")[-1], "module_type": module_type}, 
             node=url_to_node(os.getenv("NODE_URL"))
         )
 
@@ -1047,9 +1037,10 @@ async def main():
                             "parameters": parsed_params['parameters'],
                             "author": naptha.hub.user_id,
                             "module_url": parsed_params['module_url'],
-                            "module_type": parsed_params.get('module_type', 'package'),
+                            "module_type": parsed_params.get('module_type', 'agent'),
                             "module_version": parsed_params.get('module_version', '0.1'),
-                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py')
+                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py'),
+                            "execution_type": parsed_params.get('execution_type', 'package')
                         }
                         await create_agent(naptha, agent_config)
                 else:
@@ -1079,9 +1070,10 @@ async def main():
                             "parameters": parsed_params['parameters'],
                             "author": naptha.hub.user_id,
                             "module_url": parsed_params['module_url'],
-                            "module_type": parsed_params.get('module_type', 'package'),
+                            "module_type": parsed_params.get('module_type', 'orchestrator'),
                             "module_version": parsed_params.get('module_version', '0.1'),
-                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py')
+                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py'),
+                            "execution_type": parsed_params.get('execution_type', 'package')
                         }
                         await create_orchestrator(naptha, orchestrator_config)
                 else:
@@ -1111,9 +1103,10 @@ async def main():
                             "parameters": parsed_params['parameters'],
                             "author": naptha.hub.user_id,
                             "module_url": parsed_params['module_url'],
-                            "module_type": parsed_params.get('module_type', 'package'),
+                            "module_type": parsed_params.get('module_type', 'environment'),
                             "module_version": parsed_params.get('module_version', '0.1'),
-                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py')
+                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py'),
+                            "execution_type": parsed_params.get('execution_type', 'package')
                         }
                         await create_environment(naptha, environment_config)
                 else:
@@ -1143,9 +1136,10 @@ async def main():
                             "parameters": parsed_params['parameters'],
                             "author": naptha.hub.user_id,
                             "module_url": parsed_params['module_url'],
-                            "module_type": parsed_params.get('module_type', 'package'),
+                            "module_type": parsed_params.get('module_type', 'tool'),
                             "module_version": parsed_params.get('module_version', '0.1'),
-                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py')
+                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py'),
+                            "execution_type": parsed_params.get('execution_type', 'package')
                         }
                         await naptha.hub.create_tool(tool_config)
                 else:
@@ -1163,7 +1157,7 @@ async def main():
                             key, value = param.split('=')
                             parsed_params[key] = value
 
-                        required_metadata = ['description', 'module_url']
+                        required_metadata = ['description', 'parameters', 'module_url']
                         if not all(param in parsed_params for param in required_metadata):
                             print(f"Missing one or more of the following required metadata: {required_metadata}")
                             return
@@ -1172,9 +1166,13 @@ async def main():
                             "id": f"persona:{args.persona_name}",
                             "name": args.persona_name,
                             "description": parsed_params['description'],
+                            "parameters": parsed_params['parameters'],
                             "author": naptha.hub.user_id,
                             "module_url": parsed_params['module_url'],
+                            "module_type": parsed_params.get('module_type', 'persona'),
                             "module_version": parsed_params.get('module_version', '0.1'),
+                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py'),
+                            "execution_type": parsed_params.get('execution_type', 'package')
                         }
                         await create_persona(naptha, persona_config)
                 else:
@@ -1215,9 +1213,10 @@ async def main():
                             "parameters": parsed_params['parameters'],
                             "author": naptha.hub.user_id,
                             "module_url": parsed_params['module_url'],
-                            "module_type": parsed_params.get('module_type', 'package'),
+                            "module_type": parsed_params.get('module_type', 'memory'),
                             "module_version": parsed_params.get('module_version', '0.1'),
-                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py')
+                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py'),
+                            "execution_type": parsed_params.get('execution_type', 'package')
                         }
                         await naptha.hub.create_memory(memory_config)
                 else:
@@ -1259,9 +1258,10 @@ async def main():
                             "parameters": parsed_params['parameters'],
                             "author": naptha.hub.user_id,
                             "module_url": parsed_params['module_url'],
-                            "module_type": parsed_params.get('module_type', 'package'),
+                            "module_type": parsed_params.get('module_type', 'kb'),
                             "module_version": parsed_params.get('module_version', '0.1'),
-                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py')
+                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py'),
+                            "execution_type": parsed_params.get('execution_type', 'package')
                         }
                         await naptha.hub.create_kb(kb_config)
                 else:
