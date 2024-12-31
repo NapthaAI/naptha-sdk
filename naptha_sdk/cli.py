@@ -625,7 +625,7 @@ async def create(
         naptha,
         module_name,
         agent_modules = None,
-        worker_nodes = None,
+        agent_nodes = None,
         environment_modules = None,
         environment_nodes = None
 ):
@@ -647,8 +647,8 @@ async def create(
             AgentDeployment(
                 name=agent_module,
                 module={"name": agent_module},
-                node=url_to_node(worker_node)
-            ) for agent_module, worker_node in zip(agent_modules or [], worker_nodes or [])
+                node=url_to_node(agent_node)
+            ) for agent_module, agent_node in zip(agent_modules or [], agent_nodes or [])
         ],
         "environment_deployments": [
             EnvironmentDeployment(
@@ -704,7 +704,7 @@ async def run(
     module_name,
     user_id,
     parameters=None, 
-    worker_nodes=None,
+    agent_nodes=None,
     tool_nodes=None,
     environment_nodes=None,
     kb_nodes=None,
@@ -730,9 +730,9 @@ async def run(
 
     # Handle sub-deployments
     agent_deployments = []
-    if worker_nodes:
-        for worker_node in worker_nodes:
-            agent_deployments.append(AgentDeployment(node=NodeSchema(ip=worker_node.strip())))
+    if agent_nodes:
+        for agent_node in agent_nodes:
+            agent_deployments.append(AgentDeployment(node=NodeSchema(ip=agent_node.strip())))
     tool_deployments = []
     if tool_nodes:
         for tool_node in tool_nodes:
@@ -874,7 +874,7 @@ def _parse_parameters(args):
 
 def _parse_str_args(args):
     # Parse all list arguments
-    args.worker_nodes = _parse_list_arg(args, 'worker_nodes', default=None)
+    args.agent_nodes = _parse_list_arg(args, 'agent_nodes', default=None)
     args.tool_nodes = _parse_list_arg(args, 'tool_nodes', default=None)
     args.environment_nodes = _parse_list_arg(args, 'environment_nodes', default=None)
     args.kb_nodes = _parse_list_arg(args, 'kb_nodes', default=None)
@@ -952,7 +952,7 @@ async def main():
     create_parser = subparsers.add_parser("create", help="Execute create command.")
     create_parser.add_argument("module", help="Select the module to create")
     create_parser.add_argument("-a", "--agent_modules", help="Agent modules to create")
-    create_parser.add_argument("-n", "--worker_nodes", help="Agent nodes to take part in orchestrator runs.")
+    create_parser.add_argument("-n", "--agent_nodes", help="Agent nodes to take part in orchestrator runs.")
     create_parser.add_argument("-e", "--environment_modules", help="Environment module to create")
     create_parser.add_argument("-m", "--environment_nodes", help="Environment nodes to store data during agent runs.")
 
@@ -960,7 +960,7 @@ async def main():
     run_parser = subparsers.add_parser("run", help="Execute run command.")
     run_parser.add_argument("agent", help="Select the agent to run")
     run_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
-    run_parser.add_argument("-n", "--worker_nodes", help="Worker nodes to take part in agent runs.")
+    run_parser.add_argument("-n", "--agent_nodes", help="Agent nodes to take part in agent runs.")
     run_parser.add_argument("-t", "--tool_nodes", help="Tool nodes to take part in agent runs.")
     run_parser.add_argument("-e", "--environment_nodes", help="Environment nodes to store data during agent runs.")
     run_parser.add_argument('-k', '--kb_nodes', type=str, help='Knowledge base nodes')
@@ -1269,9 +1269,22 @@ async def main():
                     await list_kbs(naptha, args.kb_name)
 
             elif args.command == "create":
-                await create(naptha, args.module, args.agent_modules, args.worker_nodes, args.environment_modules, args.environment_nodes)
-            elif args.command == "run":                    
-                await run(naptha, args.agent, user_id, args.parameters, args.worker_nodes, args.tool_nodes, args.environment_nodes, args.kb_nodes, args.file, args.persona_modules)
+                await create(naptha, args.module, args.agent_modules, args.agent_nodes, args.environment_modules, args.environment_nodes)
+            
+            elif args.command == "run":
+                if hasattr(args, 'parameters') and args.parameters is not None:
+                    try:
+                        parsed_params = json.loads(args.parameters)
+                    except json.JSONDecodeError:
+                        params = shlex.split(args.parameters)
+                        parsed_params = {}
+                        for param in params:
+                            key, value = param.split('=')
+                            parsed_params[key] = value
+                else:
+                    parsed_params = None
+                    
+                await run(naptha, args.agent, user_id, parsed_params, args.agent_nodes, args.tool_nodes, args.environment_nodes, args.kb_nodes, args.file, args.personas_urls)
             elif args.command == "inference":
                 request = ChatCompletionRequest(
                     messages=[{"role": "user", "content": args.prompt}],

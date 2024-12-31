@@ -366,7 +366,7 @@ class Node:
             agent_deployment = grpc_server_pb2.AgentDeployment(
                 name=agent_run_input.deployment.name,
                 module=agent_module,
-                worker_node=agent_run_input.deployment.worker_node
+                node=agent_run_input.deployment.node
             )
             
             # Create request
