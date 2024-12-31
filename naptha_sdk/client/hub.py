@@ -59,7 +59,6 @@ class Hub:
             self.user_id = self._decode_token(user)
             self.token = user
             self.is_authenticated = True
-            print("User ID: ", self.user_id)
             return True, user, self.user_id
         except Exception as e:
             print(f"Authentication failed: {e}")

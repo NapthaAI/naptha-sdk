@@ -702,7 +702,6 @@ async def create(
 async def run(
     naptha,
     module_name,
-    user_id,
     parameters=None, 
     worker_nodes=None,
     tool_nodes=None,
@@ -760,7 +759,7 @@ async def run(
         )
 
         agent_run_input = {
-            'consumer_id': user_id,
+            'consumer_id': user['id'],
             "inputs": parameters,
             "deployment": agent_deployment.model_dump(),
         }
@@ -775,7 +774,7 @@ async def run(
             node=url_to_node(os.getenv("NODE_URL")))
 
         tool_run_input = ToolRunInput(
-            consumer_id=user_id,
+            consumer_id=user['id'],
             inputs=parameters,
             deployment=tool_deployment
         )
@@ -793,7 +792,7 @@ async def run(
         )
 
         orchestrator_run_input = OrchestratorRunInput(
-            consumer_id=user_id,
+            consumer_id=user['id'],
             inputs=parameters,
             deployment=orchestrator_deployment
         )
@@ -810,7 +809,7 @@ async def run(
         environment_run_input = EnvironmentRunInput(
             inputs=parameters,
             deployment=environment_deployment,
-            consumer_id=user_id,
+            consumer_id=user['id'],
         )
         environment_run = await naptha.node.run_environment_and_poll(environment_run_input)
 
@@ -823,7 +822,7 @@ async def run(
         )
 
         kb_run_input = KBRunInput(
-            consumer_id=user_id,
+            consumer_id=user['id'],
             inputs=parameters,
             deployment=kb_deployment
         )
@@ -997,14 +996,14 @@ async def main():
         args = parser.parse_args()
         args = _parse_str_args(args)
         if args.command == "signup":
-            _, user_id = await user_setup_flow(hub_url, public_key)
+            _, _ = await user_setup_flow(hub_url, public_key)
         elif args.command in ["nodes", "agents", "orchestrators", "environments", "personas", "kbs", "memories", "tools", "run", "inference", "read_storage", "write_storage", "publish", "create"]:
             if not naptha.hub.is_authenticated:
                 if not hub_username or not hub_password:
                     print(
                         "Please set HUB_USERNAME and HUB_PASSWORD environment variables or sign up first (run naptha signup).")
                     return
-                _, _, user_id = await naptha.hub.signin(hub_username, hub_password)
+                _, _, _ = await naptha.hub.signin(hub_username, hub_password)
 
             if args.command == "nodes":
                 if not args.list_servers:
@@ -1029,13 +1028,12 @@ async def main():
                         if missing_metadata:
                             print(f"Missing required metadata: {', '.join(missing_metadata)}")
                             return
-                            
                         agent_config = {
                             "id": f"agent:{args.agent_name}",
                             "name": args.agent_name,
                             "description": parsed_params['description'],
                             "parameters": parsed_params['parameters'],
-                            "author": naptha.hub.user_id,
+                            "author": f"user:{naptha.hub.public_key}",
                             "module_url": parsed_params['module_url'],
                             "module_type": parsed_params.get('module_type', 'agent'),
                             "module_version": parsed_params.get('module_version', '0.1'),
@@ -1068,7 +1066,7 @@ async def main():
                             "name": args.orchestrator_name,
                             "description": parsed_params['description'],
                             "parameters": parsed_params['parameters'],
-                            "author": naptha.hub.user_id,
+                            "author": f"user:{naptha.hub.public_key}",
                             "module_url": parsed_params['module_url'],
                             "module_type": parsed_params.get('module_type', 'orchestrator'),
                             "module_version": parsed_params.get('module_version', '0.1'),
@@ -1101,7 +1099,7 @@ async def main():
                             "name": args.environment_name,
                             "description": parsed_params['description'],
                             "parameters": parsed_params['parameters'],
-                            "author": naptha.hub.user_id,
+                            "author": f"user:{naptha.hub.public_key}",
                             "module_url": parsed_params['module_url'],
                             "module_type": parsed_params.get('module_type', 'environment'),
                             "module_version": parsed_params.get('module_version', '0.1'),
@@ -1134,7 +1132,7 @@ async def main():
                             "name": args.tool_name,
                             "description": parsed_params['description'],
                             "parameters": parsed_params['parameters'],
-                            "author": naptha.hub.user_id,
+                            "author": f"user:{naptha.hub.public_key}",
                             "module_url": parsed_params['module_url'],
                             "module_type": parsed_params.get('module_type', 'tool'),
                             "module_version": parsed_params.get('module_version', '0.1'),
@@ -1167,7 +1165,7 @@ async def main():
                             "name": args.persona_name,
                             "description": parsed_params['description'],
                             "parameters": parsed_params['parameters'],
-                            "author": naptha.hub.user_id,
+                            "author": f"user:{naptha.hub.public_key}",
                             "module_url": parsed_params['module_url'],
                             "module_type": parsed_params.get('module_type', 'persona'),
                             "module_version": parsed_params.get('module_version', '0.1'),
@@ -1190,7 +1188,7 @@ async def main():
                         console = Console()
                         console.print("[red]Data is required for add command.[/red]")
                         return
-                    await add_data_to_memory(naptha, args.memory_name, args.content, user_id=user_id, memory_node_url=args.memory_node_urls[0])
+                    await add_data_to_memory(naptha, args.memory_name, args.content, user_id=f"user:{naptha.hub.public_key}", memory_node_url=args.memory_node_urls[0])
                 elif args.delete and len(args.memory_name.split()) == 1:
                     await naptha.hub.delete_memory(args.memory_name)
                 elif len(args.memory_name.split()) == 1:
@@ -1211,7 +1209,7 @@ async def main():
                             "name": args.memory_name,
                             "description": parsed_params['description'],
                             "parameters": parsed_params['parameters'],
-                            "author": naptha.hub.user_id,
+                            "author": f"user:{naptha.hub.public_key}",
                             "module_url": parsed_params['module_url'],
                             "module_type": parsed_params.get('module_type', 'memory'),
                             "module_version": parsed_params.get('module_version', '0.1'),
@@ -1235,7 +1233,7 @@ async def main():
                         console = Console()
                         console.print("[red]Data is required for add command.[/red]")
                         return
-                    await add_data_to_kb(naptha, args.kb_name, args.content, user_id=user_id, kb_node=os.getenv("NODE_URL"))
+                    await add_data_to_kb(naptha, args.kb_name, args.content, user_id=f"user:{naptha.hub.public_key}", kb_node=os.getenv("NODE_URL"))
                 elif args.delete and len(args.kb_name.split()) == 1:
                     await naptha.hub.delete_kb(args.kb_name)
                 elif len(args.kb_name.split()) == 1:
@@ -1256,7 +1254,7 @@ async def main():
                             "name": args.kb_name,
                             "description": parsed_params['description'],
                             "parameters": parsed_params['parameters'],
-                            "author": naptha.hub.user_id,
+                            "author": f"user:{naptha.hub.public_key}",
                             "module_url": parsed_params['module_url'],
                             "module_type": parsed_params.get('module_type', 'kb'),
                             "module_version": parsed_params.get('module_version', '0.1'),
@@ -1271,7 +1269,7 @@ async def main():
             elif args.command == "create":
                 await create(naptha, args.module, args.agent_modules, args.worker_nodes, args.environment_modules, args.environment_nodes)
             elif args.command == "run":                    
-                await run(naptha, args.agent, user_id, args.parameters, args.worker_nodes, args.tool_nodes, args.environment_nodes, args.kb_nodes, args.file, args.persona_modules)
+                await run(naptha, args.agent, args.parameters, args.worker_nodes, args.tool_nodes, args.environment_nodes, args.kb_nodes, args.file, args.persona_modules)
             elif args.command == "inference":
                 request = ChatCompletionRequest(
                     messages=[{"role": "user", "content": args.prompt}],
