@@ -1,7 +1,8 @@
 from enum import Enum
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Any
 from datetime import datetime
 from pydantic import BaseModel
+from naptha_sdk.storage.schemas import StorageType
 
 class User(BaseModel):
     id: str
@@ -52,6 +53,10 @@ class EnvironmentConfig(BaseModel):
 
 class KBConfig(BaseModel):
     config_name: Optional[str] = None
+    storage_type: StorageType
+    path: str
+    schema: Dict[str, Any]
+    options: Optional[Dict[str, Any]] = None
 
 class DataGenerationConfig(BaseModel):
     save_outputs: Optional[bool] = None

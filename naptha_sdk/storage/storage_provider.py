@@ -109,8 +109,6 @@ class StorageProvider:
             async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
                 params = read_storage_request.db_options.model_dump(exclude_none=True)
 
-                print("TTTTT", params)
-
                 response = await client.get(endpoint, params=params)
                 response.raise_for_status()
                 return response.json()
