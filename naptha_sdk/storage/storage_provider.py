@@ -5,7 +5,7 @@ import httpx
 import json
 from typing import Optional, Union, Dict, Any, List
 from httpx import HTTPStatusError, RemoteProtocolError
-from naptha_sdk.storage.schemas import ReadStorageRequest
+from naptha_sdk.storage.schemas import ReadStorageRequest, CreateTableRequest, CreateRowRequest, DeleteTableRequest, DeleteRowRequest, ListRowsRequest
 
 HTTP_TIMEOUT = 300
 
@@ -21,44 +21,27 @@ class StorageProvider:
 
     async def create(
         self,
-        storage_type: StorageType,
-        path: str,
-        file: Optional[Union[bytes, str]] = None,
-        data: Optional[Dict[str, Any]] = None,
-        schema: Optional[Dict[str, Any]] = None,
-        options: Optional[Dict[str, Any]] = None
+        create_storage_request: Union[CreateTableRequest, CreateRowRequest]
     ) -> Dict[str, Any]:
         """
         Create new storage objects (table, file, or IPFS content)
         
         Args:
-            storage_type: Type of storage ('database', 'filesystem', or 'ipfs')
-            path: Storage path/identifier
-            file: File content for fs/ipfs storage types
-            data: JSON data for database storage
-            schema: Schema for database tables
-            options: Storage-specific options
+            create_storage_request: CreateStorageRequest
         """
-        endpoint = f"{self.node_url}/storage/{storage_type}/create"
+        endpoint = f"{self.node_url}/storage/{create_storage_request.storage_type.value}/create/{create_storage_request.path}"
 
         try:
             async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-                # Prepare form data
-                files = {'file': file} if file else None
-                data = {
-                    'path': path,
-                    'data': json.dumps(data) if data else None,
-                    'schema': json.dumps(schema) if schema else None,
-                    'options': json.dumps(options) if options else None
-                }
+                # Convert request to dict and remove None values
+                request_data = create_storage_request.model_dump(exclude_none=True)
+                # Remove storage_type and path from request data
+                request_data.pop('storage_type', None)
+                request_data.pop('path', None)
                 
-                # Remove None values
-                data = {k: v for k, v in data.items() if v is not None}
-
                 response = await client.post(
                     endpoint,
-                    data=data,
-                    files=files
+                    json=request_data
                 )
                 response.raise_for_status()
                 return response.json()
@@ -68,6 +51,42 @@ class StorageProvider:
             raise
         except RemoteProtocolError as e:
             error_msg = f"Storage creation failed to connect to the server at {self.node_url}. Please check if the server URL is correct and the server is running. Error details: {str(e)}"
+            logger.error(error_msg)
+            raise
+        except Exception as e:
+            logger.error(f"An unexpected error occurred: {e}")
+            raise
+
+    async def delete(
+        self,
+        delete_storage_request: Union[DeleteTableRequest, DeleteRowRequest]
+    ) -> Dict[str, Any]:
+        """
+        Delete storage objects (table, file, or IPFS content)
+        
+        Args:
+            delete_storage_request: DeleteStorageRequest
+        """
+        endpoint = f"{self.node_url}/storage/{delete_storage_request.storage_type.value}/delete/{delete_storage_request.path}"
+
+        try:
+            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+                params = {}
+                if hasattr(delete_storage_request, 'condition'):
+                    params['condition'] = json.dumps(delete_storage_request.condition)
+
+                response = await client.delete(
+                    endpoint,
+                    params=params
+                )
+                response.raise_for_status()
+                return response.json()
+
+        except HTTPStatusError as e:
+            logger.info(f"HTTP error occurred: {e}")
+            raise
+        except RemoteProtocolError as e:
+            error_msg = f"Storage deletion failed to connect to the server at {self.node_url}. Please check if the server URL is correct and the server is running. Error details: {str(e)}"
             logger.error(error_msg)
             raise
         except Exception as e:
@@ -109,35 +128,19 @@ class StorageProvider:
 
     async def list(
         self,
-        storage_type: StorageType,
-        path: str,
-        pattern: Optional[str] = None,
-        recursive: bool = False,
-        limit: Optional[int] = None
+        list_storage_request: ListRowsRequest
     ) -> Dict[str, Any]:
         """
         List storage objects (DB tables/rows, directory contents, IPFS directory)
         
         Args:
-            storage_type: Type of storage ('database', 'filesystem', or 'ipfs')
-            path: Storage path/identifier
-            pattern: Filter pattern
-            recursive: List recursively
-            limit: Result limit
+            list_storage_request: ListStorageRequest
         """
-        endpoint = f"{self.node_url}/storage/{storage_type}/list/{path}"
+        endpoint = f"{self.node_url}/storage/{list_storage_request.storage_type.value}/list/{list_storage_request.path}"
 
         try:
             async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-                params = {
-                    'pattern': pattern,
-                    'recursive': recursive,
-                    'limit': limit
-                }
-                # Remove None values
-                params = {k: v for k, v in params.items() if v is not None}
-
-                response = await client.get(endpoint, params=params)
+                response = await client.get(endpoint, params={"limit": list_storage_request.limit if list_storage_request.limit else None})
                 response.raise_for_status()
                 return response.json()
 

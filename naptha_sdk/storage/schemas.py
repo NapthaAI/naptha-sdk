@@ -28,6 +28,15 @@ class CreateTableRequest(BaseStorageRequest):
 class CreateRowRequest(BaseStorageRequest):
     data: Dict[str, Any]
 
+class ListRowsRequest(BaseStorageRequest):
+    limit: Optional[int] = None
+
+class DeleteTableRequest(BaseStorageRequest):
+    pass
+
+class DeleteRowRequest(BaseStorageRequest):
+    condition: Dict[str, Any]
+
 class DatabaseReadOptions(BaseModel):
     """Options specific to database reads"""
     columns: Optional[List[str]] = None
@@ -48,6 +57,14 @@ class ReadStorageRequest(BaseModel):
     storage_type: StorageType
     path: str
     db_options: Optional[DatabaseReadOptions] = None
+
+    def model_dict(self):
+        model_dict = self.dict()
+        if isinstance(self.db_options, BaseModel):
+            db_options = self.db_options.model_dump()
+            model_dict['db_options'] = db_options
+        model_dict['storage_type'] = self.storage_type.value
+        return model_dict
 
 class UpdateStorageRequest(BaseModel):
     data: Union[Dict[str, Any], bytes]
