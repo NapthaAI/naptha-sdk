@@ -182,6 +182,7 @@ class ToolRunInput(BaseModel):
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
     deployment: Union[ToolDeployment, Dict]
     agent_run: Optional[AgentRun] = None
+    signature: str
 
     def model_dict(self):
         if isinstance(self.inputs, BaseModel):
