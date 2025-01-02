@@ -180,6 +180,43 @@ async def list_servers(naptha):
     console.print(table)
     console.print(f"\n[green]Total servers:[/green] {len(servers)}")
 
+async def list_users(naptha):
+    users = await naptha.hub.list_users()
+    
+    if not users:
+        console = Console()
+        console.print("[red]No users found.[/red]")
+        return
+
+    console = Console()
+    table = Table(
+        box=box.ROUNDED,
+        show_lines=True,
+        title="List of users",
+        title_style="bold cyan",
+        header_style="bold blue",
+        row_styles=["", "dim"]  # Alternating row styles
+    )
+
+    # Define columns with specific formatting
+    table.add_column("Name", justify="left", style="green")
+    table.add_column("Username", justify="left")
+    table.add_column("Address", justify="left")
+
+    # Add rows
+    for user in users:
+        table.add_row(
+            user['name'],
+            user['username'],
+            user['address']
+        )
+
+    # Print table and summary
+    console.print()
+    console.print(table)
+    console.print(f"\n[green]Total users:[/green] {len(users)}")
+
+
 async def create(
         naptha,
         module_name,
@@ -711,7 +748,10 @@ async def main():
     kbs_parser.add_argument('-d', '--delete', action='store_true', help='Delete a knowledge base')
     kbs_parser.add_argument('-k', '--kb_nodes', type=str, help='Knowledge base nodes')
 
-    # Create parser
+    # User address listing command
+    user_parser = subparsers.add_parser("users", help="List users addresses.")
+
+    # Create command
     create_parser = subparsers.add_parser("create", help="Execute create command.")
     create_parser.add_argument("module", help="Select the module to create")
     create_parser.add_argument("-am", "--agent_modules", help="Agent modules to create")
@@ -775,7 +815,7 @@ async def main():
         elif args.command in [
             "nodes", "agents", "orchestrators", "environments", 
             "personas", "kbs", "memories", "tools", "run", "inference", 
-            "publish", "create", "storage"
+            "publish", "create", "storage", "users"
         ]:
             if not naptha.hub.is_authenticated:
                 if not hub_username or not hub_password:
@@ -897,6 +937,9 @@ async def main():
                         await naptha.hub.create_module("kb", module_config)
                 else:
                     await list_modules(naptha, module_type='kb')
+            elif args.command == "users":
+                await list_users(naptha)
+
             elif args.command == "create":
                 await create(naptha, args.module, args.agent_modules, args.agent_nodes, args.tool_modules, args.tool_nodes, args.kb_modules, args.kb_nodes, args.memory_modules, args.memory_nodes, args.environment_modules, args.environment_nodes)
             elif args.command == "run":                    
@@ -918,6 +961,7 @@ async def main():
                     options=args.options, 
                     file=args.file
                 )
+                await naptha.node.run_inference(request)
             elif args.command == "publish":
                 await naptha.publish_modules(args.decorator, args.register, args.subdeployments)
         else:

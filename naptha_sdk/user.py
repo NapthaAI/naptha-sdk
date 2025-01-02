@@ -1,4 +1,5 @@
 from ecdsa import SigningKey, SECP256k1
+from eth_hash.auto import keccak
 import os, re
 
 def generate_keypair(private_key_filename=None):
@@ -70,3 +71,11 @@ def sign_consumer_id(consumer_id, private_key):
     consumer_id_bytes = consumer_id.encode('utf-8')
     signature = private_key.sign(consumer_id_bytes)
     return signature.hex()
+
+def generate_address(public_key: bytes) -> str:
+    if len(public_key) not in [64, 33]:
+        raise ValueError("Public key must be either 33 or 64 bytes long.")
+        
+    hash = keccak(public_key)
+    address = hash[-20:]
+    return "0x" + address.hex()

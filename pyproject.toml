@@ -21,6 +21,7 @@ ipfshttpclient = "^0.7.0"
 gitpython = "^3.1.43"
 grpcio = "^1.68.1"
 grpcio-tools = "^1.68.1"
+eth-hash = {extras = ["pycryptodome"], version = "^0.7.0"}
 
 [build-system]
 requires = ["poetry-core"]
