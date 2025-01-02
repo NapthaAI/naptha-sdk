@@ -382,18 +382,18 @@ naptha inference "How can we create scaling laws for multi-agent systems?" -m "p
 After the agent runs finish, you can download the file from the node using:
 
 ```bash
-naptha read_storage -id <agent_run_id>
+naptha storage fs read <agent_run_id>
 ```
 
 You can write to the node using:
 
 ```bash
-naptha write_storage -i files/<filename>.jpg
+naptha storage fs write -d files/<filename>.jpg
 ```
 
 ### Interact with IPFS thorugh Node
 ```bash
-naptha write_storage -i files/<filename>.jpg --ipfs
+naptha storage ipfs write -d files/<filename>.jpg
 ```
 
 
