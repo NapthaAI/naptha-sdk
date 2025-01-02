@@ -84,5 +84,5 @@ class Environment:
 
     async def call_environment_func(self, environment_run_input: EnvironmentRunInput):
         logger.info(f"Running environment on environment node {self.environment_node}")
-        environment_run = await self.environment_node.run_environment_and_poll(environment_run_input)
+        environment_run = await self.environment_node.run_module(module_type="environment", run_input=environment_run_input)
         return environment_run

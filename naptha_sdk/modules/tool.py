@@ -22,6 +22,5 @@ class Tool:
             inputs=module_run.inputs,
             deployment=self.tool_deployment.model_dump(),
         )
-        
-        tool_run = await self.tool_node.run_tool_and_poll(tool_run_input)
+        tool_run = await self.tool_node.run_module(module_type="tool", run_input=tool_run_input)
         return tool_run
