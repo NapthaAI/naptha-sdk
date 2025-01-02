@@ -1,4 +1,4 @@
-from naptha_sdk.client.node import UserClient
+from naptha_sdk.client.node import NodeClient
 from naptha_sdk.schemas import KBDeployment, KBRunInput
 from typing import Any, Dict
 import logging
@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 class KnowledgeBase:
     def __init__(self, kb_deployment: KBDeployment):
         self.kb_deployment = kb_deployment
-        self.kb_node = UserClient(self.kb_deployment.node)
+        self.kb_node = NodeClient(self.kb_deployment.node)
         self.table_name = kb_deployment.config['table_name']
         self.schema = kb_deployment.config['schema']
         if "id_column" in kb_deployment.config:
