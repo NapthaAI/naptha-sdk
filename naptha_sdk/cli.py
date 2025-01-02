@@ -708,7 +708,8 @@ async def run(
         tool_run_input = ToolRunInput(
             consumer_id=user['id'],
             inputs=parameters,
-            deployment=tool_deployment
+            deployment=tool_deployment,
+            signature=sign_consumer_id(user['id'], os.getenv("PRIVATE_KEY"))
         )
         tool_run = await naptha.node.run_tool_and_poll(tool_run_input)
 
