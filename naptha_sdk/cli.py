@@ -933,6 +933,7 @@ async def main():
     # Persona commands
     personas_parser = subparsers.add_parser("personas", help="List available personas.")
     personas_parser.add_argument('persona_name', nargs='?', help='Optional persona name')
+    personas_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
     personas_parser.add_argument('-d', '--delete', action='store_true', help='Delete a persona')
 
     # Tool commands
