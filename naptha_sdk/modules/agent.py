@@ -24,5 +24,5 @@ class Agent:
             deployment=self.module_run.deployment.agent_deployments[self.agent_index].model_dump(),
         )
         
-        agent_run = await self.worker_node.run_agent(module_type="agent", run_input=agent_run_input)
+        agent_run = await self.worker_node.run_module(module_type="agent", run_input=agent_run_input)
         return agent_run
