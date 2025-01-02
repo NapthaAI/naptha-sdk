@@ -49,21 +49,35 @@ async def list_nodes(naptha):
 
     # Get dynamic headers from first node
     headers = list(nodes[0].keys())
-    
-    # Add columns with appropriate formatting
-    for header in headers:
-        table.add_column(
-            header,
-            overflow="fold",
-            max_width=60,
-            justify="left",
-            no_wrap=False
-        )
+
+    # Define columns with specific formatting
+    table.add_column("ID", justify="left")
+    table.add_column("IP", justify="left")
+    table.add_column("Owner", justify="left")
+    table.add_column("OS", justify="left")
+    table.add_column("Arch", justify="left")
+    table.add_column("Num Servers", justify="left")
+    table.add_column("Server Type", justify="left")
+    table.add_column("HTTP Port", justify="left")
+    table.add_column("Models", justify="left")
+    table.add_column("Num GPUs", justify="left")
+    table.add_column("Provider Types", justify="left")
 
     # Add rows
     for node in nodes:
-        table.add_row(*[str(node.get(key, '')) for key in headers])
-
+        table.add_row(
+            node['id'],
+            node['ip'],
+            node['owner'],
+            node['os'],
+            node['arch'],
+            str(node['num_servers']),
+            node['server_type'],
+            str(node['http_port']),
+            str(node['models']), 
+            str(node['num_gpus']),
+            str(node['provider_types']) 
+        )
     # Print table and summary
     console.print()
     console.print(table)
