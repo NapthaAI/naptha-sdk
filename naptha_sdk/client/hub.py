@@ -1,20 +1,12 @@
 import os
 from naptha_sdk.utils import add_credentials_to_env, get_logger, write_private_key_to_file
-from naptha_sdk.user import generate_keypair
-from naptha_sdk.user import get_public_key, is_hex
+from naptha_sdk.user import get_public_key, is_hex, generate_keypair, generate_address
 from surrealdb import Surreal
 import traceback
 from typing import Dict, List, Optional, Tuple
-
 import jwt
-from surrealdb import Surreal
-
-from naptha_sdk.user import generate_keypair
-from naptha_sdk.user import get_public_key
-from naptha_sdk.utils import add_credentials_to_env, get_logger
 
 logger = get_logger(__name__)
-
 
 class Hub:
     """The Hub class is the entry point into Naptha AI Hub."""
@@ -59,6 +51,7 @@ class Hub:
             self.user_id = self._decode_token(user)
             self.token = user
             self.is_authenticated = True
+            await self.check_and_update_address(self.user_id)
             return True, user, self.user_id
         except Exception as e:
             print(f"Authentication failed: {e}")
@@ -75,12 +68,30 @@ class Hub:
             "username": username,
             "password": password,
             "public_key": public_key,
+            "address": generate_address(bytes.fromhex(public_key))
         })
         if not user:
             return False, None, None
         self.user_id = self._decode_token(user)
         return True, user, self.user_id
 
+    async def check_and_update_address(self, user_id: str) -> None:
+        user = await self.get_user(user_id)
+        
+        # Check if the address is empty or None
+        if not user.get("address"):
+            logger.info("User address not found")
+            logger.info("Updating address....")
+            
+            # Generate the address and update the record
+            user["address"] = generate_address(bytes.fromhex(user["public_key"]))
+            try:
+                await self.surrealdb.update(user.pop('id'), user)
+                logger.info("Address updated successfully")
+            except Exception as e:
+                logger.error(f"Failed to update address: {e}")
+        else:
+            logger.info("User address found, moving on.....")
 
     async def get_user(self, user_id: str) -> Optional[Dict]:
         return await self.surrealdb.select(user_id)
@@ -182,6 +193,10 @@ class Hub:
     async def list_kb_content(self, kb_name: str) -> List:
         kb_content = await self.surrealdb.query("SELECT * FROM kb_content WHERE kb_id=$kb_id;", {"kb_id": f"kb:{kb_name}"})
         return kb_content[0]['result']
+    
+    async def list_users(self) -> List:
+        agents = await self.surrealdb.query("SELECT name, username, address FROM user;")
+        return agents[0]['result']
 
     async def delete_agent(self, agent_id: str) -> Tuple[bool, Optional[Dict]]:
         if ":" not in agent_id:

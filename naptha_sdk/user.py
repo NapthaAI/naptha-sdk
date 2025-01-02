@@ -1,4 +1,5 @@
 from ecdsa import SigningKey, SECP256k1
+from eth_hash.auto import keccak
 import os, re
 
 def generate_keypair(private_key_filename=None): 
@@ -38,3 +39,11 @@ def generate_public_key(private_key_hex):
 def is_hex(string):
     # Check if the string matches the pattern for a hexadecimal key
     return bool(re.match(r'^[0-9a-fA-F]{64}$', string))
+
+def generate_address(public_key: bytes) -> str:
+    if len(public_key) not in [64, 33]:
+        raise ValueError("Public key must be either 33 or 64 bytes long.")
+        
+    hash = keccak(public_key)
+    address = hash[-20:]
+    return "0x" + address.hex()
