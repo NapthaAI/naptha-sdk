@@ -7,10 +7,26 @@ class StorageType(str, Enum):
     FILESYSTEM = "fs"
     IPFS = "ipfs"
 
+class DatabaseReadOptions(BaseModel):
+    """Options specific to database reads"""
+    columns: Optional[List[str]] = None
+    conditions: Optional[List[Dict[str, Any]]] = None
+    order_by: Optional[str] = None
+    order_direction: Optional[str] = "asc"
+    limit: Optional[int] = None
+    offset: Optional[int] = None
+    # fields for QA/vector search
+    query_vector: Optional[List[float]] = None
+    query_col: Optional[str] = None  # Column to search against
+    answer_col: Optional[str] = None  # Column to return as answer
+    vector_col: Optional[str] = None  # Column containing vectors
+    top_k: Optional[int] = Field(default=5, ge=1)  # Number of results for vector search
+    include_similarity: Optional[bool] = Field(default=True)  # Include similarity scores
+
 class BaseStorageRequest(BaseModel):
     storage_type: StorageType
     path: str
-    options: Dict[str, Any] = Field(default_factory=dict)
+    options: Union[Dict[str, Any], DatabaseReadOptions] = Field(default_factory=dict)
 
     def model_dict(self):
         model_dict = self.dict()
@@ -40,20 +56,4 @@ class ListStorageRequest(BaseStorageRequest):
 
 class SearchStorageRequest(BaseStorageRequest):
     pass
-
-class DatabaseReadOptions(BaseModel):
-    """Options specific to database reads"""
-    columns: Optional[List[str]] = None
-    conditions: Optional[List[Dict[str, Any]]] = None
-    order_by: Optional[str] = None
-    order_direction: Optional[str] = "asc"
-    limit: Optional[int] = None
-    offset: Optional[int] = None
-    # fields for QA/vector search
-    query_vector: Optional[List[float]] = None
-    query_col: Optional[str] = None  # Column to search against
-    answer_col: Optional[str] = None  # Column to return as answer
-    vector_col: Optional[str] = None  # Column containing vectors
-    top_k: Optional[int] = Field(default=5, ge=1)  # Number of results for vector search
-    include_similarity: Optional[bool] = Field(default=True)  # Include similarity scores
 
