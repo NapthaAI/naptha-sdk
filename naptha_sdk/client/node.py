@@ -68,7 +68,7 @@ class NodeClient:
                 public_key=user_input.get('public_key', '')
             )
             response = await stub.CheckUser(request)
-
+            logger.info(f"Check user response: {response}")
             return MessageToDict(response, preserving_proto_field_name=True)
 
     async def register_user(self, user_input: Dict[str, str]) -> Dict[str, Any]:
@@ -94,114 +94,113 @@ class NodeClient:
             return {
                 'id': response.id,
                 'public_key': response.public_key,
-                'created_at': response.created_at
             }
 
-    async def run_agent(self, agent_run_input: AgentRunInput) -> AgentRun:
+    async def run_module(self, module_type: str, run_input: Union[AgentRunInput, KBRunInput, ToolRunInput, EnvironmentRunInput]):
         if self.node.server_type == 'ws':
-            return await self.run_agent_ws(agent_run_input)
+            return await self.run_module_ws(module_type, run_input)
         elif self.node.server_type == 'grpc':
-            return await self.run_agent_grpc(agent_run_input)
+            return await self.run_module_grpc(module_type, run_input)
         else:
             raise ValueError("Invalid server type. Server type must be either 'ws' or 'grpc'.")
+
+    async def run_module_ws(self, module_type: str, run_input):
+        response = await self.send_receive_ws(run_input, f"run_module/{module_type}")
         
-    async def run_agent_ws(self, agent_run_input: AgentRunInput) -> AgentRun:
-        response = await self.send_receive_ws(agent_run_input, "run_agent")
+        output_types = {
+            "agent": AgentRun,
+            "kb": KBRun,
+            "tool": ToolRun,
+            "environment": EnvironmentRun
+        }
         
         if response['status'] == 'success':
-            return AgentRun(**response['data'])
+            return output_types[module_type](**response['data'])
         else:
-            logger.error(f"Error running agent: {response['message']}")
+            logger.error(f"Error running {module_type}: {response['message']}")
             raise Exception(response['message'])
 
-    async def run_agent_grpc(self, agent_run_input: AgentRunInput):
+    async def run_module_grpc(self, module_type: str, run_input):
         async with grpc.aio.insecure_channel(self.node_url) as channel:
             stub = grpc_server_pb2_grpc.GrpcServerStub(channel)
-            
-            # Convert dict to appropriate input type if needed
-            if isinstance(agent_run_input, dict):
-                agent_run_input = AgentRunInput(**agent_run_input)
 
-            # Convert input data to Struct
+            # Convert inputs to Struct
             input_struct = struct_pb2.Struct()
-            if agent_run_input.inputs:
-                if isinstance(agent_run_input.inputs, dict):
-                    input_data = agent_run_input.inputs.dict() if hasattr(agent_run_input.inputs, 'dict') else agent_run_input.inputs
+            if run_input.inputs:
+                if isinstance(run_input.inputs, dict):
+                    input_data = run_input.inputs.dict() if hasattr(run_input.inputs, 'dict') else run_input.inputs
                     input_struct.update(input_data)
-            
-            # Convert deployment node to NodeConfigInput
+
+            # Create node config
             node_config = grpc_server_pb2.NodeConfigInput(
-                ip=agent_run_input.deployment.node.ip,
-                http_port=agent_run_input.deployment.node.http_port,
-                server_type=agent_run_input.deployment.node.server_type
-            )
-            
-            # Create agent module with all fields
-            agent_module = grpc_server_pb2.AgentModule(
-                id=agent_run_input.deployment.module.get('id', ''),
-                name=agent_run_input.deployment.module.get('name', ''),
-                description=agent_run_input.deployment.module.get('description', ''),
-                author=agent_run_input.deployment.module.get('author', ''),
-                module_url=agent_run_input.deployment.module.get('module_url', ''),
-                module_type=agent_run_input.deployment.module.get('module_type', ''),
-                module_version=agent_run_input.deployment.module.get('module_version', ''),
-                module_entrypoint=agent_run_input.deployment.module.get('module_entrypoint', ''),
-                personas_urls=agent_run_input.deployment.module.get('personas_urls', [])
+                ip=run_input.deployment.node.ip,
+                http_port=run_input.deployment.node.http_port,
+                server_type=run_input.deployment.node.server_type
             )
 
-            # Create LLMConfig if exists
-            llm_config = None
-            if agent_run_input.deployment.config and agent_run_input.deployment.config.llm_config:
-                llm_config_data = agent_run_input.deployment.config.llm_config
-                if isinstance(llm_config_data, dict):
-                    llm_config = grpc_server_pb2.LLMConfig(**llm_config_data)
-                else:
-                    llm_config = grpc_server_pb2.LLMConfig(
-                        config_name=getattr(llm_config_data, 'config_name', None),
-                        client=getattr(llm_config_data, 'client', None),
-                        model=getattr(llm_config_data, 'model', None),
-                        max_tokens=getattr(llm_config_data, 'max_tokens', None),
-                        temperature=getattr(llm_config_data, 'temperature', None),
-                        api_base=getattr(llm_config_data, 'api_base', None)
-                    )
+            # Create module
+            module = grpc_server_pb2.Module(
+                id=run_input.deployment.module.get('id', ''),
+                name=run_input.deployment.module.get('name', ''),
+                description=run_input.deployment.module.get('description', ''),
+                author=run_input.deployment.module.get('author', ''),
+                module_url=run_input.deployment.module.get('module_url', ''),
+                module_type=module_type,
+                module_version=run_input.deployment.module.get('module_version', ''),
+                module_entrypoint=run_input.deployment.module.get('module_entrypoint', '')
+            )
 
-            # Create AgentConfig
-            agent_config = None
-            if agent_run_input.deployment.config:
-                config_data = agent_run_input.deployment.config
-                if isinstance(config_data, dict):
-                    agent_config = grpc_server_pb2.AgentConfig(**config_data)
+            # Create config struct
+            config_struct = struct_pb2.Struct()
+            if run_input.deployment.config:
+                if isinstance(run_input.deployment.config, dict):
+                    config_struct.update(run_input.deployment.config)
                 else:
-                    agent_config = grpc_server_pb2.AgentConfig(
-                        config_name=getattr(config_data, 'config_name', None),
-                        config_schema=getattr(config_data, 'config_schema', None),
-                        llm_config=llm_config
-                    )
+                    config_struct.update(run_input.deployment.config.dict())
+
+            # Create deployment based on module type
+            deployment_classes = {
+                "agent": grpc_server_pb2.AgentDeployment,
+                "kb": grpc_server_pb2.BaseDeployment,
+                "tool": grpc_server_pb2.ToolDeployment,
+                "environment": grpc_server_pb2.BaseDeployment
+            }
             
-            # Create agent deployment
-            agent_deployment = grpc_server_pb2.AgentDeployment(
-                node=node_config,
-                name=agent_run_input.deployment.name,
-                module=agent_module,
-                config=agent_config,
+            DeploymentClass = deployment_classes[module_type]
+            deployment = DeploymentClass(
+                node_input=node_config,
+                name=run_input.deployment.name,
+                module=module,
+                config=config_struct,
+                initialized=False
             )
+
+            # Create request with appropriate deployment field
+            request_args = {
+                "module_type": module_type,
+                "consumer_id": run_input.consumer_id,
+                "inputs": input_struct,
+                f"{module_type}_deployment": deployment
+            }
             
-            # Create request
-            request = grpc_server_pb2.AgentRunInput(
-                consumer_id=agent_run_input.consumer_id,
-                deployment=agent_deployment,
-                input_struct=input_struct
-            )
-            
+            request = grpc_server_pb2.ModuleRunRequest(**request_args)
+
             final_response = None
-            async for response in stub.RunAgent(request):
+            async for response in stub.RunModule(request):
                 final_response = response
                 logger.info(f"Got response: {response}")
-                
-            return AgentRun(
-                consumer_id=agent_run_input.consumer_id,
-                inputs=agent_run_input.inputs,
-                deployment=agent_run_input.deployment,
+
+            output_types = {
+                "agent": AgentRun,
+                "kb": KBRun,
+                "tool": ToolRun,
+                "environment": EnvironmentRun
+            }
+
+            return output_types[module_type](
+                consumer_id=run_input.consumer_id,
+                inputs=run_input.inputs,
+                deployment=run_input.deployment,
                 orchestrator_runs=[],
                 status=final_response.status,
                 error=final_response.error,
@@ -211,10 +210,9 @@ class NodeClient:
                 created_time=final_response.created_time,
                 start_processing_time=final_response.start_processing_time,
                 completed_time=final_response.completed_time,
-                duration=final_response.duration,
-                input_schema_ipfs_hash=final_response.input_schema_ipfs_hash
+                duration=final_response.duration
             )
-
+    
     async def connect_ws(self, action: str):
         client_id = str(uuid.uuid4())
         full_url = f"{self.node_url}/ws/{action}/{client_id}"
