@@ -7,20 +7,18 @@ class StorageType(str, Enum):
     FILESYSTEM = "fs"
     IPFS = "ipfs"
 
-class CreateTableRequest(BaseModel):
-    storage_type: StorageType
-    path: str
-    schema: Dict[str, Any]
-
-class CreateRowRequest(BaseModel):
-    storage_type: StorageType
-    path: str
-    data: Dict[str, Any]
-
 class BaseStorageRequest(BaseModel):
     storage_type: StorageType
     path: str
     options: Dict[str, Any] = Field(default_factory=dict)
+
+    def model_dict(self):
+        model_dict = self.dict()
+        if isinstance(self.options, BaseModel):
+            options = self.options.model_dump()
+            model_dict['options'] = options
+        model_dict['storage_type'] = self.storage_type.value
+        return model_dict
 
 class CreateTableRequest(BaseStorageRequest):
     schema: Dict[str, Any]
@@ -28,14 +26,20 @@ class CreateTableRequest(BaseStorageRequest):
 class CreateRowRequest(BaseStorageRequest):
     data: Dict[str, Any]
 
-class ListRowsRequest(BaseStorageRequest):
-    limit: Optional[int] = None
-
-class DeleteTableRequest(BaseStorageRequest):
+class ReadStorageRequest(BaseStorageRequest):
     pass
 
-class DeleteRowRequest(BaseStorageRequest):
-    condition: Dict[str, Any]
+class UpdateStorageRequest(BaseStorageRequest):
+    pass
+
+class DeleteStorageRequest(BaseStorageRequest):
+    pass
+
+class ListStorageRequest(BaseStorageRequest):
+    pass
+
+class SearchStorageRequest(BaseStorageRequest):
+    pass
 
 class DatabaseReadOptions(BaseModel):
     """Options specific to database reads"""
@@ -53,28 +57,3 @@ class DatabaseReadOptions(BaseModel):
     top_k: Optional[int] = Field(default=5, ge=1)  # Number of results for vector search
     include_similarity: Optional[bool] = Field(default=True)  # Include similarity scores
 
-class ReadStorageRequest(BaseModel):
-    """Unified read request schema"""
-    storage_type: StorageType
-    path: str
-    db_options: Optional[DatabaseReadOptions] = None
-
-    def model_dict(self):
-        model_dict = self.dict()
-        if isinstance(self.db_options, BaseModel):
-            db_options = self.db_options.model_dump()
-            model_dict['db_options'] = db_options
-        model_dict['storage_type'] = self.storage_type.value
-        return model_dict
-
-class UpdateStorageRequest(BaseModel):
-    data: Union[Dict[str, Any], bytes]
-    condition: Optional[Dict[str, Any]] = None
-    options: Dict[str, Any] = Field(default_factory=dict)
-
-class SearchStorageRequest(BaseModel):
-    path: str
-    query: Union[str, Dict[str, Any], list[float]]
-    query_type: str = "text"
-    limit: Optional[int] = None
-    options: Dict[str, Any] = Field(default_factory=dict)
