@@ -56,7 +56,7 @@ class NodeClient:
             raise ValueError("Invalid server type. Server type must be either 'ws' or 'grpc'.")
 
     async def check_user_ws(self, user_input: Dict[str, str]):
-        response = await self.send_receive_ws(user_input, "check_user")
+        response = await self.send_receive_ws(user_input, "user/check")
         logger.info(f"Check user response: {response}")
         return response
 
@@ -80,7 +80,7 @@ class NodeClient:
             raise ValueError("Invalid server type. Server type must be either 'ws' or 'grpc'.")
         
     async def register_user_ws(self, user_input: Dict[str, str]):
-        response = await self.send_receive_ws(user_input, "register_user")
+        response = await self.send_receive_ws(user_input, "user/register")
         logger.info(f"Register user response: {response}")
         return response
 
@@ -105,7 +105,7 @@ class NodeClient:
             raise ValueError("Invalid server type. Server type must be either 'ws' or 'grpc'.")
 
     async def run_module_ws(self, module_type: str, run_input):
-        response = await self.send_receive_ws(run_input, f"run_module/{module_type}")
+        response = await self.send_receive_ws(run_input, f"{module_type}/run")
         
         output_types = {
             "agent": AgentRun,
