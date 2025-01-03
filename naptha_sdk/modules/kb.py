@@ -70,7 +70,7 @@ class KnowledgeBase:
             logger.error(f"Error getting knowledge base: {str(e)}")
             raise
         
-    async def call_kb_func(self, kb_run_input: KBRunInput):
+    async def call_kb_func(self, module_run_input: KBRunInput, *args, **kwargs):
         logger.info(f"Running knowledge base on knowledge base node {self.kb_node}")
-        kb_run = await self.kb_node.run_module(module_type="kb", run_input=kb_run_input)
+        kb_run = await self.kb_node.run_module(module_type="kb", run_input=module_run_input.model_dump())
         return kb_run
