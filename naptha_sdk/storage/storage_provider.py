@@ -2,7 +2,7 @@ import httpx
 from httpx import HTTPStatusError, RemoteProtocolError
 import json
 from typing import Union, Dict, Any
-from naptha_sdk.schemas import NodeSchema
+from naptha_sdk.schemas import NodeConfigUser
 from naptha_sdk.storage.schemas import ReadStorageRequest, CreateTableRequest, CreateRowRequest, DeleteStorageRequest, ListStorageRequest, UpdateStorageRequest, SearchStorageRequest
 from naptha_sdk.utils import get_logger, node_to_url
 
@@ -11,7 +11,7 @@ HTTP_TIMEOUT = 300
 logger = get_logger(__name__)
 
 class StorageProvider:
-    def __init__(self, node: NodeSchema):
+    def __init__(self, node: NodeConfigUser):
         self.node = node
         self.node_url = node_to_url(node)
         self.connections = {}

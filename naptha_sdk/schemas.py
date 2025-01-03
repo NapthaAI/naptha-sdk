@@ -1,16 +1,45 @@
 from enum import Enum
 from typing import Dict, List, Optional, Union, Any
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from naptha_sdk.storage.schemas import StorageType
 
 class User(BaseModel):
     id: str
 
-class NodeSchema(BaseModel):
+class NodeServer(BaseModel):
+    server_type: str
+    port: int
+    node_id: str
+
+class NodeConfig(BaseModel):
+    id: str
+    owner: str
+    public_key: str
+    ip: str = Field(default="localhost")
+    server_type: str = Field(default="ws")
+    http_port: int = Field(default=7001)
+    num_servers: int = Field(default=1)
+    provider_types: List[str] = Field(default=["models", "storage", "modules"])
+    servers: List[NodeServer]
+    models: List[str]
+    docker_jobs: bool
+    ports: Optional[List[int]] = None
+    routing_type: Optional[str] = Field(default="direct")
+    routing_url: Optional[str] = Field(default=None)
+    num_gpus: Optional[int] = Field(default=None)
+    arch: Optional[str] = Field(default=None)
+    os: Optional[str] = Field(default=None)
+    ram: Optional[int] = Field(default=None)
+    vram: Optional[int] = Field(default=None)
+
+    class Config:
+        allow_mutation = True
+
+class NodeConfigUser(BaseModel):
     ip: str
-    server_type: Optional[str] = None
     http_port: Optional[int] = None
+    server_type: Optional[str] = None
 
 class LLMClientType(str, Enum):
     OPENAI = "openai"
@@ -67,26 +96,26 @@ class DataGenerationConfig(BaseModel):
     default_filename: Optional[str] = None
 
 class ToolDeployment(BaseModel):
-    node: Union[NodeSchema, Dict]
+    node: Union[NodeConfigUser, NodeConfig, Dict]
     name: Optional[str] = None
     module: Optional[Dict] = None
     config: Optional[ToolConfig] = None
     data_generation_config: Optional[DataGenerationConfig] = None
 
 class KBDeployment(BaseModel):
-    node: Union[NodeSchema, Dict]
+    node: Union[NodeConfigUser, NodeConfig, Dict]
     name: Optional[str] = None
     module: Optional[Dict] = None
     config: Optional[Dict] = None
 
 class EnvironmentDeployment(BaseModel):
-    node: Union[NodeSchema, Dict]
+    node: Union[NodeConfigUser, NodeConfig, Dict]
     name: Optional[str] = None
     module: Optional[Dict] = None
     config: Optional[EnvironmentConfig] = None
 
 class AgentDeployment(BaseModel):
-    node: Union[NodeSchema, Dict]
+    node: Union[NodeConfigUser, NodeConfig, Dict]
     name: Optional[str] = None
     module: Optional[Dict] = None
     config: Optional[Union[AgentConfig, Dict]] = None
@@ -96,7 +125,7 @@ class AgentDeployment(BaseModel):
     kb_deployments: Optional[List[KBDeployment]] = None
 
 class OrchestratorDeployment(BaseModel):
-    node: Union[NodeSchema, Dict]
+    node: Union[NodeConfigUser, NodeConfig, Dict]
     name: Optional[str] = None
     module: Optional[Dict] = None
     config: Optional[OrchestratorConfig] = None

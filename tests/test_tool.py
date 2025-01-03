@@ -1,14 +1,14 @@
 import asyncio
 from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.modules.tool import Tool
-from naptha_sdk.schemas import ToolDeployment, ToolRunInput, NodeSchema
+from naptha_sdk.schemas import ToolDeployment, ToolRunInput, NodeConfigUser
 
 async def test_tool():
     naptha = Naptha()
 
     tool_deployment = ToolDeployment(
         module={"name": "generate_image_tool"},
-        node=NodeSchema(
+        node=NodeConfigUser(
             ip="localhost",
             http_port=7001,
             server_type="http"
