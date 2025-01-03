@@ -31,44 +31,6 @@ class KnowledgeBase:
         except Exception as e:
             logger.error(f"Error initializing knowledge base: {str(e)}")
             raise
-
-    async def upsert_kb(self, id_: str, data: Dict[str, Any]):
-        try:
-            # check if the id_ exists
-            existing_data = await self.kb_node.query_table(
-                self.table_name,
-                condition={self.id_column: id_}
-            )
-
-            if existing_data["rows"]:
-                # update existing record
-                await self.kb_node.update_row(
-                    self.table_name,
-                    data=data,
-                    condition={self.id_column: id_}
-                )
-                logger.info(f"Updated knowledge base with id: {id_}")
-            else:
-                # insert new record
-                await self.kb_node.add_row(
-                    self.table_name,
-                    data={self.id_column: id_, **data}
-                )
-                logger.info(f"Inserted new knowledge base with id: {id_}")
-        except Exception as e:
-            logger.error(f"Error upserting knowledge base: {str(e)}")
-            raise
-    
-    async def get_kb(self, column_name: str, column_value: str) -> Dict[str, Any]:
-        try:
-            data = await self.kb_node.query_table(
-                self.table_name,
-                condition={column_name: column_value}
-            )
-            return data["rows"][0] if data["rows"] else None
-        except Exception as e:
-            logger.error(f"Error getting knowledge base: {str(e)}")
-            raise
         
     async def call_kb_func(self, module_run_input: KBRunInput, *args, **kwargs):
         logger.info(f"Running knowledge base on knowledge base node {self.kb_node}")
