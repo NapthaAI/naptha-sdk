@@ -118,6 +118,7 @@ class NodeClient:
             return output_types[module_type](**response['data'])
         else:
             logger.error(f"Error running {module_type}: {response['message']}")
+            logger.error(f"Full traceback: {traceback.format_exc()}")
             raise Exception(response['message'])
 
     async def run_module_grpc(self, module_type: str, run_input):
