@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.user import get_public_key
-from naptha_sdk.schemas import AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, NodeSchema
+from naptha_sdk.schemas import AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, NodeConfigUser
 import os
 import shlex
 from rich.console import Console
@@ -661,19 +661,19 @@ async def run(
     agent_deployments = []
     if worker_nodes:
         for worker_node in worker_nodes:
-            agent_deployments.append(AgentDeployment(node=NodeSchema(ip=worker_node.strip())))
+            agent_deployments.append(AgentDeployment(node=NodeConfigUser(ip=worker_node.strip())))
     tool_deployments = []
     if tool_nodes:
         for tool_node in tool_nodes:
-            tool_deployments.append(ToolDeployment(node=NodeSchema(ip=tool_node.strip())))
+            tool_deployments.append(ToolDeployment(node=NodeConfigUser(ip=tool_node.strip())))
     environment_deployments = []
     if environment_nodes:
         for environment_node in environment_nodes:
-            environment_deployments.append(EnvironmentDeployment(node=NodeSchema(ip=environment_node.strip())))
+            environment_deployments.append(EnvironmentDeployment(node=NodeConfigUser(ip=environment_node.strip())))
     kb_deployments = []
     if kb_nodes:
         for kb_node in kb_nodes:
-            kb_deployments.append(KBDeployment(node=NodeSchema(ip=kb_node.strip())))
+            kb_deployments.append(KBDeployment(node=NodeConfigUser(ip=kb_node.strip())))
 
 
     if module_type == "agent":

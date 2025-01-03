@@ -2,7 +2,7 @@ import json
 from typing import Dict, Union
 import httpx
 from httpx import HTTPStatusError, RemoteProtocolError
-from naptha_sdk.schemas import ChatCompletionRequest, NodeSchema
+from naptha_sdk.schemas import ChatCompletionRequest, NodeConfigUser
 from naptha_sdk.utils import get_logger, node_to_url
 
 logger = get_logger(__name__)
@@ -10,7 +10,7 @@ HTTP_TIMEOUT = 300
 
 
 class InferenceClient:
-    def __init__(self, node: NodeSchema):
+    def __init__(self, node: NodeConfigUser):
         self.node = node
         self.node_url = node_to_url(node)
         
