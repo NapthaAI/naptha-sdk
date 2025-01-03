@@ -480,91 +480,6 @@ async def list_kbs(naptha, kb_name=None):
     console.print(table)
     console.print(f"\n[green]Total knowledge bases:[/green] {len(kbs)}")
 
-async def list_kb_content(naptha, kb_name):
-    rows = await naptha.node.query_table(
-        table_name=kb_name,   
-        columns="*",
-        condition=None,
-        order_by=None,
-        limit=None
-    )
-    
-    if not rows.get('rows'):
-        console = Console()
-        console.print("[red]No content found in knowledge base.[/red]")
-        return
-
-    console = Console()
-    table = Table(
-        box=box.ROUNDED,
-        show_lines=True,
-        title=f"Knowledge Base Content: {kb_name}",
-        title_style="bold cyan",
-        header_style="bold blue",
-        row_styles=["", "dim"]  # Alternating row styles
-    )
-
-    # Add headers
-    headers = list(rows['rows'][0].keys())
-    for header in headers:
-        if header.lower() in ['id', 'module_url']:
-            table.add_column(header, justify="left", max_width=40)
-        elif header.lower() in ['title', 'name']:
-            table.add_column(header, justify="left", style="green", max_width=40)
-        elif header.lower() in ['text', 'description', 'content']:
-            table.add_column(header, justify="left", max_width=60)
-        else:
-            table.add_column(header, justify="left", max_width=30)
-
-    # Add rows
-    for row in rows['rows']:
-        table.add_row(*[str(row.get(key, '')) for key in headers])
-
-    # Print table and summary
-    console.print()
-    console.print(table)
-    console.print(f"\n[green]Total rows:[/green] {len(rows['rows'])}")
-
-async def add_data_to_kb(naptha, kb_name, data, user_id=None, kb_node=None):
-    try:
-        # Parse the data string into a dictionary
-        data_dict = {}
-        # Split by spaces, but keep quoted strings together
-        parts = shlex.split(data)
-        
-        for part in parts:
-            if '=' in part:
-                key, value = part.split('=', 1)
-                # Remove quotes if they exist
-                value = value.strip("'\"")
-                data_dict[key] = value
-
-        data_dict = [data_dict]
-        
-        kb_run_input = {
-            "consumer_id": user_id,
-            "inputs": {
-                "mode": "add_data",
-                "data": json.dumps(data_dict)
-            },
-            "deployment": {
-                "name": kb_name,
-                "module": {
-                    "name": kb_name
-                },
-                "node": url_to_node(kb_node)
-            }
-        }
-
-        kb_run = await naptha.node.run_kb_and_poll(kb_run_input)
-        console = Console()
-        console.print(f"\n[green]Successfully added data to knowledge base:[/green] {kb_name}")
-        console.print(kb_run)
-        
-    except Exception as e:
-        console = Console()
-        console.print(f"\n[red]Error adding data to knowledge base:[/red] {str(e)}")
-
 async def list_servers(naptha):
     servers = await naptha.hub.list_servers()
     
@@ -1011,9 +926,6 @@ async def main():
     kbs_parser.add_argument('kb_name', nargs='?', help='Optional knowledge base name')
     kbs_parser.add_argument('-p', '--metadata', type=str, help='Metadata for knowledge base registration in "key=value" format')
     kbs_parser.add_argument('-d', '--delete', action='store_true', help='Delete a knowledge base')
-    kbs_parser.add_argument('-l', '--list', action='store_true', help='List content in a knowledge base')
-    kbs_parser.add_argument('-a', '--add', action='store_true', help='Add data to a knowledge base')
-    kbs_parser.add_argument('-c', '--content', type=str, help='Content to add to a knowledge base', required=False)
     kbs_parser.add_argument('-k', '--kb_nodes', type=str, help='Knowledge base node URLs')
 
     # Create parser
@@ -1290,16 +1202,6 @@ async def main():
                 if not args.kb_name:
                     # List all knowledge bases
                     await list_kbs(naptha)
-                elif args.list:
-                    # List content of specific knowledge base
-                    await list_kb_content(naptha, args.kb_name)
-                elif args.add:
-                    # Add data to knowledge base
-                    if not args.content:
-                        console = Console()
-                        console.print("[red]Data is required for add command.[/red]")
-                        return
-                    await add_data_to_kb(naptha, args.kb_name, args.content, user_id=f"user:{naptha.hub.public_key}", kb_node=os.getenv("NODE_URL"))
                 elif args.delete and len(args.kb_name.split()) == 1:
                     await naptha.hub.delete_kb(args.kb_name)
                 elif len(args.kb_name.split()) == 1:
