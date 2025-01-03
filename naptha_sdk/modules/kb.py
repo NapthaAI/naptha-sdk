@@ -34,5 +34,5 @@ class KnowledgeBase:
         
     async def call_kb_func(self, module_run_input: KBRunInput, *args, **kwargs):
         logger.info(f"Running knowledge base on knowledge base node {self.kb_node}")
-        kb_run = await self.kb_node.run_module(module_type="kb", run_input=module_run_input.model_dump())
+        kb_run = await self.kb_node.run_module(module_type="kb", run_input=module_run_input.model_dict())
         return kb_run

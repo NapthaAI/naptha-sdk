@@ -87,6 +87,13 @@ class KBConfig(BaseModel):
     schema: Dict[str, Any]
     options: Optional[Dict[str, Any]] = None
 
+    def model_dict(self):
+        if isinstance(self.storage_type, StorageType):
+            self.storage_type = self.storage_type.value
+        model_dict = self.dict()
+        model_dict['storage_type'] = self.storage_type
+        return model_dict
+
 class DataGenerationConfig(BaseModel):
     save_outputs: Optional[bool] = None
     save_outputs_location: Optional[str] = None
@@ -107,6 +114,12 @@ class KBDeployment(BaseModel):
     name: Optional[str] = None
     module: Optional[Dict] = None
     config: Optional[KBConfig] = None
+
+    def model_dict(self):
+        model_dict = self.dict()
+        if isinstance(self.config, KBConfig):
+            model_dict['config'] = self.config.model_dict()
+        return model_dict
 
 class EnvironmentDeployment(BaseModel):
     node: Union[NodeConfigUser, NodeConfig, Dict]
@@ -297,6 +310,8 @@ class KBRunInput(BaseModel):
 
     def model_dict(self):
         model_dict = self.dict()
+        if isinstance(self.deployment, KBDeployment):
+            model_dict['deployment'] = self.deployment.model_dict()
         return model_dict
 
 class KBRun(BaseModel):
