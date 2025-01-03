@@ -69,8 +69,7 @@ class StorageProvider:
         try:
             async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
                 params = read_storage_request.options.model_dump(exclude_none=True)
-
-                response = await client.get(endpoint, params=params)
+                response = await client.get(endpoint, params={"options": json.dumps(params)})
                 response.raise_for_status()
                 return response.json()
 
@@ -169,7 +168,8 @@ class StorageProvider:
 
         try:
             async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-                response = await client.get(endpoint, params=list_storage_request.options.model_dump())
+                params = list_storage_request.options.model_dump(exclude_none=True)
+                response = await client.get(endpoint, params={"options": json.dumps(params)})
                 response.raise_for_status()
                 return response.json()
 
