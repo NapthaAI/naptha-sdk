@@ -106,7 +106,7 @@ class KBDeployment(BaseModel):
     node: Union[NodeConfigUser, NodeConfig, Dict]
     name: Optional[str] = None
     module: Optional[Dict] = None
-    config: Optional[Dict] = None
+    config: Optional[KBConfig] = None
 
 class EnvironmentDeployment(BaseModel):
     node: Union[NodeConfigUser, NodeConfig, Dict]
@@ -118,7 +118,7 @@ class AgentDeployment(BaseModel):
     node: Union[NodeConfigUser, NodeConfig, Dict]
     name: Optional[str] = None
     module: Optional[Dict] = None
-    config: Optional[Union[AgentConfig, Dict]] = None
+    config: Optional[AgentConfig] = None
     data_generation_config: Optional[DataGenerationConfig] = None
     tool_deployments: Optional[List[ToolDeployment]] = None
     environment_deployments: Optional[List[EnvironmentDeployment]] = None
