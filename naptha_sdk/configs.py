@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from naptha_sdk.client.hub import list_nodes
 from naptha_sdk.module_manager import load_persona
 from naptha_sdk.schemas import AgentDeployment, EnvironmentDeployment, LLMConfig, OrchestratorDeployment, ToolDeployment, KBDeployment
 from naptha_sdk.utils import url_to_node
@@ -9,9 +10,12 @@ def load_llm_configs(llm_configs_path):
         llm_configs = json.loads(file.read())
     return [LLMConfig(**config) for config in llm_configs]
 
-def load_node_metadata(deployment, node_url):
+async def load_node_metadata(deployment, node_url, is_subdeployment):
     print(f"Loading node metadata for {deployment['node']['ip']}")
-    deployment["node"] = url_to_node(node_url)
+    if not is_subdeployment:
+        deployment["node"] = url_to_node(node_url)
+    else:
+        deployment["node"] = await list_nodes(deployment["node"]["ip"])
     print(f"Node metadata loaded {deployment['node']}")
     return deployment
 
@@ -38,34 +42,34 @@ async def load_subdeployments(deployment, node_url):
         agent_deployments = []
         for i, agent_deployment in enumerate(deployment["agent_deployments"]):
             deployment_name = deployment["agent_deployments"][i]["name"]
-            agent_deployment = await setup_module_deployment("agent", configs_path / "agent_deployments.json", node_url, deployment_name)
+            agent_deployment = await setup_module_deployment("agent", configs_path / "agent_deployments.json", node_url, deployment_name, is_subdeployment=True)
             agent_deployments.append(agent_deployment)
         deployment["agent_deployments"] = agent_deployments
     if "tool_deployments" in deployment and deployment["tool_deployments"]:
         tool_deployments = []
         for i, tool_deployment in enumerate(deployment["tool_deployments"]):
             deployment_name = deployment["tool_deployments"][i]["name"]
-            tool_deployment = await setup_module_deployment("tool", configs_path / "tool_deployments.json", node_url, deployment_name)
+            tool_deployment = await setup_module_deployment("tool", configs_path / "tool_deployments.json", node_url, deployment_name, is_subdeployment=True)
             tool_deployments.append(tool_deployment)
         deployment["tool_deployments"] = tool_deployments
     if "environment_deployments" in deployment and deployment["environment_deployments"]:
         environment_deployments = []
         for i, environment_deployment in enumerate(deployment["environment_deployments"]):
             deployment_name = deployment["environment_deployments"][i]["name"]
-            environment_deployment = await setup_module_deployment("environment", configs_path / "environment_deployments.json", node_url, deployment_name)
+            environment_deployment = await setup_module_deployment("environment", configs_path / "environment_deployments.json", node_url, deployment_name, is_subdeployment=True)
             environment_deployments.append(environment_deployment)
         deployment["environment_deployments"] = environment_deployments
     if "kb_deployments" in deployment and deployment["kb_deployments"]:
         kb_deployments = []
         for i, kb_deployment in enumerate(deployment["kb_deployments"]):
             deployment_name = deployment["kb_deployments"][i]["name"]
-            kb_deployment = await setup_module_deployment("kb", configs_path / "kb_deployments.json", node_url, deployment_name)
+            kb_deployment = await setup_module_deployment("kb", configs_path / "kb_deployments.json", node_url, deployment_name, is_subdeployment=True)
             kb_deployments.append(kb_deployment)
         deployment["kb_deployments"] = kb_deployments
     print(f"Subdeployments loaded {deployment}")
     return deployment
 
-async def setup_module_deployment(module_type: str, deployment_path: str, node_url: str, deployment_name: str = None, load_persona_data=False):
+async def setup_module_deployment(module_type: str, deployment_path: str, node_url: str, deployment_name: str = None, load_persona_data=False, is_subdeployment: bool = False):
 
     # Map deployment types to their corresponding classes
     deployment_map = {
@@ -88,7 +92,7 @@ async def setup_module_deployment(module_type: str, deployment_path: str, node_u
         if deployment is None:
             raise ValueError(f"No deployment found with name {deployment_name}")
 
-    deployment = load_node_metadata(deployment, node_url)
+    deployment = await load_node_metadata(deployment, node_url, is_subdeployment)
     deployment = await load_module_config_data(deployment, load_persona_data)
     deployment = await load_subdeployments(deployment, node_url)
     return deployment_map[module_type](**deployment)
