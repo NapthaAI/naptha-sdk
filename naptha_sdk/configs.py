@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from naptha_sdk.client.hub import list_nodes
 from naptha_sdk.module_manager import load_persona
-from naptha_sdk.schemas import AgentDeployment, EnvironmentDeployment, LLMConfig, OrchestratorDeployment, ToolDeployment, KBDeployment
+from naptha_sdk.schemas import AgentDeployment, EnvironmentDeployment, LLMConfig, OrchestratorDeployment, ToolDeployment, KBDeployment, KBConfig, AgentConfig, EnvironmentConfig, ToolConfig, OrchestratorConfig
 from naptha_sdk.utils import url_to_node
 
 def load_llm_configs(llm_configs_path):
@@ -19,7 +19,15 @@ async def load_node_metadata(deployment, node_url, is_subdeployment):
     print(f"Node metadata loaded {deployment['node']}")
     return deployment
 
-async def load_module_config_data(deployment, load_persona_data=False):
+async def load_module_config_data(module_type, deployment, load_persona_data=False):
+
+    config_map = {
+        "agent": AgentConfig,
+        "environment": EnvironmentConfig,
+        "tool": ToolConfig,
+        "orchestrator": OrchestratorConfig,
+        "kb": KBConfig
+    }
 
     if "llm_config" in deployment["config"] and deployment["config"]["llm_config"] is not None:
         config_name = deployment["config"]["llm_config"]["config_name"]
@@ -30,6 +38,8 @@ async def load_module_config_data(deployment, load_persona_data=False):
     if load_persona_data:
         persona_data = await load_persona(deployment["config"]["persona_module"])
         deployment["config"]["system_prompt"]["persona"] = persona_data
+
+    deployment["config"] = config_map[module_type](**deployment["config"])
 
     return deployment
 
@@ -93,6 +103,6 @@ async def setup_module_deployment(module_type: str, deployment_path: str, node_u
             raise ValueError(f"No deployment found with name {deployment_name}")
 
     deployment = await load_node_metadata(deployment, node_url, is_subdeployment)
-    deployment = await load_module_config_data(deployment, load_persona_data)
+    deployment = await load_module_config_data(module_type, deployment, load_persona_data)
     deployment = await load_subdeployments(deployment, node_url)
     return deployment_map[module_type](**deployment)
