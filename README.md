@@ -350,8 +350,10 @@ For each persona, you will see a url where you can check out the data.
 ### Create a New Persona
 
 ```bash
-naptha personas persona_name -p "description='Persona description' parameters='{input_parameter_1: str, input_parameter_2: int}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
+naptha personas sam_altman_twitter -p "description='Persona for Sam Altman' parameters='{name: str, bio: str, openness: int}' module_url='https://huggingface.co/datasets/OpenAI/twitter_personas' module_entrypoint='data/sam.json'" 
 ```
+
+Make sure that the `module_url` is the url of the main repo (e.g the huggingface dataset, github repo, or repo stored on ipfs) and the `module_entrypoint` is the path to the file in the dataset (currently can be json or yaml).
 
 ### Delete a Persona
 
