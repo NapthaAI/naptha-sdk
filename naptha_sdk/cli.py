@@ -660,14 +660,14 @@ async def create(
         "agent_deployments": [
             AgentDeployment(
                 name=agent_module,
-                module={"name": agent_module},
+                module={"name": agent_module, "module_type": "agent"},
                 node=url_to_node(worker_node)
             ) for agent_module, worker_node in zip(agent_modules or [], worker_nodes or [])
         ],
         "environment_deployments": [
             EnvironmentDeployment(
                 name=env_module,
-                module={"name": env_module},
+                module={"name": env_module, "module_type": "environment"},
                 node=url_to_node(env_node)
             ) for env_module, env_node in zip(environment_modules or [], environment_nodes or [])
         ]
@@ -677,28 +677,28 @@ async def create(
     deployment_configs = {
         "agent": lambda: AgentDeployment(
             name=module_name,
-            module={"name": module_name},
+            module={"name": module_name, "module_type": "agent"},
             node=url_to_node(os.getenv("NODE_URL")),
         ),
         "tool": lambda: ToolDeployment(
             name=module_name,
-            module={"name": module_name},
+            module={"name": module_name, "module_type": "tool"},
             node=url_to_node(os.getenv("NODE_URL"))
         ),
         "orchestrator": lambda: OrchestratorDeployment(
             name=module_name,
-            module={"name": module_name},
+            module={"name": module_name, "module_type": "orchestrator"},
             node=url_to_node(os.getenv("NODE_URL")),
             **aux_deployments
         ),
         "environment": lambda: EnvironmentDeployment(
             name=module_name,
-            module={"name": module_name},
+            module={"name": module_name, "module_type": "environment"},
             node=url_to_node(os.getenv("NODE_URL"))
         ),
         "kb": lambda: KBDeployment(
             name=module_name,
-            module={"name": module_name},
+            module={"name": module_name, "module_type": "kb"},
             node=url_to_node(os.getenv("NODE_URL"))
         )
     }
@@ -1048,7 +1048,7 @@ async def main():
                             "name": args.agent_name,
                             "description": parsed_params['description'],
                             "parameters": parsed_params['parameters'],
-                            "author": f"user:{naptha.hub.public_key}",
+                            "author": naptha.hub.user_id,
                             "module_url": parsed_params['module_url'],
                             "module_type": parsed_params.get('module_type', 'agent'),
                             "module_version": parsed_params.get('module_version', '0.1'),
@@ -1081,7 +1081,7 @@ async def main():
                             "name": args.orchestrator_name,
                             "description": parsed_params['description'],
                             "parameters": parsed_params['parameters'],
-                            "author": f"user:{naptha.hub.public_key}",
+                            "author": naptha.hub.user_id,
                             "module_url": parsed_params['module_url'],
                             "module_type": parsed_params.get('module_type', 'orchestrator'),
                             "module_version": parsed_params.get('module_version', '0.1'),
@@ -1114,7 +1114,7 @@ async def main():
                             "name": args.environment_name,
                             "description": parsed_params['description'],
                             "parameters": parsed_params['parameters'],
-                            "author": f"user:{naptha.hub.public_key}",
+                            "author": naptha.hub.user_id,
                             "module_url": parsed_params['module_url'],
                             "module_type": parsed_params.get('module_type', 'environment'),
                             "module_version": parsed_params.get('module_version', '0.1'),
@@ -1147,7 +1147,7 @@ async def main():
                             "name": args.tool_name,
                             "description": parsed_params['description'],
                             "parameters": parsed_params['parameters'],
-                            "author": f"user:{naptha.hub.public_key}",
+                            "author": naptha.hub.user_id,
                             "module_url": parsed_params['module_url'],
                             "module_type": parsed_params.get('module_type', 'tool'),
                             "module_version": parsed_params.get('module_version', '0.1'),
@@ -1180,7 +1180,7 @@ async def main():
                             "name": args.persona_name,
                             "description": parsed_params['description'],
                             "parameters": parsed_params['parameters'],
-                            "author": f"user:{naptha.hub.public_key}",
+                            "author": naptha.hub.user_id,
                             "module_url": parsed_params['module_url'],
                             "module_type": parsed_params.get('module_type', 'persona'),
                             "module_version": parsed_params.get('module_version', '0.1'),
@@ -1203,7 +1203,7 @@ async def main():
                         console = Console()
                         console.print("[red]Data is required for add command.[/red]")
                         return
-                    await add_data_to_memory(naptha, args.memory_name, args.content, user_id=f"user:{naptha.hub.public_key}", memory_node_url=args.memory_node_urls[0])
+                    await add_data_to_memory(naptha, args.memory_name, args.content, user_id=naptha.hub.user_id, memory_node_url=args.memory_node_urls[0])
                 elif args.delete and len(args.memory_name.split()) == 1:
                     await naptha.hub.delete_memory(args.memory_name)
                 elif len(args.memory_name.split()) == 1:
@@ -1224,7 +1224,7 @@ async def main():
                             "name": args.memory_name,
                             "description": parsed_params['description'],
                             "parameters": parsed_params['parameters'],
-                            "author": f"user:{naptha.hub.public_key}",
+                            "author": naptha.hub.user_id,
                             "module_url": parsed_params['module_url'],
                             "module_type": parsed_params.get('module_type', 'memory'),
                             "module_version": parsed_params.get('module_version', '0.1'),
@@ -1248,7 +1248,7 @@ async def main():
                         console = Console()
                         console.print("[red]Data is required for add command.[/red]")
                         return
-                    await add_data_to_kb(naptha, args.kb_name, args.content, user_id=f"user:{naptha.hub.public_key}", kb_node=os.getenv("NODE_URL"))
+                    await add_data_to_kb(naptha, args.kb_name, args.content, user_id=naptha.hub.user_id, kb_node=os.getenv("NODE_URL"))
                 elif args.delete and len(args.kb_name.split()) == 1:
                     await naptha.hub.delete_kb(args.kb_name)
                 elif len(args.kb_name.split()) == 1:
@@ -1269,7 +1269,7 @@ async def main():
                             "name": args.kb_name,
                             "description": parsed_params['description'],
                             "parameters": parsed_params['parameters'],
-                            "author": f"user:{naptha.hub.public_key}",
+                            "author": naptha.hub.user_id,
                             "module_url": parsed_params['module_url'],
                             "module_type": parsed_params.get('module_type', 'kb'),
                             "module_version": parsed_params.get('module_version', '0.1'),
