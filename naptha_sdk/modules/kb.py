@@ -8,10 +8,10 @@ class KnowledgeBase:
     def __init__(self, kb_deployment: KBDeployment):
         self.kb_deployment = kb_deployment
         self.kb_node = NodeClient(self.kb_deployment.node)
-        self.table_name = kb_deployment.config['table_name']
-        self.schema = kb_deployment.config['schema']
+        self.table_name = kb_deployment.config.path
+        self.schema = kb_deployment.config.schema
         if "id_column" in kb_deployment.config:
-            self.id_column = kb_deployment.config['id_column']
+            self.id_column = kb_deployment.config.id_column
         else:
             self.id_column = "id"
         if self.table_name is None:
