@@ -221,7 +221,11 @@ class AgentRunInput(BaseModel):
 
     def model_dict(self):
         model_dict = self.dict()
+        if isinstance(self.deployment.config, BaseModel):
+            config = self.deployment.config.model_dump()
+            model_dict['deployment']['config'] = config
         return model_dict
+
 
 class ToolRunInput(BaseModel):
     consumer_id: str
