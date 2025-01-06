@@ -4,6 +4,7 @@ from naptha_sdk.utils import add_credentials_to_env, get_logger, write_private_k
 from naptha_sdk.user import generate_keypair
 from naptha_sdk.user import get_public_key, is_hex
 from surrealdb import Surreal
+import traceback
 from typing import Dict, List, Optional, Tuple
 
 import jwt
@@ -78,9 +79,8 @@ class Hub:
             return True, user, self.user_id
             
         except Exception as e:
-            logger.error(f"Authentication failed: {str(e)}", exc_info=True)
-            return False, None, None
-
+            raise Exception(f"Authentication failed: {str(e)}. Please ensure you have set HUB_URL, HUB_USERNAME, and HUB_PASSWORD in the .env file, and that you have run `naptha signup` for this user.")
+    
     async def signup(self, username: str, password: str, public_key: str) -> Tuple[bool, Optional[str], Optional[str]]:
         user = await self.surrealdb.signup({
             "NS": self.ns,

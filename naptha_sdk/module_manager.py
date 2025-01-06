@@ -324,56 +324,51 @@ def load_input_schema(repo_name):
 
 async def load_persona(persona_module):
     """Load persona from a JSON or YAML file in a git repository."""
-    try:
 
-        hub_username = os.getenv("HUB_USERNAME")
-        hub_password = os.getenv("HUB_PASSWORD")
-        hub_url = os.getenv("HUB_URL")
+    hub_username = os.getenv("HUB_USERNAME")
+    hub_password = os.getenv("HUB_PASSWORD")
+    hub_url = os.getenv("HUB_URL")
 
-        if not hub_username or not hub_password or not hub_url:
-            raise ValueError("HUB_USERNAME, HUB_PASSWORD, and HUB_URL environment variables must be set")
+    if not hub_username or not hub_password or not hub_url:
+        raise ValueError("HUB_USERNAME, HUB_PASSWORD, and HUB_URL environment variables must be set")
 
-        async with Hub(hub_url) as hub:
-            try:
-                _, _, _ = await hub.signin(hub_username, hub_password)
-            except Exception as auth_error:
-                raise ConnectionError(f"Failed to authenticate with Hub: {str(auth_error)}")            
+    async with Hub(hub_url) as hub:
+        success, _, _ = await hub.signin(hub_username, hub_password)
+        if not success:
+            raise ConnectionError(f"Failed to authenticate with Hub.")            
 
-            personas = await hub.list_personas(persona_module['name'])
-        persona = personas[0]
-        persona_url = persona['module_url']
+        personas = await hub.list_personas(persona_module['name'])
+    persona = personas[0]
+    persona_url = persona['module_url']
 
-        # Clone the repo
-        repo_name = persona_url.split('/')[-1]
-        repo_path = Path(f"{AGENT_DIR}/{repo_name}")
+    # Clone the repo
+    repo_name = persona_url.split('/')[-1]
+    repo_path = Path(f"{AGENT_DIR}/{repo_name}")
+    
+    # Remove existing repo if it exists
+    if repo_path.exists():
+        import shutil
+        shutil.rmtree(repo_path)
         
-        # Remove existing repo if it exists
-        if repo_path.exists():
-            import shutil
-            shutil.rmtree(repo_path)
-            
-        _ = Repo.clone_from(persona_url, to_path=str(repo_path))
-        
-        persona_file = repo_path / persona['module_entrypoint']
-        if not persona_file.exists():
-            logger.error(f"Persona file not found in repository {repo_name}")
-            return None
-                
-        # Load based on file extension
-        with persona_file.open('r') as f:
-            if persona_file.suffix == '.json':
-                persona_data = json.load(f)
-            elif persona_file.suffix in ['.yml', '.yaml']:
-                persona_data = yaml.safe_load(f)
-            else:
-                logger.error(f"Unsupported file type {persona_file.suffix} in {repo_name}")
-                return None
-            
-
-        # input_schema = load_input_schema(repo_name)
-        return persona_data
-        
-    except Exception as e:
-        logger.error(f"Error loading persona from {persona_url}: {e}")
+    _ = Repo.clone_from(persona_url, to_path=str(repo_path))
+    
+    persona_file = repo_path / persona['module_entrypoint']
+    if not persona_file.exists():
+        logger.error(f"Persona file not found in repository {repo_name}")
         return None
+            
+    # Load based on file extension
+    with persona_file.open('r') as f:
+        if persona_file.suffix == '.json':
+            persona_data = json.load(f)
+        elif persona_file.suffix in ['.yml', '.yaml']:
+            persona_data = yaml.safe_load(f)
+        else:
+            logger.error(f"Unsupported file type {persona_file.suffix} in {repo_name}")
+            return None
+        
+
+    # input_schema = load_input_schema(repo_name)
+    return persona_data
+        
     
