@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.user import get_public_key
-from naptha_sdk.schemas import AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, NodeConfigUser
+from naptha_sdk.schemas import AgentDeployment, EnvironmentDeployment, MemoryDeployment, MemoryRunInput, OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, NodeConfigUser
 import os
 import shlex
 from rich.console import Console
@@ -597,6 +597,11 @@ async def create(
             module={"name": module_name},
             node=url_to_node(os.getenv("NODE_URL")),
         ),
+        "memory": lambda: MemoryDeployment(
+            name=module_name,
+            module={"name": module_name},
+            node=url_to_node(os.getenv("NODE_URL"))
+        ),
         "tool": lambda: ToolDeployment(
             name=module_name,
             module={"name": module_name},
@@ -635,6 +640,7 @@ async def run(
     module_name,
     parameters=None, 
     worker_nodes=None,
+    memory_nodes=None,
     tool_nodes=None,
     environment_nodes=None,
     kb_nodes=None,
@@ -663,6 +669,10 @@ async def run(
     if worker_nodes:
         for worker_node in worker_nodes:
             agent_deployments.append(AgentDeployment(node=NodeConfigUser(ip=worker_node.strip())))
+    memory_deployments = []
+    if memory_nodes:
+        for memory_node in memory_nodes:
+            memory_deployments.append(MemoryDeployment(node=NodeConfigUser(ip=memory_node.strip())))
     tool_deployments = []
     if tool_nodes:
         for tool_node in tool_nodes:
@@ -684,6 +694,7 @@ async def run(
             module={"id": module_name, "name": module_name.split(":")[-1], "module_type": module_type}, 
             node=url_to_node(os.getenv("NODE_URL")), 
             config={"persona_module": {"name": persona_modules[0]}} if persona_modules else None,
+            memory_deployments=memory_deployments,
             tool_deployments=tool_deployments,
             kb_deployments=kb_deployments,
             environment_deployments=environment_deployments
@@ -697,6 +708,21 @@ async def run(
         print(f"Agent run input: {agent_run_input}")
 
         agent_run = await naptha.node.run_agent_and_poll(agent_run_input)
+
+    elif module_type == "memory":
+        print("Running Memory...")
+
+        memory_deployment = MemoryDeployment(
+            module={"id": module_name, "name": module_name.split(":")[-1], "module_type": module_type}, 
+            node=url_to_node(os.getenv("NODE_URL"))
+        )
+
+        memory_run_input = MemoryRunInput(
+            consumer_id=user['id'],
+            inputs=parameters,
+            deployment=memory_deployment
+        )
+        memory_run = await naptha.node.run_memory_and_poll(memory_run_input)
 
     elif module_type == "tool":
         print("Running Tool...")
@@ -718,6 +744,7 @@ async def run(
             module={"id": module_name, "name": module_name.split(":")[-1], "module_type": module_type}, 
             node=url_to_node(os.getenv("NODE_URL")),
             agent_deployments=agent_deployments,
+            memory_deployments=memory_deployments,
             environment_deployments=environment_deployments,
             kb_deployments=kb_deployments
         )
