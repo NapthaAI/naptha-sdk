@@ -189,19 +189,19 @@ naptha orchestrators -d orchestrator_name
 You can download and install the modules for an orchestrator without running first using:
 
 ```bash
-naptha create orchestrator:multiagent_chat --agent_modules "agent:simple_chat_agent,agent:simple_chat_agent" --worker_nodes "node.naptha.ai,node1.naptha.ai" --environment_modules "environment:groupchat_environment" --environment_nodes "node.naptha.ai"
+naptha create orchestrator:multiagent_chat --agent_modules "agent:simple_chat_agent,agent:simple_chat_agent" --worker_nodes "node.naptha.ai,node1.naptha.ai" --kb_modules "kb:groupchat_kb" --kb_nodes "node.naptha.ai"
 ```
 
 You can run the orchestrator module on hosted nodes using:
 
 ```bash
-naptha run orchestrator:multiagent_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --worker_nodes "node.naptha.ai,node1.naptha.ai" --environment_nodes "node.naptha.ai"
+naptha run orchestrator:multiagent_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --worker_nodes "node.naptha.ai,node1.naptha.ai" --kb_nodes "node.naptha.ai"
 ```
 
 Or on local nodes:
 
 ```bash
-naptha run orchestrator:multiagent_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --worker_nodes "localhost,localhost" --environment_nodes "localhost"
+naptha run orchestrator:multiagent_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --worker_nodes "localhost,localhost" --kb_nodes "localhost"
 ```
 
 ```bash
@@ -228,32 +228,6 @@ For example, an environment module might:
 - Store and manage a knowledge base that multiple agents can read from and write to
 - Provide a shared task queue for coordinating work between agents
 - Manage game state for multi-agent simulations
-
-### Interact with the Environment Hub
-
-You can also use the CLI to explore available environments that you can use with orchestrators:
-
-```bash
-naptha environments
-```
-
-### Create a New Environment Module
-
-```bash
-naptha environments environment_name -p "description='Environment description' parameters='{input_parameter_1: str, input_parameter_2: int}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
-```
-
-### Delete an Environment Module
-
-```bash
-naptha environments -d environment_name
-```
-
-### Run an Environment Module
-
-```bash
-naptha run environment:groupchat_environment -p "function_name='get_global_state'"
-```
 
 ## Knowledge Base Modules
 
@@ -286,26 +260,39 @@ naptha create kb:wikipedia_kb
 ### Initialize the content in the Knowledge Base
 
 ```bash
-naptha run kb:wikipedia_kb -p "mode='init'"
+naptha run kb:wikipedia_kb -p "function_name='init'"
 ```
 
 ### List content in the Knowledge Base
 
 ```bash
-naptha kbs wikipedia_kb -l
+naptha run kb:wikipedia_kb -p "function_name='list_rows' function_input_data='{\"limit\": \"10\"}'"
 ```
 
 ### Add to the Knowledge Base
 
 ```bash
-naptha kbs wikipedia_kb -a -c "url='https://en.wikipedia.org/wiki/Socrates' title='Socrates' text='Socrates was a Greek philosopher from Athens who is credited as the founder of Western philosophy and as among the first moral philosophers of the ethical tradition of thought.'" 
+naptha run kb:wikipedia_kb -p "function_name='add_data' function_input_data='{\"url\": \"https://en.wikipedia.org/wiki/Socrates\", \"title\": \"Socrates\", \"text\": \"Socrates was a Greek philosopher from Athens who is credited as the founder of Western philosophy and as among the first moral philosophers of the ethical tradition of thought.\"}'"
 ```
 
 ### Query the Knowledge Base Module
 
 ```bash
-naptha run kb:wikipedia_kb -p "mode='query' query='Elon Musk'"
+naptha run kb:wikipedia_kb -p "function_name='run_query' function_input_data='{\"query\": \"Elon Musk\"}'"
 ```
+
+## Delete a row from the Knowledge Base
+
+```bash
+naptha run kb:wikipedia_kb -p "function_name='delete_row' function_input_data='{\"condition\": {\"title\": \"Elon Musk\"}}'"
+```
+
+## Delete the entire Knowledge Base
+
+```bash
+naptha run kb:wikipedia_kb -p "function_name='delete_table' function_input_data='{\"table_name\": \"wikipedia_kb\"}'"
+```
+
 
 ### Run an Agent that interacts with the Knowledge Base
 
@@ -382,18 +369,18 @@ naptha inference "How can we create scaling laws for multi-agent systems?" -m "p
 After the agent runs finish, you can download the file from the node using:
 
 ```bash
-naptha read_storage -id <agent_run_id>
+naptha storage fs read <agent_run_id>
 ```
 
 You can write to the node using:
 
 ```bash
-naptha write_storage -i files/<filename>.jpg
+naptha storage fs create -d files/<filename>.jpg
 ```
 
 ### Interact with IPFS thorugh Node
 ```bash
-naptha write_storage -i files/<filename>.jpg --ipfs
+naptha storage ipfs create -d files/<filename>.jpg
 ```
 
 

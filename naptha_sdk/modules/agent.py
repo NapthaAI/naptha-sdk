@@ -6,23 +6,15 @@ logger = get_logger(__name__)
 
 class Agent:
     def __init__(self, 
-        module_run, 
-        agent_index,
+        deployment, 
         *args,
         **kwargs
     ):
-        self.module_run = module_run
-        self.agent_index = agent_index
-        self.worker_node = NodeClient(self.module_run.deployment.agent_deployments[self.agent_index].node)
+        self.deployment = deployment
+        self.agent_node = NodeClient(self.deployment.node)
 
-    async def call_agent_func(self, *args, **kwargs):
-        logger.info(f"Running agent on worker node {self.worker_node.node_url}")
-
-        agent_run_input = AgentRunInput(
-            consumer_id=self.module_run.consumer_id,
-            inputs=kwargs,
-            deployment=self.module_run.deployment.agent_deployments[self.agent_index].model_dump(),
-        )
+    async def call_agent_func(self, module_run_input: AgentRunInput, *args, **kwargs):
+        logger.info(f"Running agent on worker node {self.agent_node.node_url}")
         
-        agent_run = await self.worker_node.run_module(module_type="agent", run_input=agent_run_input)
+        agent_run = await self.agent_node.run_module(module_type="agent", run_input=module_run_input.model_dict())
         return agent_run

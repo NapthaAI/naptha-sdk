@@ -28,8 +28,14 @@ class Naptha:
         self.user = User(id=f"user:{self.public_key}")
         self.hub_username = os.getenv("HUB_USERNAME", None)
         self.hub_url = os.getenv("HUB_URL", None)
-        self.node = UserClient(url_to_node(os.getenv("NODE_URL", None)))
-        self.inference_client = InferenceClient(url_to_node(os.getenv("NODE_URL", None)))
+
+        node_url = os.getenv("NODE_URL")
+
+        if node_url is None:
+            raise ValueError("NODE_URL is not set. Make sure your project has a .env file with a NODE_URL variable.")
+
+        self.node = UserClient(url_to_node(node_url))
+        self.inference_client = InferenceClient(url_to_node(node_url))
         self.hub = Hub(self.hub_url, self.public_key)  
 
     async def __aenter__(self):

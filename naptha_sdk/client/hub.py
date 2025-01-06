@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 import os
 from naptha_sdk.utils import add_credentials_to_env, get_logger, write_private_key_to_file
 from naptha_sdk.user import generate_keypair
@@ -15,6 +16,7 @@ from naptha_sdk.utils import add_credentials_to_env, get_logger
 
 logger = get_logger(__name__)
 
+load_dotenv()
 
 class Hub:
     """The Hub class is the entry point into Naptha AI Hub."""
@@ -117,9 +119,27 @@ class Hub:
         servers = await self.surrealdb.query("SELECT * FROM server;")
         return servers[0]['result']
 
-    async def list_nodes(self) -> List:
-        nodes = await self.surrealdb.query("SELECT * FROM node;")
-        return nodes[0]['result']
+    async def list_nodes(self, node_ip=None) -> List:
+        if not node_ip:
+            nodes = await self.surrealdb.query("SELECT * FROM node;")
+            return nodes[0]['result']
+        else:
+            nodes = await self.surrealdb.query("SELECT * FROM node WHERE ip=$node_ip;", {"node_ip": node_ip})
+            node = nodes[0]['result'][0]
+            server_ids = node['servers']
+            servers = []
+            for server_id in server_ids:
+                server = await self.surrealdb.select(server_id)
+                servers.append(server)
+            node['servers'] = servers
+
+            alt_ports = [
+                server['port'] 
+                for server in servers
+                if server['server_type'] in ['ws', 'grpc']
+            ]
+            node['ports'] = alt_ports
+            return node
 
     async def list_agents(self, agent_name=None) -> List:
         if not agent_name:
@@ -412,3 +432,18 @@ async def user_setup_flow(hub_url, public_key):
             case _:
                 logger.error("Unexpected case encountered in user setup flow.")
                 raise Exception("Unexpected error in user setup. Please check your configuration and try again.")
+            
+async def list_nodes(node_ip: str) -> List:
+
+    hub_username = os.getenv("HUB_USERNAME")
+    hub_password = os.getenv("HUB_PASSWORD")
+    hub_url = os.getenv("HUB_URL")
+    
+    async with Hub(hub_url) as hub:
+        try:
+            _, _, _ = await hub.signin(hub_username, hub_password)
+        except Exception as auth_error:
+            raise ConnectionError(f"Failed to authenticate with Hub: {str(auth_error)}")
+
+        node = await hub.list_nodes(node_ip=node_ip)
+        return node

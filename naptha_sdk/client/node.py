@@ -20,14 +20,14 @@ from httpx import HTTPStatusError, RemoteProtocolError
 from naptha_sdk.client import grpc_server_pb2
 from naptha_sdk.client import grpc_server_pb2_grpc
 from naptha_sdk.schemas import AgentRun, AgentRunInput, ChatCompletionRequest, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, \
-    OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, KBDeployment, KBRunInput, KBRun, ToolRunInput, ToolRun, NodeSchema, ModelResponse, ToolDeployment
+    OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, KBDeployment, KBRunInput, KBRun, ToolRunInput, ToolRun, NodeConfig, NodeConfigUser, ModelResponse, ToolDeployment
 from naptha_sdk.utils import get_logger, node_to_url
 
 logger = get_logger(__name__)
 HTTP_TIMEOUT = 300
 
 class NodeClient:
-    def __init__(self, node: NodeSchema):
+    def __init__(self, node: NodeConfig):
         self.node = node
         self.server_type = node.server_type
         self.node_url = self.node_to_url(node)
@@ -36,7 +36,7 @@ class NodeClient:
         self.access_token = None
         logger.info(f"Node URL: {self.node_url}")
 
-    def node_to_url(self, node: NodeSchema):
+    def node_to_url(self, node: NodeConfig):
         ports = node.ports
         if len(ports) == 0:
             raise ValueError("No ports found for node")
@@ -118,6 +118,7 @@ class NodeClient:
             return output_types[module_type](**response['data'])
         else:
             logger.error(f"Error running {module_type}: {response['message']}")
+            logger.error(f"Full traceback: {traceback.format_exc()}")
             raise Exception(response['message'])
 
     async def run_module_grpc(self, module_type: str, run_input):
@@ -132,7 +133,7 @@ class NodeClient:
                     input_struct.update(input_data)
 
             # Create node config
-            node_config = grpc_server_pb2.NodeConfigInput(
+            node_config = grpc_server_pb2.NodeConfigUser(
                 ip=run_input.deployment.node.ip,
                 http_port=run_input.deployment.node.http_port,
                 server_type=run_input.deployment.node.server_type
@@ -245,7 +246,7 @@ class NodeClient:
             await self.disconnect_ws(client_id)
 
 class UserClient:
-    def __init__(self, node: NodeSchema):
+    def __init__(self, node: NodeConfigUser):
         self.node = node
         self.node_url = node_to_url(node)
         self.connections = {}

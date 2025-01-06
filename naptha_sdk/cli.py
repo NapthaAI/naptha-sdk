@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.user import get_public_key
-from naptha_sdk.schemas import AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, NodeSchema
+from naptha_sdk.schemas import AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, NodeConfigUser
 import os
 import shlex
 from rich.console import Console
@@ -18,6 +18,8 @@ from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.schemas import AgentDeployment, ChatCompletionRequest, EnvironmentDeployment, \
     OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, KBDeployment, KBRunInput, ToolDeployment, ToolRunInput
+from naptha_sdk.storage.storage_provider import StorageProvider
+from naptha_sdk.storage.schemas import CreateTableRequest, CreateRowRequest, DeleteStorageRequest, ListStorageRequest, ReadStorageRequest, UpdateStorageRequest, SearchStorageRequest
 from naptha_sdk.user import get_public_key
 from naptha_sdk.utils import url_to_node
 
@@ -479,91 +481,6 @@ async def list_kbs(naptha, kb_name=None):
     console.print(table)
     console.print(f"\n[green]Total knowledge bases:[/green] {len(kbs)}")
 
-async def list_kb_content(naptha, kb_name):
-    rows = await naptha.node.query_table(
-        table_name=kb_name,   
-        columns="*",
-        condition=None,
-        order_by=None,
-        limit=None
-    )
-    
-    if not rows.get('rows'):
-        console = Console()
-        console.print("[red]No content found in knowledge base.[/red]")
-        return
-
-    console = Console()
-    table = Table(
-        box=box.ROUNDED,
-        show_lines=True,
-        title=f"Knowledge Base Content: {kb_name}",
-        title_style="bold cyan",
-        header_style="bold blue",
-        row_styles=["", "dim"]  # Alternating row styles
-    )
-
-    # Add headers
-    headers = list(rows['rows'][0].keys())
-    for header in headers:
-        if header.lower() in ['id', 'module_url']:
-            table.add_column(header, justify="left", max_width=40)
-        elif header.lower() in ['title', 'name']:
-            table.add_column(header, justify="left", style="green", max_width=40)
-        elif header.lower() in ['text', 'description', 'content']:
-            table.add_column(header, justify="left", max_width=60)
-        else:
-            table.add_column(header, justify="left", max_width=30)
-
-    # Add rows
-    for row in rows['rows']:
-        table.add_row(*[str(row.get(key, '')) for key in headers])
-
-    # Print table and summary
-    console.print()
-    console.print(table)
-    console.print(f"\n[green]Total rows:[/green] {len(rows['rows'])}")
-
-async def add_data_to_kb(naptha, kb_name, data, user_id=None, kb_node=None):
-    try:
-        # Parse the data string into a dictionary
-        data_dict = {}
-        # Split by spaces, but keep quoted strings together
-        parts = shlex.split(data)
-        
-        for part in parts:
-            if '=' in part:
-                key, value = part.split('=', 1)
-                # Remove quotes if they exist
-                value = value.strip("'\"")
-                data_dict[key] = value
-
-        data_dict = [data_dict]
-        
-        kb_run_input = {
-            "consumer_id": user_id,
-            "inputs": {
-                "mode": "add_data",
-                "data": json.dumps(data_dict)
-            },
-            "deployment": {
-                "name": kb_name,
-                "module": {
-                    "name": kb_name
-                },
-                "node": url_to_node(kb_node)
-            }
-        }
-
-        kb_run = await naptha.node.run_kb_and_poll(kb_run_input)
-        console = Console()
-        console.print(f"\n[green]Successfully added data to knowledge base:[/green] {kb_name}")
-        console.print(kb_run)
-        
-    except Exception as e:
-        console = Console()
-        console.print(f"\n[red]Error adding data to knowledge base:[/red] {str(e)}")
-
 async def list_servers(naptha):
     servers = await naptha.hub.list_servers()
     
@@ -745,19 +662,19 @@ async def run(
     agent_deployments = []
     if worker_nodes:
         for worker_node in worker_nodes:
-            agent_deployments.append(AgentDeployment(node=NodeSchema(ip=worker_node.strip())))
+            agent_deployments.append(AgentDeployment(node=NodeConfigUser(ip=worker_node.strip())))
     tool_deployments = []
     if tool_nodes:
         for tool_node in tool_nodes:
-            tool_deployments.append(ToolDeployment(node=NodeSchema(ip=tool_node.strip())))
+            tool_deployments.append(ToolDeployment(node=NodeConfigUser(ip=tool_node.strip())))
     environment_deployments = []
     if environment_nodes:
         for environment_node in environment_nodes:
-            environment_deployments.append(EnvironmentDeployment(node=NodeSchema(ip=environment_node.strip())))
+            environment_deployments.append(EnvironmentDeployment(node=NodeConfigUser(ip=environment_node.strip())))
     kb_deployments = []
     if kb_nodes:
         for kb_node in kb_nodes:
-            kb_deployments.append(KBDeployment(node=NodeSchema(ip=kb_node.strip())))
+            kb_deployments.append(KBDeployment(node=NodeConfigUser(ip=kb_node.strip())))
 
 
     if module_type == "agent":
@@ -857,6 +774,59 @@ async def write_storage(naptha, storage_input, ipfs=False, publish_to_ipns=False
     except Exception as err:
         print(f"Error: {err}")
 
+async def storage_interaction(naptha, storage_type, command, path, data, schema, options):
+    storage_provider = StorageProvider(naptha.node)
+
+    if command == "create":
+        if schema:
+            create_table_request = CreateTableRequest(
+                storage_type=storage_type,
+                path=path,
+                schema=schema
+            )
+        elif data:
+            create_row_request = CreateRowRequest(
+                storage_type=storage_type,
+                path=path,
+                data=data
+            )
+    elif command == "read":
+        read_request = ReadStorageRequest(
+            storage_type=storage_type,
+            path=path,
+            options=options
+        )
+    elif command == "update":
+        update_request = UpdateStorageRequest(
+            storage_type=storage_type,
+            path=path,
+            options=options
+        )
+        await storage_provider.create(update_request)
+    elif command == "delete":
+        delete_request = DeleteStorageRequest(
+            storage_type=storage_type,
+            path=path,
+            options=options
+        )
+        await storage_provider.create(delete_request)
+    elif command == "list":
+        list_request = ListStorageRequest(
+            storage_type=storage_type,
+            path=path,
+            options=options
+        )
+        await storage_provider.create(list_request)
+    elif command == "search":
+        search_request = SearchStorageRequest(
+            storage_type=storage_type,
+            path=path,
+            options=options
+        )
+        await storage_provider.create(search_request)
+    else:
+        raise ValueError(f"Invalid command: {command}")
+
 def _parse_list_arg(args, arg_name, default=None, split_char=','):
     """Helper function to parse list arguments with common logic."""
     if hasattr(args, arg_name) and getattr(args, arg_name) is not None:
@@ -908,41 +878,41 @@ async def main():
     parser = argparse.ArgumentParser(description="CLI with for Naptha")
     subparsers = parser.add_subparsers(title="commands", dest="command")
 
-    # Node commands
+    # Node parser
     nodes_parser = subparsers.add_parser("nodes", help="List available nodes.")
     nodes_parser.add_argument("-s", '--list_servers', action='store_true', help='List servers')
 
-    # Agent commands
+    # Agent parser
     agents_parser = subparsers.add_parser("agents", help="List available agents.")
     agents_parser.add_argument('agent_name', nargs='?', help='Optional agent name')
     agents_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
     agents_parser.add_argument('-d', '--delete', action='store_true', help='Delete a agent')
 
-    # Orchestrator commands
+    # Orchestrator parser
     orchestrators_parser = subparsers.add_parser("orchestrators", help="List available orchestrators.")
     orchestrators_parser.add_argument('orchestrator_name', nargs='?', help='Optional orchestrator name')
     orchestrators_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
     orchestrators_parser.add_argument('-d', '--delete', action='store_true', help='Delete an orchestrator')
 
-    # Environment commands
+    # Environment parser
     environments_parser = subparsers.add_parser("environments", help="List available environments.")
     environments_parser.add_argument('environment_name', nargs='?', help='Optional environment name')
     environments_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
     environments_parser.add_argument('-d', '--delete', action='store_true', help='Delete an environment')
 
-    # Persona commands
+    # Persona parser
     personas_parser = subparsers.add_parser("personas", help="List available personas.")
     personas_parser.add_argument('persona_name', nargs='?', help='Optional persona name')
     personas_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
     personas_parser.add_argument('-d', '--delete', action='store_true', help='Delete a persona')
 
-    # Tool commands
+    # Tool parser
     tools_parser = subparsers.add_parser("tools", help="List available tools.")
     tools_parser.add_argument('tool_name', nargs='?', help='Optional tool name')
     tools_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
     tools_parser.add_argument('-d', '--delete', action='store_true', help='Delete a tool')
 
-    # Memory commands
+    # Memory parser
     memories_parser = subparsers.add_parser("memories", help="List available memories.")
     memories_parser.add_argument('memory_name', nargs='?', help='Optional memory name')
     memories_parser.add_argument('-p', '--metadata', type=str, help='Metadata for memory registration in "key=value" format')
@@ -952,17 +922,14 @@ async def main():
     memories_parser.add_argument('-c', '--content', type=str, help='Content to add to a memory', required=False)
     memories_parser.add_argument('-m', '--memory_node_urls', type=str, help='Memory node URLs', default=["http://localhost:7001"])
 
-    # Knowledge base commands
+    # Knowledge base parser
     kbs_parser = subparsers.add_parser("kbs", help="List available knowledge bases.")
     kbs_parser.add_argument('kb_name', nargs='?', help='Optional knowledge base name')
     kbs_parser.add_argument('-p', '--metadata', type=str, help='Metadata for knowledge base registration in "key=value" format')
     kbs_parser.add_argument('-d', '--delete', action='store_true', help='Delete a knowledge base')
-    kbs_parser.add_argument('-l', '--list', action='store_true', help='List content in a knowledge base')
-    kbs_parser.add_argument('-a', '--add', action='store_true', help='Add data to a knowledge base')
-    kbs_parser.add_argument('-c', '--content', type=str, help='Content to add to a knowledge base', required=False)
     kbs_parser.add_argument('-k', '--kb_nodes', type=str, help='Knowledge base node URLs')
 
-    # Create command
+    # Create parser
     create_parser = subparsers.add_parser("create", help="Execute create command.")
     create_parser.add_argument("module", help="Select the module to create")
     create_parser.add_argument("-a", "--agent_modules", help="Agent modules to create")
@@ -970,7 +937,7 @@ async def main():
     create_parser.add_argument("-e", "--environment_modules", help="Environment module to create")
     create_parser.add_argument("-m", "--environment_nodes", help="Environment nodes to store data during agent runs.")
 
-    # Run command
+    # Run parser
     run_parser = subparsers.add_parser("run", help="Execute run command.")
     run_parser.add_argument("agent", help="Select the agent to run")
     run_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
@@ -982,24 +949,21 @@ async def main():
     run_parser.add_argument("-pm", "--persona_modules", help="Personas URLs to install before running the agent")
     run_parser.add_argument("-f", "--file", help="YAML file with agent run parameters")
 
-    # Inference command
+    # Inference parser
     inference_parser = subparsers.add_parser("inference", help="Run model inference.")
     inference_parser.add_argument("prompt", help="Input prompt for the model")
     inference_parser.add_argument("-m", "--model", help="Model to use for inference", default="phi3:mini")
     inference_parser.add_argument("-p", "--parameters", type=str, help='Additional model parameters in "key=value" format')
 
-    # Read storage commands
-    read_storage_parser = subparsers.add_parser("read_storage", help="Read from storage.")
-    read_storage_parser.add_argument("-id", "--agent_run_id", help="Agent run ID to read from")
-    read_storage_parser.add_argument("-o", "--output_dir", default="files", help="Output directory to write to")
-    read_storage_parser.add_argument("--ipfs", help="Read from IPFS", action="store_true")
+    # Storage parser
+    storage_parser = subparsers.add_parser("storage", help="Interact with Node storage.")
+    storage_parser.add_argument("storage_type", help="The type of storage", choices=["db", "fs", "ipfs"])
+    storage_parser.add_argument("command", help="The command to run", choices=["create", "read"])
+    storage_parser.add_argument("path", help="The path to store the object")
+    storage_parser.add_argument("-d", "--data", help="Data to write to storage")
+    storage_parser.add_argument("-s", "--schema", help="Schema to write to storage")
+    storage_parser.add_argument("-o", "--options", help="Options to use with storage")
 
-    # Write storage commands
-    write_storage_parser = subparsers.add_parser("write_storage", help="Write to storage.")
-    write_storage_parser.add_argument("-i", "--storage_input", help="Path to file or directory to write to storage")
-    write_storage_parser.add_argument("--ipfs", help="Write to IPFS", action="store_true")
-    write_storage_parser.add_argument("--publish_to_ipns", help="Publish to IPNS", action="store_true")
-    write_storage_parser.add_argument("--update_ipns_name", help="Update IPNS name")
 
     # Signup command
     signup_parser = subparsers.add_parser("signup", help="Sign up a new user.")
@@ -1239,16 +1203,6 @@ async def main():
                 if not args.kb_name:
                     # List all knowledge bases
                     await list_kbs(naptha)
-                elif args.list:
-                    # List content of specific knowledge base
-                    await list_kb_content(naptha, args.kb_name)
-                elif args.add:
-                    # Add data to knowledge base
-                    if not args.content:
-                        console = Console()
-                        console.print("[red]Data is required for add command.[/red]")
-                        return
-                    await add_data_to_kb(naptha, args.kb_name, args.content, user_id=f"user:{naptha.hub.public_key}", kb_node=os.getenv("NODE_URL"))
                 elif args.delete and len(args.kb_name.split()) == 1:
                     await naptha.hub.delete_kb(args.kb_name)
                 elif len(args.kb_name.split()) == 1:
@@ -1291,12 +1245,8 @@ async def main():
                     model=args.model,
                 )
                 await naptha.inference_client.run_inference(request)
-            elif args.command == "read_storage":
-                await read_storage(naptha, args.agent_run_id, args.output_dir, args.ipfs)
-            elif args.command == "write_storage":
-                await write_storage(naptha, args.storage_input, args.ipfs, args.publish_to_ipns, args.update_ipns_name)
-
-                
+            elif args.command == "storage":
+                await storage_interaction(naptha, args.storage_type, args.command, args.path, args.data, args.schema, args.options)
             elif args.command == "publish":
                 await naptha.publish_agents()
         else:
