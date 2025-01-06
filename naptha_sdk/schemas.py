@@ -190,7 +190,7 @@ class AgentRun(BaseModel):
     completed_time: Optional[str] = None
     duration: Optional[float] = None
     input_schema_ipfs_hash: Optional[str] = None
-
+    signature: str
     class Config:
         allow_mutation = True
         json_encoders = {
@@ -256,7 +256,7 @@ class ToolRun(BaseModel):
     start_processing_time: Optional[str] = None
     completed_time: Optional[str] = None
     duration: Optional[float] = None
-
+    signature: str
 class OrchestratorRunInput(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
@@ -282,6 +282,7 @@ class OrchestratorRun(BaseModel):
     duration: Optional[float] = None
     agent_runs: List['AgentRun'] = []
     input_schema_ipfs_hash: Optional[str] = None
+    signature: str
 
 class EnvironmentRunInput(BaseModel):
     consumer_id: str
@@ -309,6 +310,7 @@ class EnvironmentRun(BaseModel):
     completed_time: Optional[str] = None
     duration: Optional[float] = None
     input_schema_ipfs_hash: Optional[str] = None
+    signature: str
 
 class KBRunInput(BaseModel):
     consumer_id: str
@@ -337,7 +339,8 @@ class KBRun(BaseModel):
     start_processing_time: Optional[str] = None
     completed_time: Optional[str] = None
     duration: Optional[float] = None
-    
+    signature: str
+
 class ChatMessage(BaseModel):
     role: str
     content: str
