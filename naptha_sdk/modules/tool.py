@@ -16,11 +16,5 @@ class Tool:
 
     async def call_tool_func(self, module_run: Union[AgentRun, ToolRunInput]):
         logger.info(f"Running tool on worker node {self.tool_node}")
-
-        tool_run_input = ToolRunInput(
-            consumer_id=module_run.consumer_id,
-            inputs=module_run.inputs.model_dump(),
-            deployment=self.tool_deployment.model_dump(),
-        )
-        tool_run = await self.tool_node.run_module(module_type="tool", run_input=tool_run_input.model_dump())
+        tool_run = await self.tool_node.run_module(module_type="tool", run_input=module_run.model_dict())
         return tool_run

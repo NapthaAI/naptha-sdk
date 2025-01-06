@@ -230,7 +230,7 @@ class AgentRunInput(BaseModel):
 class ToolRunInput(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
-    deployment: Union[ToolDeployment, Dict]
+    deployment: ToolDeployment
     agent_run: Optional[AgentRun] = None
 
     def model_dict(self):
