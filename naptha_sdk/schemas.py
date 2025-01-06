@@ -68,6 +68,20 @@ class AgentConfig(BaseModel):
     persona_module: Optional[Union[Dict, BaseModel]] = None
     system_prompt: Optional[Union[Dict, BaseModel]] = None
 
+class MemoryConfig(BaseModel):
+    config_name: Optional[str] = None
+    storage_type: StorageType
+    path: str
+    schema: Dict[str, Any]
+    options: Optional[Dict[str, Any]] = None
+
+    def model_dict(self):
+        if isinstance(self.storage_type, StorageType):
+            self.storage_type = self.storage_type.value
+        model_dict = self.dict()
+        model_dict['storage_type'] = self.storage_type
+        return model_dict
+
 class ToolConfig(BaseModel):
     config_name: Optional[str] = None
     llm_config: Optional[LLMConfig] = None
@@ -102,6 +116,18 @@ class DataGenerationConfig(BaseModel):
     save_inputs_location: Optional[str] = None
     default_filename: Optional[str] = None
 
+class MemoryDeployment(BaseModel):
+    node: Union[NodeConfigUser, NodeConfig, Dict]
+    name: Optional[str] = None
+    module: Optional[Dict] = None
+    config: Optional[MemoryConfig] = None
+
+    def model_dict(self):
+        model_dict = self.dict()
+        if isinstance(self.config, MemoryConfig):
+            model_dict['config'] = self.config.model_dict()
+        return model_dict
+
 class ToolDeployment(BaseModel):
     node: Union[NodeConfigUser, NodeConfig, Dict]
     name: Optional[str] = None
@@ -133,6 +159,7 @@ class AgentDeployment(BaseModel):
     module: Optional[Dict] = None
     config: Optional[AgentConfig] = None
     data_generation_config: Optional[DataGenerationConfig] = None
+    memory_deployments: Optional[List[MemoryDeployment]] = None
     tool_deployments: Optional[List[ToolDeployment]] = None
     environment_deployments: Optional[List[EnvironmentDeployment]] = None
     kb_deployments: Optional[List[KBDeployment]] = None
@@ -143,6 +170,7 @@ class OrchestratorDeployment(BaseModel):
     module: Optional[Dict] = None
     config: Optional[OrchestratorConfig] = None
     agent_deployments: Optional[List[AgentDeployment]] = None
+    memory_deployments: Optional[List[MemoryDeployment]] = None
     environment_deployments: Optional[List[EnvironmentDeployment]] = None
     kb_deployments: Optional[List[KBDeployment]] = None
 
@@ -226,6 +254,32 @@ class AgentRunInput(BaseModel):
             model_dict['deployment']['config'] = config
         return model_dict
 
+class MemoryRun(BaseModel):
+    consumer_id: str
+    inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
+    deployment: MemoryDeployment
+    orchestrator_runs: List['OrchestratorRun'] = []
+    status: str = "pending"
+    error: bool = False
+    id: Optional[str] = None
+    results: list[Optional[str]] = []
+    error_message: Optional[str] = None
+    created_time: Optional[str] = None
+    start_processing_time: Optional[str] = None
+    completed_time: Optional[str] = None
+    duration: Optional[float] = None
+
+class MemoryRunInput(BaseModel):
+    consumer_id: str
+    inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
+    deployment: MemoryDeployment
+    orchestrator_runs: List['OrchestratorRun'] = []
+
+    def model_dict(self):
+        model_dict = self.dict()
+        if isinstance(self.deployment, MemoryDeployment):
+            model_dict['deployment'] = self.deployment.model_dict()
+        return model_dict
 
 class ToolRunInput(BaseModel):
     consumer_id: str
