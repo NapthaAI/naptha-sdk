@@ -18,6 +18,7 @@ from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.schemas import AgentDeployment, ChatCompletionRequest, EnvironmentDeployment, \
     OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, KBDeployment, KBRunInput, ToolDeployment, ToolRunInput
+from naptha_sdk.storage.storage_provider import StorageProvider
 from naptha_sdk.storage.schemas import CreateTableRequest, CreateRowRequest, DeleteStorageRequest, ListStorageRequest, ReadStorageRequest, UpdateStorageRequest, SearchStorageRequest
 from naptha_sdk.user import get_public_key
 from naptha_sdk.utils import url_to_node

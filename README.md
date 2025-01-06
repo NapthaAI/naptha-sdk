@@ -375,12 +375,12 @@ naptha storage fs read <agent_run_id>
 You can write to the node using:
 
 ```bash
-naptha storage fs write -d files/<filename>.jpg
+naptha storage fs create -d files/<filename>.jpg
 ```
 
 ### Interact with IPFS thorugh Node
 ```bash
-naptha storage ipfs write -d files/<filename>.jpg
+naptha storage ipfs create -d files/<filename>.jpg
 ```
 
 
