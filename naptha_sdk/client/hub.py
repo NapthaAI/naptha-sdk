@@ -4,7 +4,6 @@ from naptha_sdk.utils import add_credentials_to_env, get_logger, write_private_k
 from naptha_sdk.user import generate_keypair
 from naptha_sdk.user import get_public_key, is_hex
 from surrealdb import Surreal
-import traceback
 from typing import Dict, List, Optional, Tuple
 
 import jwt
@@ -47,28 +46,42 @@ class Hub:
         return jwt.decode(token, options={"verify_signature": False})["ID"]
 
     async def signin(self, username: str, password: str) -> Tuple[bool, Optional[str], Optional[str]]:
+        logger.info(f"Attempting authentication for user: {username}")
+        
         try:
-            print("Signing in to hub with username: ", username)
-            user = await self.surrealdb.signin(
-                {
-                    "NS": self.ns,
-                    "DB": self.db,
-                    "AC": "user",
-                    "username": username,
-                    "password": password,
-                },
-            )
+            user = await self.surrealdb.signin({
+                "NS": self.ns,
+                "DB": self.db,
+                "AC": "user",
+                "username": username,
+                "password": password,
+            })
+            
             self.user_id = self._decode_token(user)
+            local_public_key = self.public_key or get_public_key(os.getenv("PRIVATE_KEY"))
+            hub_public_key = self.user_id.split(":")[1]
+            
+            if local_public_key != hub_public_key:
+                logger.error("Public key mismatch", extra={
+                    "local_key": local_public_key,
+                    "hub_key": hub_public_key
+                })
+                raise Exception(
+                    "Public key mismatch. Please verify your private key in .env file. "
+                    f"Local key: {local_public_key}, Hub key: {hub_public_key}"
+                )
+            
             self.token = user
             self.is_authenticated = True
+            
+            logger.info(f"Successfully authenticated user: {username}")
             return True, user, self.user_id
+            
         except Exception as e:
-            print(f"Authentication failed: {e}")
-            print("Full traceback: ", traceback.format_exc())
+            logger.error(f"Authentication failed: {str(e)}", exc_info=True)
             return False, None, None
 
     async def signup(self, username: str, password: str, public_key: str) -> Tuple[bool, Optional[str], Optional[str]]:
-
         user = await self.surrealdb.signup({
             "NS": self.ns,
             "DB": self.db,
