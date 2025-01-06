@@ -1,16 +1,29 @@
 from ecdsa import SigningKey, SECP256k1
 import os, re
 
-def generate_keypair(private_key_filename=None): 
-    private_key = SigningKey.generate(curve=SECP256k1).to_string().hex()
-    public_key = generate_public_key(private_key)
+def generate_keypair(private_key_filename=None):
     pkfile = private_key_filename if private_key_filename else 'private_key.pem'
+    file_path = os.path.join(os.getcwd(), pkfile)
+    
+    # Check if private key file exists and is not empty
+    if private_key_filename and os.path.isfile(file_path):
+        with open(file_path, 'r') as file:
+            private_key = file.read().strip()
+            # Check if file is empty or contains only whitespace
+            if not private_key:
+                # Generate new key if file is empty
+                private_key = SigningKey.generate(curve=SECP256k1).to_string().hex()
+                with open(file_path, 'w') as f:
+                    f.write(private_key)
+    else:
+        # Generate new private key
+        private_key = SigningKey.generate(curve=SECP256k1).to_string().hex()
+        # Save the private key to a file
+        with open(file_path, 'w') as file:
+            file.write(private_key)
 
-    # Save the private key to a file
-    with open(os.path.join(os.getcwd(), pkfile), 'w') as file:
-        file.write(private_key)
-
-    return public_key, os.path.join(os.getcwd(), pkfile)
+    public_key = generate_public_key(private_key)
+    return public_key, file_path
 
 def get_public_key(private_key):
     # To ensure old users can still login

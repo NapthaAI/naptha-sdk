@@ -982,7 +982,10 @@ async def main():
                     print(
                         "Please set HUB_USERNAME and HUB_PASSWORD environment variables or sign up first (run naptha signup).")
                     return
-                _, _, _ = await naptha.hub.signin(hub_username, hub_password)
+                success, _, _ = await naptha.hub.signin(hub_username, hub_password)
+                if not success:
+                    print("Authentication failed. Please check your username and password.")
+                    return
 
             if args.command == "nodes":
                 if not args.list_servers:
