@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 from naptha_sdk.client.hub import list_nodes
 from naptha_sdk.module_manager import load_persona
@@ -11,6 +12,11 @@ def load_llm_configs(llm_configs_path):
     return [LLMConfig(**config) for config in llm_configs]
 
 async def load_node_metadata(deployment, node_url, is_subdeployment):
+    if node_url is None:
+        node_url = os.getenv("NODE_URL")
+        if node_url is None:
+            raise Exception("Node URL is required. Please make sure you've added NODE_URL=<node_url> to your .env file.")
+
     print(f"Loading node metadata for {deployment['node']['ip']}")
     if not is_subdeployment:
         deployment["node"] = url_to_node(node_url)
