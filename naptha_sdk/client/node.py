@@ -19,8 +19,8 @@ from httpx import HTTPStatusError, RemoteProtocolError
 
 from naptha_sdk.client import grpc_server_pb2
 from naptha_sdk.client import grpc_server_pb2_grpc
-from naptha_sdk.schemas import AgentRun, AgentRunInput, ChatCompletionRequest, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, \
-    OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, KBDeployment, KBRunInput, KBRun, ToolRunInput, ToolRun, NodeConfig, NodeConfigUser, ModelResponse, ToolDeployment
+from naptha_sdk.schemas import AgentRun, AgentRunInput, MemoryRun, MemoryRunInput, ChatCompletionRequest, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, \
+    OrchestratorRunInput, AgentDeployment, MemoryDeployment, EnvironmentDeployment, OrchestratorDeployment, KBDeployment, KBRunInput, KBRun, ToolRunInput, ToolRun, NodeConfig, NodeConfigUser, ModelResponse, ToolDeployment
 from naptha_sdk.utils import get_logger, node_to_url
 
 logger = get_logger(__name__)
@@ -96,7 +96,7 @@ class NodeClient:
                 'public_key': response.public_key,
             }
 
-    async def run_module(self, module_type: str, run_input: Union[AgentRunInput, KBRunInput, ToolRunInput, EnvironmentRunInput]):
+    async def run_module(self, module_type: str, run_input: Union[AgentRunInput, MemoryRunInput, KBRunInput, ToolRunInput, EnvironmentRunInput]):
         if self.node.server_type == 'ws':
             return await self.run_module_ws(module_type, run_input)
         elif self.node.server_type == 'grpc':
@@ -109,6 +109,7 @@ class NodeClient:
         
         output_types = {
             "agent": AgentRun,
+            "memory": MemoryRun,
             "kb": KBRun,
             "tool": ToolRun,
             "environment": EnvironmentRun
@@ -162,6 +163,7 @@ class NodeClient:
             # Create deployment based on module type
             deployment_classes = {
                 "agent": grpc_server_pb2.AgentDeployment,
+                "memory": grpc_server_pb2.MemoryDeployment,
                 "kb": grpc_server_pb2.BaseDeployment,
                 "tool": grpc_server_pb2.ToolDeployment,
                 "environment": grpc_server_pb2.BaseDeployment
@@ -193,6 +195,7 @@ class NodeClient:
 
             output_types = {
                 "agent": AgentRun,
+                "memory": MemoryRun,
                 "kb": KBRun,
                 "tool": ToolRun,
                 "environment": EnvironmentRun
@@ -292,12 +295,12 @@ class UserClient:
             print(f"An unexpected error occurred: {e}")
             raise
 
-    async def _run_and_poll(self, run_input: Union[AgentRunInput, EnvironmentRunInput, OrchestratorRunInput, KBRunInput, ToolRunInput, Dict], module_type: str) -> Union[AgentRun, EnvironmentRun, OrchestratorRun, KBRun, ToolRun, Dict]:
+    async def _run_and_poll(self, run_input: Union[AgentRunInput, MemoryRunInput, EnvironmentRunInput, OrchestratorRunInput, KBRunInput, ToolRunInput, Dict], module_type: str) -> Union[AgentRun, MemoryRun, EnvironmentRun, OrchestratorRun, KBRun, ToolRun, Dict]:
         """Generic method to run and poll either an agent, orchestrator, environment, tool or KB.
         
         Args:
-            run_input: Either AgentRunInput, OrchestratorRunInput, EnvironmentRunInput, KBRunInput, ToolRunInput or Dict
-            module_type: Either 'agent', 'orchestrator', 'environment', 'tool' or 'kb'
+            run_input: Either AgentRunInput, MemoryRunInput, OrchestratorRunInput, EnvironmentRunInput, KBRunInput, ToolRunInput or Dict
+            module_type: Either 'agent', 'memory', 'orchestrator', 'environment', 'tool' or 'kb'
         """
         print(f"Run input: {run_input}")
         print(f"Module type: {module_type}")
@@ -334,6 +337,10 @@ class UserClient:
     async def run_agent_and_poll(self, agent_run_input: AgentRunInput) -> AgentRun:
         """Run an agent and poll for results until completion."""
         return await self._run_and_poll(agent_run_input, 'agent')
+    
+    async def run_memory_and_poll(self, memory_run_input: MemoryRunInput) -> MemoryRun:
+        """Run a memory module and poll for results until completion."""
+        return await self._run_and_poll(memory_run_input, 'memory')
 
     async def run_tool_and_poll(self, tool_run_input: ToolRunInput) -> ToolRun:
         """Run a tool and poll for results until completion."""
@@ -408,13 +415,13 @@ class UserClient:
             logger.info(f"An unexpected error occurred: {e}")
             raise
 
-    async def _run_module(self, run_input: Union[AgentRunInput, OrchestratorRunInput, EnvironmentRunInput, ToolRunInput], module_type: str) -> Union[AgentRun, OrchestratorRun, EnvironmentRun, ToolRun]:
+    async def _run_module(self, run_input: Union[AgentRunInput, MemoryRunInput, OrchestratorRunInput, EnvironmentRunInput, ToolRunInput], module_type: str) -> Union[AgentRun, MemoryRun, OrchestratorRun, EnvironmentRun, ToolRun]:
         """
         Generic method to run either an agent, orchestrator, environment, or tool on a node
         
         Args:
-            run_input: Either AgentRunInput, OrchestratorRunInput, EnvironmentRunInput, or ToolRunInput
-            module_type: Either 'agent', 'orchestrator', 'environment', or 'tool'
+            run_input: Either AgentRunInput, MemoryRunInput, OrchestratorRunInput, EnvironmentRunInput, or ToolRunInput
+            module_type: Either 'agent', 'memory', 'orchestrator', 'environment', or 'tool'
         """
         print(f"Running {module_type}...")
         print(f"Run input: {run_input}")
@@ -425,6 +432,7 @@ class UserClient:
         # Convert dict to appropriate input type if needed
         input_class = {
             'agent': AgentRunInput,
+            'memory': MemoryRunInput,
             'orchestrator': OrchestratorRunInput,
             'environment': EnvironmentRunInput,
             'kb': KBRunInput,
@@ -450,6 +458,7 @@ class UserClient:
                 # Convert response to appropriate return type
                 return_class = {
                     'agent': AgentRun,
+                    'memory': MemoryRun,
                     'orchestrator': OrchestratorRun,
                     'environment': EnvironmentRun,
                     'kb': KBRun,
@@ -507,6 +516,10 @@ class UserClient:
     async def run_agent(self, agent_run_input: AgentRunInput) -> AgentRun:
         """Run an agent on a node"""
         return await self._run_module(agent_run_input, 'agent')
+    
+    async def run_memory(self, memory_run_input: MemoryRunInput) -> MemoryRun:
+        """Run a memory module on a node"""
+        return await self._run_module(memory_run_input, 'memory')
 
     async def run_tool(self, tool_run_input: ToolRunInput) -> ToolRun:
         """Run a tool on a node"""
@@ -526,14 +539,14 @@ class UserClient:
 
     async def check_run(
         self, 
-        module_run: Union[AgentRun, OrchestratorRun, EnvironmentRun, KBRun, ToolRun], 
+        module_run: Union[AgentRun, MemoryRun, OrchestratorRun, EnvironmentRun, KBRun, ToolRun], 
         module_type: str
-    ) -> Union[AgentRun, OrchestratorRun, EnvironmentRun, KBRun, ToolRun]:
+    ) -> Union[AgentRun, MemoryRun, OrchestratorRun, EnvironmentRun, KBRun, ToolRun]:
         """Generic method to check the status of a module run.
         
         Args:
-            module_run: Either AgentRun, OrchestratorRun, EnvironmentRun, ToolRun or KBRun object
-            module_type: Either 'agent', 'orchestrator', 'environment', 'tool' or 'kb'
+            module_run: Either AgentRun, MemoryRun, OrchestratorRun, EnvironmentRun, ToolRun or KBRun object
+            module_type: Either 'agent', 'memory', 'orchestrator', 'environment', 'tool' or 'kb'
         """
         try:
             async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
@@ -545,6 +558,7 @@ class UserClient:
             
             return_class = {
                 'agent': AgentRun,
+                'memory': MemoryRun,
                 'orchestrator': OrchestratorRun,
                 'environment': EnvironmentRun,
                 'kb': KBRun,
@@ -561,6 +575,9 @@ class UserClient:
     # Update existing methods to use the new generic one
     async def check_agent_run(self, agent_run: AgentRun) -> AgentRun:
         return await self.check_run(agent_run, 'agent')
+    
+    async def check_memory_run(self, memory_run: MemoryRun) -> MemoryRun:
+        return await self.check_run(memory_run, 'memory')
 
     async def check_tool_run(self, tool_run: ToolRun) -> ToolRun:
         return await self.check_run(tool_run, 'tool')
