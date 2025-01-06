@@ -2,9 +2,11 @@ from naptha_sdk.client.node import NodeClient
 from naptha_sdk.schemas import AgentRun, ToolRunInput
 from naptha_sdk.utils import get_logger
 from typing import Union
+from dotenv import load_dotenv
+import os
 
 logger = get_logger(__name__)
-
+load_dotenv(override=True)
 class Tool:
     def __init__(self, 
         tool_deployment,
