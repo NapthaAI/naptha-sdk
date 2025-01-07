@@ -62,7 +62,7 @@ async def load_module_config_data(module_type, deployment, load_persona_data=Fal
 
     return deployment
 
-async def load_subdeployments(deployment, node_url, user_id=None):
+async def load_subdeployments(deployment, node_url=None, user_id=None):
 
     configs_path = Path(f"{Path.cwd().name}/configs")
 
@@ -98,7 +98,7 @@ async def load_subdeployments(deployment, node_url, user_id=None):
     print(f"Subdeployments loaded {deployment}")
     return deployment
 
-async def setup_module_deployment(module_type: str, deployment_path: str, node_url: str, user_id: str = None, deployment_name: str = None, load_persona_data=False, is_subdeployment: bool = False):
+async def setup_module_deployment(module_type: str, deployment_path: str, node_url: str = None, user_id: str = None, deployment_name: str = None, load_persona_data=False, is_subdeployment: bool = False):
 
     # Map deployment types to their corresponding classes
     deployment_map = {
@@ -121,7 +121,8 @@ async def setup_module_deployment(module_type: str, deployment_path: str, node_u
         if deployment is None:
             raise ValueError(f"No deployment found with name {deployment_name}")
 
-    deployment = await load_node_metadata(deployment, node_url, is_subdeployment)
+    if node_url is not None:
+        deployment = await load_node_metadata(deployment, node_url, is_subdeployment)
     if user_id is not None:
         await check_register_user(deployment, user_id)
     deployment = await load_module_config_data(module_type, deployment, load_persona_data)

@@ -8,6 +8,7 @@ from pathlib import Path
 
 from naptha_sdk.client.hub import Hub
 from naptha_sdk.client.node import UserClient
+from naptha_sdk.configs import setup_module_deployment
 from naptha_sdk.inference import InferenceClient
 from naptha_sdk.module_manager import AGENT_DIR, add_files_to_package, add_dependencies_to_pyproject, git_add_commit, \
     init_agent_package, publish_ipfs_package, render_agent_code, write_code_to_package
@@ -67,20 +68,27 @@ class Naptha:
             else:
                 logger.error(f"Failed to create agent {name}")
 
-    async def publish_modules(self, decorator = False, register = None):
+    async def publish_modules(self, decorator = False, register = None, subdeployments = False):
         logger.info(f"Publishing Agent Packages...")
         start_time = time.time()
 
         if not decorator:
-            module_path = Path.cwd() 
-            with open(module_path / module_path.name / 'configs/deployment.json', 'r') as f:
+            module_path = Path.cwd()
+            deployment_path = module_path / module_path.name / 'configs/deployment.json'
+            with open(deployment_path, 'r') as f:
                 deployment = json.load(f)
             module = deployment[0]['module']
             modules = [module]
+            if subdeployments:
+                deployment = await setup_module_deployment(module['module_type'], deployment_path)
+                for module_type in ['agent', 'kb', 'tool', 'environment']:
+                    subdeployment = module_type + '_deployments'
+                    if hasattr(deployment, subdeployment) and getattr(deployment, subdeployment):
+                        for submodule in getattr(deployment, subdeployment):
+                            modules.append(submodule.module)
         else:
             path = Path.cwd() / AGENT_DIR
             modules = [item.name for item in path.iterdir() if item.is_dir()]
-
             for module in modules:
                 git_add_commit(module)
                 module = {
@@ -94,17 +102,20 @@ class Naptha:
                     "execution_type": "package"
                 }
         for module in modules:
-            module_url = None
-            # If register is a string, use it as the URL
-            if isinstance(register, str):
-                module_url = register
-                logger.info(f"Using provided URL for {module['module_type']} {module['name']}: {module_url}")
-            # Otherwise, publish to IPFS
+            if "module_url" in module and module['module_url'] is not "None":
+                module_url = module['module_url']
+            # For decorator=False, only the main module should not have a module_url
             else:
-                _, response = await publish_ipfs_package(module, decorator)
-                module_url = f'ipfs://{response["ipfs_hash"]}'
-                logger.info(f"Storing {module['module_type']} {module['name']} on IPFS")
-                logger.info(f"IPFS Hash: {response['ipfs_hash']}. You can download it from http://provider.akash.pro:30584/ipfs/{response['ipfs_hash']}")
+                # If register is a string, use it as the URL
+                if isinstance(register, str):
+                    module_url = register
+                    logger.info(f"Using provided URL for {module['module_type']} {module['name']}: {module_url}")
+                # Otherwise, publish to IPFS
+                else:
+                    _, response = await publish_ipfs_package(module['name'], decorator)
+                    module_url = f'ipfs://{response["ipfs_hash"]}'
+                    logger.info(f"Storing {module['module_type']} {module['name']} on IPFS")
+                    logger.info(f"IPFS Hash: {response['ipfs_hash']}. You can download it from http://provider.akash.pro:30584/ipfs/{response['ipfs_hash']}")
 
             if register:
                 # Register module with hub

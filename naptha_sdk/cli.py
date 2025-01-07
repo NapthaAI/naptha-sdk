@@ -981,6 +981,7 @@ async def main():
                               nargs='?', 
                               const=True,
                               metavar="URL")
+    publish_parser.add_argument("-s", "--subdeployments", help="Publish subdeployments", action="store_true")
         
     async with naptha as naptha:
         args = parser.parse_args()
@@ -1262,7 +1263,7 @@ async def main():
             elif args.command == "storage":
                 await storage_interaction(naptha, args.storage_type, args.command, args.path, args.data, args.schema, args.options)
             elif args.command == "publish":
-                await naptha.publish_modules(args.decorator, args.register)
+                await naptha.publish_modules(args.decorator, args.register, args.subdeployments)
         else:
             parser.print_help()
 
