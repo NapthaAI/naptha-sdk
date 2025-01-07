@@ -1,9 +1,20 @@
 import httpx
-from httpx import HTTPStatusError, RemoteProtocolError
 import json
-from typing import Union, Dict, Any
+from pydantic import BaseModel
+from typing import Union, Dict, Any, Optional, List, BinaryIO
 from naptha_sdk.schemas import NodeConfigUser
-from naptha_sdk.storage.schemas import ReadStorageRequest, CreateTableRequest, CreateRowRequest, DeleteStorageRequest, ListStorageRequest, UpdateStorageRequest, SearchStorageRequest
+from naptha_sdk.storage.schemas import (
+    StorageLocation,
+    StorageType,
+    StorageObject,
+    BaseStorageRequest,
+    CreateStorageRequest,
+    ReadStorageRequest,
+    UpdateStorageRequest,
+    DeleteStorageRequest,
+    ListStorageRequest,
+    SearchStorageRequest
+)
 from naptha_sdk.utils import get_logger, node_to_url
 
 HTTP_TIMEOUT = 300
@@ -14,208 +25,150 @@ class StorageProvider:
     def __init__(self, node: NodeConfigUser):
         self.node = node
         self.node_url = node_to_url(node)
-        self.connections = {}
-        
+        self.client = httpx.AsyncClient(timeout=HTTP_TIMEOUT)
         logger.info(f"Storage Provider URL: {self.node_url}")
 
-    async def create(
-        self,
-        create_storage_request: Union[CreateTableRequest, CreateRowRequest]
-    ) -> Dict[str, Any]:
-        """
-        Create new storage objects (table, file, or IPFS content)
-        
-        Args:
-            create_storage_request: CreateStorageRequest
-        """
-        endpoint = f"{self.node_url}/storage/{create_storage_request.storage_type.value}/create/{create_storage_request.path}"
 
+    async def _make_request(
+        self,
+        request: BaseStorageRequest,
+        files: Optional[Dict] = None
+    ) -> Any:
+        """Make HTTP request to storage endpoint"""
+        endpoint = f"{self.node_url}/storage/{request.storage_type.value}/{request.request_type.value}/{request.path}"
+        
         try:
-            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-                request_data = create_storage_request.model_dump(exclude_none=True)
-                request_data.pop('storage_type', None)
-                request_data.pop('path', None)
+            response = None
+            match request:
+                case CreateStorageRequest():
+                    form_data = {}
+                    if request.data:
+                        form_data['data'] = json.dumps(request.data)
+                    files = files if files is not None else {}
+                    response = await self.client.post(endpoint, data=form_data, files=files)
+
+                case ReadStorageRequest():
+                    if request.storage_type in [StorageType.FILESYSTEM, StorageType.IPFS]:
+                        response = await self.client.get(endpoint)
+                        response.raise_for_status()
+                        # Check content type to determine response handling
+                        content_type = response.headers.get('content-type', '')
+                        if 'json' in content_type:
+                            return response.json()
+                        return response.content
+                    else:
+                        params = {"options": json.dumps(request.options)} if request.options else None
+                        response = await self.client.get(endpoint, params=params)
+                                        
+                case UpdateStorageRequest():
+                    # Extract condition from options if present
+                    condition = request.options.get("condition") if request.options else None
+                    form_data = {
+                        'data': json.dumps(request.data)
+                    }
+                    params = {
+                        'condition': json.dumps(condition) if condition else None
+                    }
+                    response = await self.client.put(endpoint, data=form_data, params=params)
+                    
+                case ListStorageRequest():
+                    params = {"options": json.dumps(request.options)} if request.options else None
+                    response = await self.client.get(endpoint, params=params)
+                    
+                case DeleteStorageRequest():
+                    params = {}
+                    if request.storage_type == StorageType.DATABASE:
+                        if request.condition:
+                            params["condition"] = json.dumps(request.condition)
+                    elif request.storage_type == StorageType.FILESYSTEM:
+                        if request.options:
+                            params["options"] = json.dumps(request.options)
+                    response = await self.client.delete(endpoint, params=params)
+                    
+                case SearchStorageRequest():
+                    search_data = {
+                        "query": request.query,
+                        "query_type": request.query_type,
+                        "limit": request.limit
+                    }
+                    response = await self.client.post(endpoint, json=search_data)
+            
+            if response:
+                response.raise_for_status()
+                content_type = response.headers.get('content-type', '')
+                if 'json' in content_type:
+                    return response.json()
+                return response.content
                 
-                response = await client.post(
-                    endpoint,
-                    json=request_data
-                )
-                response.raise_for_status()
-                return response.json()
-
-        except HTTPStatusError as e:
-            logger.info(f"HTTP error occurred: {e}")
-            raise
-        except RemoteProtocolError as e:
-            error_msg = f"Storage creation failed to connect to the server at {self.node_url}. Please check if the server URL is correct and the server is running. Error details: {str(e)}"
-            logger.error(error_msg)
-            raise
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error occurred: {e.response.text}")
+            raise StorageError(f"HTTP error occurred: {str(e)}", status_code=e.response.status_code)
         except Exception as e:
-            logger.error(f"An unexpected error occurred: {e}")
-            raise
+            logger.error(f"Storage operation failed: {str(e)}")
+            raise StorageError(f"Storage operation failed: {str(e)}")
 
-    async def read(
-        self,
-        read_storage_request: ReadStorageRequest,
-    ) -> Dict[str, Any]:
-        """
-        Read from storage (query DB, read file, or fetch IPFS content)
-        
-        Args:
-            read_storage_request: ReadStorageRequest
-        """
-        endpoint = f"{self.node_url}/storage/{read_storage_request.storage_type.value}/read/{read_storage_request.path}"
+    async def execute(self, request: BaseStorageRequest) -> Union[StorageObject, List[StorageObject], bool]:
+        """Execute storage request and return appropriate response"""
+        files = None
+        if isinstance(request, CreateStorageRequest) and request.file:
+            files = {"file": request.file}
+            
+        result = await self._make_request(request, files=files)
 
-        try:
-            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-                params = read_storage_request.options.model_dump(exclude_none=True)
-                response = await client.get(endpoint, params={"options": json.dumps(params)})
-                response.raise_for_status()
-                return response.json()
-
-        except HTTPStatusError as e:
-            logger.info(f"HTTP error occurred: {e}")
-            raise
-        except RemoteProtocolError as e:
-            error_msg = f"Storage read failed to connect to the server at {self.node_url}. Please check if the server URL is correct and the server is running. Error details: {str(e)}"
-            logger.error(error_msg)
-            raise
-        except Exception as e:
-            logger.error(f"An unexpected error occurred: {e}")
-            raise
-
-    async def update(
-        self,
-        update_storage_request: UpdateStorageRequest
-    ) -> Dict[str, Any]:
-        """
-        Update storage objects (DB rows, file contents, or IPFS content)
-        
-        Args:
-            update_storage_request: UpdateStorageRequest
-        """
-        endpoint = f"{self.node_url}/storage/{update_storage_request.storage_type.value}/update/{update_storage_request.path}"
-
-        try:
-            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-                request_data = update_storage_request.model_dict()
+        match request:
+            case DeleteStorageRequest():
+                return True
                 
-                response = await client.put(
-                    endpoint,
-                    json=request_data
+            case ListStorageRequest():
+                # Handle list response which might be a simple array
+                if isinstance(result, list):
+                    return [
+                        StorageObject(
+                            location=StorageLocation(
+                                storage_type=request.storage_type,
+                                path=request.path
+                            ),
+                            data=item
+                        )
+                        for item in result
+                    ]
+                return StorageObject(
+                    location=StorageLocation(storage_type=request.storage_type, path=request.path),
+                    data=result
                 )
-                response.raise_for_status()
-                return response.json()
-
-        except HTTPStatusError as e:
-            logger.info(f"HTTP error occurred: {e}")
-            raise
-        except RemoteProtocolError as e:
-            error_msg = f"Storage update failed to connect to the server at {self.node_url}. Please check if the server URL is correct and the server is running. Error details: {str(e)}"
-            logger.error(error_msg)
-            raise
-        except Exception as e:
-            logger.error(f"An unexpected error occurred: {e}")
-            raise
-
-    async def delete(
-        self,
-        delete_storage_request: DeleteStorageRequest
-    ) -> Dict[str, Any]:
-        """
-        Delete storage objects (table, file, or IPFS content)
-        
-        Args:
-            delete_storage_request: DeleteStorageRequest
-        """
-        endpoint = f"{self.node_url}/storage/{delete_storage_request.storage_type.value}/delete/{delete_storage_request.path}"
-
-        try:
-            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-                params = {}
-                if hasattr(delete_storage_request, 'condition'):
-                    params['condition'] = json.dumps(delete_storage_request.condition)
-
-                response = await client.delete(
-                    endpoint,
-                    params=params
-                )
-                response.raise_for_status()
-                return response.json()
-
-        except HTTPStatusError as e:
-            logger.info(f"HTTP error occurred: {e}")
-            raise
-        except RemoteProtocolError as e:
-            error_msg = f"Storage deletion failed to connect to the server at {self.node_url}. Please check if the server URL is correct and the server is running. Error details: {str(e)}"
-            logger.error(error_msg)
-            raise
-        except Exception as e:
-            logger.error(f"An unexpected error occurred: {e}")
-            raise
-
-    async def list(
-        self,
-        list_storage_request: ListStorageRequest
-    ) -> Dict[str, Any]:
-        """
-        List storage objects (DB tables/rows, directory contents, IPFS directory)
-        
-        Args:
-            list_storage_request: ListStorageRequest
-        """
-        endpoint = f"{self.node_url}/storage/{list_storage_request.storage_type.value}/list/{list_storage_request.path}"
-
-        try:
-            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-                params = list_storage_request.options.model_dump(exclude_none=True)
-                response = await client.get(endpoint, params={"options": json.dumps(params)})
-                response.raise_for_status()
-                return response.json()
-
-        except HTTPStatusError as e:
-            logger.info(f"HTTP error occurred: {e}")
-            raise
-        except RemoteProtocolError as e:
-            error_msg = f"Storage listing failed to connect to the server at {self.node_url}. Please check if the server URL is correct and the server is running. Error details: {str(e)}"
-            logger.error(error_msg)
-            raise
-        except Exception as e:
-            logger.error(f"An unexpected error occurred: {e}")
-            raise
-
-    async def search(
-        self,
-        search_storage_request: SearchStorageRequest
-    ) -> Dict[str, Any]:
-        """
-        Search across storage (DB query, file content search, IPFS search)
-        
-        Args:
-            search_storage_request: SearchStorageRequest
-        """
-        endpoint = f"{self.node_url}/storage/{search_storage_request.storage_type.value}/search/{search_storage_request.path}"
-
-        try:
-            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-                request_data = search_storage_request.model_dump(exclude_none=True)
-                request_data.pop('storage_type', None)
-                request_data.pop('path', None)
                 
-                response = await client.post(
-                    endpoint,
-                    json=request_data
+            case SearchStorageRequest():
+                # Handle search response which returns objects with path
+                return [
+                    StorageObject(
+                        location=StorageLocation(
+                            storage_type=request.storage_type,
+                            path=obj.get("path", "")
+                        ),
+                        data=obj.get("data"),
+                        metadata=obj.get("metadata")
+                    )
+                    for obj in result
+                ]
+                
+            case _:
+                return StorageObject(
+                    location=StorageLocation(
+                        storage_type=request.storage_type,
+                        path=request.path
+                    ),
+                    data=result
                 )
-                response.raise_for_status()
-                return response.json()
 
-        except HTTPStatusError as e:
-            logger.info(f"HTTP error occurred: {e}")
-            raise
-        except RemoteProtocolError as e:
-            error_msg = f"Storage search failed to connect to the server at {self.node_url}. Please check if the server URL is correct and the server is running. Error details: {str(e)}"
-            logger.error(error_msg)
-            raise
-        except Exception as e:
-            logger.error(f"An unexpected error occurred: {e}")
-            raise
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.client.aclose()
+
+class StorageError(Exception):
+    """Custom exception for storage operations"""
+    def __init__(self, message: str, status_code: Optional[int] = None):
+        self.message = message
+        self.status_code = status_code
+        super().__init__(self.message)
