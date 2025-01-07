@@ -284,10 +284,10 @@ async def write_to_ipfs(file_path):
         logger.error(f"Traceback: {traceback.format_exc()}")
         return (500, {"message": f"Error writing file to IPFS: {e}"})
 
-async def publish_ipfs_package(agent_name, is_module = False):
+async def publish_ipfs_package(agent_name, decorator = False):
     package_path = f"{AGENT_DIR}/{agent_name}"
 
-    if is_module:
+    if not decorator:
         output_zip_file = zip_dir_with_gitignore(Path.cwd())
     else:
         output_zip_file = zip_dir(package_path)

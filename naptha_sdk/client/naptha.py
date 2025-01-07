@@ -67,11 +67,11 @@ class Naptha:
             else:
                 logger.error(f"Failed to create agent {name}")
 
-    async def publish_agents(self, is_module = False, register = False):
+    async def publish_agents(self, decorator = False, register = False):
         logger.info(f"Publishing Agent Packages...")
         start_time = time.time()
 
-        if(is_module):
+        if not decorator:
             agents = [Path.cwd().name]
         else:
             path = Path.cwd() / AGENT_DIR
@@ -80,9 +80,9 @@ class Naptha:
                 git_add_commit(agent)
 
         for agent in agents:
-            _, response = await publish_ipfs_package(agent, is_module)
+            _, response = await publish_ipfs_package(agent, decorator)
             logger.info(f"Published Agent: {agent}")
-            
+
             if register:
                 # Register agent with hub
                 async with self.hub:
