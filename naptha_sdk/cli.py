@@ -766,103 +766,94 @@ async def run(
         )
         kb_run = await naptha.node.run_kb_and_poll(kb_run_input)
 
-async def storage_interaction(naptha, storage_type, command, path, data=None, schema=None, options=None, file=None):
+async def storage_interaction(naptha, storage_type, operation, path, data=None, schema=None, options=None, file=None):
     """Handle storage interactions using StorageProvider"""
     storage_provider = StorageProvider(naptha.node.node)
+    print(f"Storage interaction: {storage_type}, {operation}, {path}, {data}, {schema}, {options}, {file}")
 
-    # Convert string storage type to enum
-    storage_type = StorageType(storage_type)
-    
     try:
-        # Handle different storage commands
-        match command:
-            case "create":
-                if storage_type in [StorageType.FILESYSTEM, StorageType.IPFS] and file:
-                    # Handle file upload for fs/ipfs
-                    with open(file, 'rb') as f:
-                        request = CreateStorageRequest(
-                            storage_type=storage_type,
-                            path=path,
-                            file=f,
-                            options=options or {}
-                        )
-                elif schema:
-                    if isinstance(schema, str):
-                        schema = json.loads(schema)
+        # Convert string storage type to enum
+        storage_type = StorageType(storage_type)
+
+        # Special handling for filesystem/IPFS file operations
+        if storage_type in [StorageType.FILESYSTEM, StorageType.IPFS]:
+            if operation == "create" and file:
+                with open(file, 'rb') as f:
                     request = CreateStorageRequest(
                         storage_type=storage_type,
                         path=path,
-                        data=schema
+                        file=f,
+                        options=json.loads(options) if options else {}
                     )
-                elif data:
-                    if isinstance(data, str):
-                        data = json.loads(data)
-                    request = CreateStorageRequest(
-                        storage_type=storage_type,
-                        path=path,
-                        data=data
-                    )
-                else:
-                    raise ValueError("Either file, schema or data must be provided for create command")
+                    result = await storage_provider.execute(request)
+                    print(result)
+                    return result
                     
-            case "read":
-                if isinstance(options, str):
-                    options = json.loads(options)
+            elif operation == "read":
                 request = ReadStorageRequest(
                     storage_type=storage_type,
                     path=path,
-                    options=options or {}
+                    options=json.loads(options) if options else {}
                 )
-                if storage_type in [StorageType.FILESYSTEM, StorageType.IPFS]:
-                    # Handle file download for fs/ipfs
-                    result = await storage_provider.execute(request)
-                    if isinstance(result.data, bytes):
-                        output_path = options.get('output_path') if options else f'./downloads/{path}'
-                        os.makedirs(os.path.dirname(output_path), exist_ok=True)
-                        with open(output_path, 'wb') as f:
-                            f.write(result.data)
-                        print(f"File downloaded to: {output_path}")
-                        return result
+                result = await storage_provider.execute(request)
                 
-            case "update":
-                if storage_type in [StorageType.FILESYSTEM, StorageType.IPFS] and file:
-                    with open(file, 'rb') as f:
-                        request = UpdateStorageRequest(
-                            storage_type=storage_type,
-                            path=path,
-                            data=f,
-                            options=options or {}
-                        )
-                elif not data:
-                    raise ValueError("Either file or data must be provided for update command")
-                else:
-                    if isinstance(data, str):
-                        data = json.loads(data)
-                    if isinstance(options, str):
-                        options = json.loads(options)
-                    request = UpdateStorageRequest(
+                # Handle downloaded file
+                if isinstance(result.data, bytes):
+                    output_dir = "./downloads"
+                    os.makedirs(output_dir, exist_ok=True)
+                    output_path = os.path.join(output_dir, os.path.basename(path))
+                    with open(output_path, 'wb') as f:
+                        f.write(result.data)
+                    print(f"File downloaded to: {output_path}")
+                return result
+
+        # Handle database and other operations
+        match operation:
+            case "create":
+                if schema:
+                    request = CreateStorageRequest(
                         storage_type=storage_type,
                         path=path,
-                        data=data,
-                        options=options or {}
+                        data=json.loads(schema)
                     )
+                elif data:
+                    request = CreateStorageRequest(
+                        storage_type=storage_type,
+                        path=path,
+                        data=json.loads(data)
+                    )
+                else:
+                    raise ValueError("Either schema or data must be provided for create command")
+                    
+            case "read":
+                request = ReadStorageRequest(
+                    storage_type=storage_type,
+                    path=path,
+                    options=json.loads(options) if options else {}
+                )
+                
+            case "update":
+                if not data:
+                    raise ValueError("Data must be provided for update command")
+                request = UpdateStorageRequest(
+                    storage_type=storage_type,
+                    path=path,
+                    data=json.loads(data),
+                    options=json.loads(options) if options else {}
+                )
                 
             case "delete":
-                if isinstance(options, str):
-                    options = json.loads(options)
                 request = DeleteStorageRequest(
                     storage_type=storage_type,
                     path=path,
-                    options=options or {}
+                    options=json.loads(options) if options else {}
                 )
                 
             case "list":
-                if isinstance(options, str):
-                    options = json.loads(options)
                 request = ListStorageRequest(
                     storage_type=storage_type,
                     path=path,
-                    options=options or {}
+                    options=json.loads(options) if options else {}
                 )
                 
             case "search":
@@ -871,10 +862,10 @@ async def storage_interaction(naptha, storage_type, command, path, data=None, sc
                 request = SearchStorageRequest(
                     storage_type=storage_type,
                     path=path,
-                    query=data,
-                    options=options or {}
+                    query=json.loads(data),
+                    options=json.loads(options) if options else {}
                 )
-                
+
         result = await storage_provider.execute(request)
         print(result)
         return result
@@ -1317,7 +1308,16 @@ async def main():
                 )
                 await naptha.inference_client.run_inference(request)
             elif args.command == "storage":
-                await storage_interaction(naptha, args.storage_type, args.operation, args.path, args.data, args.schema, args.options)
+                await storage_interaction(
+                    naptha, 
+                    args.storage_type, 
+                    args.operation, 
+                    args.path, 
+                    data=args.data, 
+                    schema=args.schema, 
+                    options=args.options, 
+                    file=args.file
+                )
             elif args.command == "publish":
                 await naptha.publish_modules(args.decorator, args.register, args.subdeployments)
         else:
