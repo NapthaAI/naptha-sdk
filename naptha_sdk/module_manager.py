@@ -15,6 +15,7 @@ import textwrap
 import tomlkit
 import yaml
 import zipfile
+import fnmatch
 
 load_dotenv()
 logger = get_logger(__name__)
@@ -283,9 +284,14 @@ async def write_to_ipfs(file_path):
         logger.error(f"Traceback: {traceback.format_exc()}")
         return (500, {"message": f"Error writing file to IPFS: {e}"})
 
-async def publish_ipfs_package(agent_name):
+async def publish_ipfs_package(agent_name, decorator = False):
     package_path = f"{AGENT_DIR}/{agent_name}"
-    output_zip_file = zip_dir(package_path)
+
+    if not decorator:
+        output_zip_file = zip_dir_with_gitignore(Path.cwd())
+    else:
+        output_zip_file = zip_dir(package_path)
+    
     success, response = await write_to_ipfs(output_zip_file)
     logger.info(f"Response: {response}")
     return success, response
@@ -372,3 +378,41 @@ async def load_persona(persona_module):
     return persona_data
         
     
+    
+def read_gitignore(directory):
+    gitignore_path = os.path.join(directory, '.gitignore')
+    
+    if not os.path.exists(gitignore_path):
+        logger.info(f"No .gitignore file found in {directory}")
+        return []
+    
+    with open(gitignore_path, 'r') as file:
+        lines = file.readlines()
+
+    ignored_files = [line.strip() for line in lines if line.strip() and not line.startswith('#')]
+    return ignored_files
+
+def zip_dir_with_gitignore(directory_path):
+    ignored_files = read_gitignore(directory_path)
+    output_zip_file = f"./{os.path.basename(directory_path)}.zip"
+
+    # Convert patterns in .gitignore to absolute paths for comparison
+    ignored_patterns = [os.path.join(directory_path, pattern) for pattern in ignored_files]
+
+    with zipfile.ZipFile(output_zip_file, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        for root, dirs, files in os.walk(directory_path):
+            dirs = [d for d in dirs if not any(fnmatch.fnmatch(os.path.join(root, d), pattern) for pattern in ignored_patterns)]
+            
+            for file in files:
+                file_path = os.path.join(root, file)
+
+                if any(fnmatch.fnmatch(file_path, pattern) for pattern in ignored_patterns):
+                    continue
+                
+                if file == output_zip_file.split('/')[1]:
+                    continue
+
+                zip_file.write(file_path, os.path.relpath(file_path, directory_path))
+
+    logger.info(f"Zipped directory '{directory_path}' to '{output_zip_file}'")
+    return output_zip_file

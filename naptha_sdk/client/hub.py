@@ -212,6 +212,23 @@ class Hub:
             kb = await self.surrealdb.query("SELECT * FROM kb WHERE name=$kb_name;", {"kb_name": kb_name})
             return kb[0]['result']
 
+    async def list_modules(self, module_type, module_name) -> List:
+        if module_type == 'agent':
+            modules = await self.surrealdb.query("SELECT * FROM agent WHERE id=$module_name;", {"module_name": module_name})
+        elif module_type == 'tool':
+            modules = await self.surrealdb.query("SELECT * FROM tool WHERE id=$module_name;", {"module_name": module_name})
+        elif module_type == 'orchestrator':
+            modules = await self.surrealdb.query("SELECT * FROM orchestrator WHERE id=$module_name;", {"module_name": module_name})
+        elif module_type == 'environment':
+            modules = await self.surrealdb.query("SELECT * FROM environment WHERE id=$module_name;", {"module_name": module_name})
+        elif module_type == 'persona':
+            modules = await self.surrealdb.query("SELECT * FROM persona WHERE id=$module_name;", {"module_name": module_name})
+        elif module_type == 'memory':
+            modules = await self.surrealdb.query("SELECT * FROM memory WHERE id=$module_name;", {"module_name": module_name})
+        elif module_type == 'kb':
+            modules = await self.surrealdb.query("SELECT * FROM kb WHERE id=$module_name;", {"module_name": module_name})
+        return modules[0]['result']
+
     async def list_kb_content(self, kb_name: str) -> List:
         kb_content = await self.surrealdb.query("SELECT * FROM kb_content WHERE kb_id=$kb_id;", {"kb_id": f"kb:{kb_name}"})
         return kb_content[0]['result']
@@ -338,12 +355,14 @@ class Hub:
     async def update_agent(self, agent_config: Dict) -> Tuple[bool, Optional[Dict]]:
         return await self.surrealdb.update("agent", agent_config)
 
-    async def create_or_update_agent(self, agent_config: Dict) -> Tuple[bool, Optional[Dict]]:
-        list_agents = await self.list_agents(agent_config.get('id'))
-        if not list_agents:
-            return await self.surrealdb.create("agent", agent_config)
+    async def create_or_update_module(self, module_type, module_config: Dict) -> Tuple[bool, Optional[Dict]]:
+        list_modules = await self.list_modules(module_type, module_config.get('id'))
+        if not list_modules:
+            logger.info(f"Module does not exist. Registering new module: {module_config.get('id')}")
+            return await self.surrealdb.create(module_type, module_config)
         else:
-            return await self.surrealdb.update(agent_config.pop('id'), agent_config)
+            logger.info(f"Module already exists. Updating existing module: {module_config.get('id')}")
+            return await self.surrealdb.update(module_config.pop('id'), module_config)
 
     async def close(self):
         """Close the database connection"""
