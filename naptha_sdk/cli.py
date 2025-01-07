@@ -976,8 +976,12 @@ async def main():
     # Publish command
     publish_parser = subparsers.add_parser("publish", help="Publish agents.")
     publish_parser.add_argument("-d", "--decorator", help="Publish module via decorator", action="store_true")
-    publish_parser.add_argument("-r", "--register", help="Register agents with hub", action="store_true")
-    
+    publish_parser.add_argument("-r", "--register", 
+                              help="Register modules with hub. Optionally provide a GitHub URL to skip IPFS storage", 
+                              nargs='?', 
+                              const=True,
+                              metavar="URL")
+        
     async with naptha as naptha:
         args = parser.parse_args()
         args = _parse_str_args(args)

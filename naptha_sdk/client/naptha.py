@@ -67,7 +67,7 @@ class Naptha:
             else:
                 logger.error(f"Failed to create agent {name}")
 
-    async def publish_agents(self, decorator = False, register = False):
+    async def publish_agents(self, decorator = False, register = None):
         logger.info(f"Publishing Agent Packages...")
         start_time = time.time()
 
@@ -85,9 +85,17 @@ class Naptha:
                 git_add_commit(module)
 
         for module in modules:
-            _, response = await publish_ipfs_package(module, decorator)
-            logger.info(f"Storing {module_type} {module} on IPFS")
-            logger.info(f"IPFS Hash: {response['ipfs_hash']}. You can download it from http://provider.akash.pro:30584/ipfs/{response['ipfs_hash']}")
+            module_url = None
+            # If register is a string, use it as the URL
+            if isinstance(register, str):
+                module_url = register
+                logger.info(f"Using provided URL for {module_type} {module}: {module_url}")
+            # Otherwise, publish to IPFS
+            else:
+                _, response = await publish_ipfs_package(module, decorator)
+                module_url = f'ipfs://{response["ipfs_hash"]}'
+                logger.info(f"Storing {module_type} {module} on IPFS")
+                logger.info(f"IPFS Hash: {response['ipfs_hash']}. You can download it from http://provider.akash.pro:30584/ipfs/{response['ipfs_hash']}")
 
             if register:
                 # Register module with hub
@@ -99,7 +107,7 @@ class Naptha:
                         "description": module,
                         "parameters": module,
                         "author": self.hub.user_id,
-                        "module_url": f'ipfs://{response["ipfs_hash"]}',
+                        "module_url": module_url,
                         "module_type": module_type,
                         "module_version": "v0.1",
                         "module_entrypoint": "run.py",
