@@ -366,15 +366,14 @@ class Hub:
 
     async def close(self):
         """Close the database connection"""
-        if self.is_authenticated:
-            try:
-                await self.surrealdb.close()
-            except Exception as e:
-                logger.error(f"Error closing database connection: {e}")
-            finally:
-                self.is_authenticated = False
-                self.user_id = None
-                self.token = None
+        try:
+            await self.surrealdb.close()
+        except Exception as e:
+            logger.error(f"Error closing database connection: {e}")
+        finally:
+            self.is_authenticated = False
+            self.user_id = None
+            self.token = None
 
     async def __aenter__(self):
         """Async enter method for context manager"""
