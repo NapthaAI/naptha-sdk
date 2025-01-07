@@ -355,6 +355,13 @@ class ChatCompletionRequest(BaseModel):
     presence_penalty: Optional[float] = None
     stop: Optional[List[str]] = None
     stream: Optional[bool] = None
+    stream_options: Optional[dict] = None
+    n: Optional[int] = None
+    response_format: Optional[dict] = None
+    seed: Optional[int] = None
+    tools: Optional[List] = None
+    tool_choice: Optional[str] = None
+    parallel_tool_calls: Optional[bool] = None
 
 class Choices(BaseModel):
     message: ChatMessage
