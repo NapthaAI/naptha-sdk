@@ -81,7 +81,8 @@ class Naptha:
 
         for agent in agents:
             _, response = await publish_ipfs_package(agent, decorator)
-            logger.info(f"Published Agent: {agent}")
+            logger.info(f"Storing Agent {agent} on IPFS")
+            logger.info(f"IPFS Hash: {response['ipfs_hash']}. You can download it from http://provider.akash.pro:30584/ipfs/{response['ipfs_hash']}")
 
             if register:
                 # Register agent with hub
@@ -97,9 +98,9 @@ class Naptha:
                         "module_type": "agent",
                         "module_version": "0.1",
                         "module_entrypoint": "run.py",
-                        "module_type": "package",
+                        "execution_type": "agent",
                     }
-                    logger.info(f"Registering Agent {agent_config}")
+                    logger.info(f"Registering Agent on Naptha Hub {agent_config}")
                     agent = await self.hub.create_or_update_agent(agent_config)
 
         end_time = time.time()
