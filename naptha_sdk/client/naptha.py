@@ -67,7 +67,7 @@ class Naptha:
             else:
                 logger.error(f"Failed to create agent {name}")
 
-    async def publish_agents(self, is_module = False):
+    async def publish_agents(self, is_module = False, register = False):
         logger.info(f"Publishing Agent Packages...")
         start_time = time.time()
 
@@ -82,23 +82,25 @@ class Naptha:
         for agent in agents:
             _, response = await publish_ipfs_package(agent, is_module)
             logger.info(f"Published Agent: {agent}")
-        
-            # Register agent with hub
-            async with self.hub:
-                _, _, user_id = await self.hub.signin(self.hub_username, os.getenv("HUB_PASSWORD"))
-                agent_config = {
-                    "id": f"agent:{agent}",
-                    "name": agent,
-                    "description": agent,
-                    "parameters": agent,
-                    "author": self.hub.user_id,
-                    "module_url": f'ipfs://{response["ipfs_hash"]}',
-                    "module_type": "package",
-                    "module_version": "0.1",
-                    "module_entrypoint": "run.py"
-                }
-                logger.info(f"Registering Agent {agent_config}")
-                agent = await self.hub.create_or_update_agent(agent_config)
+            
+            if register:
+                # Register agent with hub
+                async with self.hub:
+                    _, _, user_id = await self.hub.signin(self.hub_username, os.getenv("HUB_PASSWORD"))
+                    agent_config = {
+                        "id": f"agent:{agent}",
+                        "name": agent,
+                        "description": agent,
+                        "parameters": agent,
+                        "author": self.hub.user_id,
+                        "module_url": f'ipfs://{response["ipfs_hash"]}',
+                        "module_type": "agent",
+                        "module_version": "0.1",
+                        "module_entrypoint": "run.py",
+                        "module_type": "package",
+                    }
+                    logger.info(f"Registering Agent {agent_config}")
+                    agent = await self.hub.create_or_update_agent(agent_config)
 
         end_time = time.time()
         total_time = end_time - start_time

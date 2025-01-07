@@ -976,7 +976,8 @@ async def main():
     # Publish command
     publish_parser = subparsers.add_parser("publish", help="Publish agents.")
     publish_parser.add_argument("-m", "--module", help="Publish module to IPFS", action="store_true")
-
+    publish_parser.add_argument("-r", "--register", help="Register agents with hub", action="store_true")
+    
     async with naptha as naptha:
         args = parser.parse_args()
         args = _parse_str_args(args)
@@ -1257,7 +1258,7 @@ async def main():
             elif args.command == "storage":
                 await storage_interaction(naptha, args.storage_type, args.command, args.path, args.data, args.schema, args.options)
             elif args.command == "publish":
-                await naptha.publish_agents(args.module)
+                await naptha.publish_agents(args.module, args.register)
         else:
             parser.print_help()
 
