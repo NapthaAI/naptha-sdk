@@ -1262,7 +1262,7 @@ async def main():
             elif args.command == "storage":
                 await storage_interaction(naptha, args.storage_type, args.command, args.path, args.data, args.schema, args.options)
             elif args.command == "publish":
-                await naptha.publish_agents(args.decorator, args.register)
+                await naptha.publish_modules(args.decorator, args.register)
         else:
             parser.print_help()
 
