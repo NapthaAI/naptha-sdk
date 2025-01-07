@@ -76,9 +76,10 @@ class Naptha:
         else:
             path = Path.cwd() / AGENT_DIR
             agents = [item.name for item in path.iterdir() if item.is_dir()]
+            for agent in agents:
+                git_add_commit(agent)
 
         for agent in agents:
-            git_add_commit(agent, is_module)
             _, response = await publish_ipfs_package(agent, is_module)
             logger.info(f"Published Agent: {agent}")
         

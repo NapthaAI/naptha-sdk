@@ -214,10 +214,10 @@ class InputSchema(BaseModel):
     with open(f'{AGENT_DIR}/{agent_name}/{agent_name}/schemas.py', 'w') as file:
         file.write(schema_code)
 
-def git_add_commit(agent_name, is_module = False):
-    subprocess.run(["git", "-C", f"{AGENT_DIR}/{agent_name}" if not is_module else str(Path.cwd()), "add", "-A"])
-    subprocess.run(["git", "-C", f"{AGENT_DIR}/{agent_name}" if not is_module else str(Path.cwd()), "commit", "-m", "Initial commit"])
-    subprocess.run(["git", "-C", f"{AGENT_DIR}/{agent_name}" if not is_module else str(Path.cwd()), "tag", "-f", "v0.1"])
+def git_add_commit(agent_name):
+    subprocess.run(["git", "-C", f"{AGENT_DIR}/{agent_name}", "add", "-A"])
+    subprocess.run(["git", "-C", f"{AGENT_DIR}/{agent_name}", "commit", "-m", "Initial commit"])
+    subprocess.run(["git", "-C", f"{AGENT_DIR}/{agent_name}", "tag", "-f", "v0.1"])
 
 def write_code_to_package(agent_name, code):
     package_path = f'{AGENT_DIR}/{agent_name}'
