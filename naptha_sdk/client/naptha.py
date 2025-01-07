@@ -1,10 +1,10 @@
 import asyncio
+from dotenv import load_dotenv
 import inspect
+import json
 import os
 import time
 from pathlib import Path
-
-from dotenv import load_dotenv
 
 from naptha_sdk.client.hub import Hub
 from naptha_sdk.client.node import UserClient
@@ -72,40 +72,45 @@ class Naptha:
         start_time = time.time()
 
         if not decorator:
-            agents = [Path.cwd().name]
+            module_path = Path.cwd() 
+            modules = [module_path.name]
+            with open(module_path / module_path.name / 'configs/deployment.json', 'r') as f:
+                deployment = json.load(f)
+                module_type = deployment[0]['module']['module_type']
         else:
             path = Path.cwd() / AGENT_DIR
-            agents = [item.name for item in path.iterdir() if item.is_dir()]
-            for agent in agents:
-                git_add_commit(agent)
+            modules = [item.name for item in path.iterdir() if item.is_dir()]
+            module_type = 'agent'
+            for module in modules:
+                git_add_commit(module)
 
-        for agent in agents:
-            _, response = await publish_ipfs_package(agent, decorator)
-            logger.info(f"Storing Agent {agent} on IPFS")
+        for module in modules:
+            _, response = await publish_ipfs_package(module, decorator)
+            logger.info(f"Storing {module_type} {module} on IPFS")
             logger.info(f"IPFS Hash: {response['ipfs_hash']}. You can download it from http://provider.akash.pro:30584/ipfs/{response['ipfs_hash']}")
 
             if register:
-                # Register agent with hub
+                # Register module with hub
                 async with self.hub:
                     _, _, user_id = await self.hub.signin(self.hub_username, os.getenv("HUB_PASSWORD"))
-                    agent_config = {
-                        "id": f"agent:{agent}",
-                        "name": agent,
-                        "description": agent,
-                        "parameters": agent,
+                    module_config = {
+                        "id": f"{module_type}:{module}",
+                        "name": module,
+                        "description": module,
+                        "parameters": module,
                         "author": self.hub.user_id,
                         "module_url": f'ipfs://{response["ipfs_hash"]}',
-                        "module_type": "agent",
-                        "module_version": "0.1",
+                        "module_type": module_type,
+                        "module_version": "v0.1",
                         "module_entrypoint": "run.py",
-                        "execution_type": "agent",
+                        "execution_type": "package",
                     }
-                    logger.info(f"Registering Agent on Naptha Hub {agent_config}")
-                    agent = await self.hub.create_or_update_agent(agent_config)
+                    logger.info(f"Registering {module_type} {module} on Naptha Hub {module_config}")
+                    module = await self.hub.create_or_update_module(module_type, module_config)
 
         end_time = time.time()
         total_time = end_time - start_time
-        logger.info(f"Total time taken to publish {len(agents)} agents: {total_time:.2f} seconds")
+        logger.info(f"Total time taken to publish {len(modules)} modules: {total_time:.2f} seconds")
 
     def build(self):
         asyncio.run(self.build_agents())
