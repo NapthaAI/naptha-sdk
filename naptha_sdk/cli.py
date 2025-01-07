@@ -1268,7 +1268,15 @@ async def main():
             parser.print_help()
 
 def cli():
-    asyncio.run(main())
+    import sys
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\nOperation cancelled by user")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        sys.exit(1)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    cli()

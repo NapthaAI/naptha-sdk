@@ -445,6 +445,13 @@ class UserClient:
                     json=run_input.model_dict(),
                     headers=headers
                 )
+
+                # Try to get error details even for error responses
+                if response.status_code >= 400:
+                    error_detail = response.json() if response.text else str(response)
+                    logger.error(f"Server error response: {error_detail}")
+                    raise Exception(f"Server returned error response: {error_detail}")
+                    
                 response.raise_for_status()
                 
                 # Convert response to appropriate return type
@@ -556,7 +563,6 @@ class UserClient:
             raise  
         except Exception as e:
             logger.info(f"An unexpected error occurred: {e}")
-            logger.info(f"Full traceback: {traceback.format_exc()}")
 
     # Update existing methods to use the new generic one
     async def check_agent_run(self, agent_run: AgentRun) -> AgentRun:
