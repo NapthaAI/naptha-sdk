@@ -266,33 +266,61 @@ naptha run kb:wikipedia_kb -p "function_name='init'"
 ### List content in the Knowledge Base
 
 ```bash
-naptha run kb:wikipedia_kb -p "function_name='list_rows' function_input_data='{\"limit\": \"10\"}'"
+naptha run kb:wikipedia_kb -p '{
+    "function_name": "list_rows",
+    "function_input_data": {
+        "limit": "10"
+    }
+}'
 ```
 
 ### Add to the Knowledge Base
 
 ```bash
-naptha run kb:wikipedia_kb -p "function_name='add_data' function_input_data='{\"url\": \"https://en.wikipedia.org/wiki/Socrates\", \"title\": \"Socrates\", \"text\": \"Socrates was a Greek philosopher from Athens who is credited as the founder of Western philosophy and as among the first moral philosophers of the ethical tradition of thought.\"}'"
+naptha run kb:wikipedia_kb -p '{
+    "function_name": "add_data",
+    "function_input_data": {
+        "url": "https://en.wikipedia.org/wiki/Socrates",
+        "title": "Socrates",
+        "text": "Socrates was a Greek philosopher from Athens who is credited as the founder of Western philosophy and as among the first moral philosophers of the ethical tradition of thought."
+    }
+}'
 ```
 
 ### Query the Knowledge Base Module
 
 ```bash
-naptha run kb:wikipedia_kb -p "function_name='run_query' function_input_data='{\"query\": \"Elon Musk\"}'"
+naptha run kb:wikipedia_kb -p '{
+    "function_name": "run_query",
+    "function_input_data": {
+        "query": "Elon Musk"
+    }
+}'
 ```
 
 ## Delete a row from the Knowledge Base
 
 ```bash
-naptha run kb:wikipedia_kb -p "function_name='delete_row' function_input_data='{\"condition\": {\"title\": \"Elon Musk\"}}'"
+naptha run kb:wikipedia_kb -p '{
+    "function_name": "delete_row",
+    "function_input_data": {
+        "condition": {
+            "title": "Elon Musk"
+        }
+    }
+}'
 ```
 
 ## Delete the entire Knowledge Base
 
 ```bash
-naptha run kb:wikipedia_kb -p "function_name='delete_table' function_input_data='{\"table_name\": \"wikipedia_kb\"}'"
+naptha run kb:wikipedia_kb -p '{
+    "function_name": "delete_table",
+    "function_input_data": {
+        "table_name": "wikipedia_kb"
+    }
+}'
 ```
-
 
 ### Run an Agent that interacts with the Knowledge Base
 
