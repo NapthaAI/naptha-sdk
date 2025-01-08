@@ -19,7 +19,10 @@ from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.schemas import AgentDeployment, ChatCompletionRequest, EnvironmentDeployment, \
     OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, KBDeployment, KBRunInput, ToolDeployment, ToolRunInput
 from naptha_sdk.storage.storage_provider import StorageProvider
-from naptha_sdk.storage.schemas import CreateTableRequest, CreateRowRequest, DeleteStorageRequest, ListStorageRequest, ReadStorageRequest, UpdateStorageRequest, SearchStorageRequest
+from naptha_sdk.storage.schemas import (
+    CreateStorageRequest, DeleteStorageRequest, ListStorageRequest, 
+    ReadStorageRequest, UpdateStorageRequest, SearchStorageRequest,StorageType, 
+)
 from naptha_sdk.user import get_public_key, sign_consumer_id
 from naptha_sdk.utils import url_to_node
 
@@ -551,7 +554,6 @@ async def create_persona(naptha, persona_config):
     elif isinstance(persona, list):
         print(f"Persona created: {persona[0]}")
 
-
 async def create(
         naptha,
         module_name,
@@ -764,73 +766,112 @@ async def run(
         )
         kb_run = await naptha.node.run_kb_and_poll(kb_run_input)
 
-async def read_storage(naptha, hash_or_name, output_dir='./files', ipfs=False):
-    """Read from storage, IPFS, or IPNS."""
+async def storage_interaction(naptha, storage_type, operation, path, data=None, schema=None, options=None, file=None):
+    """Handle storage interactions using StorageProvider"""
+    storage_provider = StorageProvider(naptha.node.node)
+    print(f"Storage interaction: {storage_type}, {operation}, {path}, {data}, {schema}, {options}, {file}")
+
     try:
-        await naptha.node.read_storage(hash_or_name.strip(), output_dir, ipfs=ipfs)
-    except Exception as err:
-        print(f"Error: {err}")
+        # Convert string storage type to enum
+        storage_type = StorageType(storage_type)
 
-async def write_storage(naptha, storage_input, ipfs=False, publish_to_ipns=False, update_ipns_name=None):
-    """Write to storage, optionally to IPFS and/or IPNS."""
-    try:
-        response = await naptha.node.write_storage(storage_input, ipfs=ipfs, publish_to_ipns=publish_to_ipns, update_ipns_name=update_ipns_name)
-        print(response)
-    except Exception as err:
-        print(f"Error: {err}")
+        # Special handling for filesystem/IPFS file operations
+        if storage_type in [StorageType.FILESYSTEM, StorageType.IPFS]:
+            if operation == "create" and file:
+                with open(file, 'rb') as f:
+                    request = CreateStorageRequest(
+                        storage_type=storage_type,
+                        path=path,
+                        file=f,
+                        options=json.loads(options) if options else {}
+                    )
+                    result = await storage_provider.execute(request)
+                    return result
+                    
+            elif operation == "read":
+                request = ReadStorageRequest(
+                    storage_type=storage_type,
+                    path=path,
+                    options=json.loads(options) if options else {}
+                )
+                result = await storage_provider.execute(request)
+                
+                # Handle downloaded file
+                if isinstance(result.data, bytes):
+                    output_dir = "./downloads"
+                    os.makedirs(output_dir, exist_ok=True)
+                    output_path = os.path.join(output_dir, os.path.basename(path))
+                    with open(output_path, 'wb') as f:
+                        f.write(result.data)
+                    print(f"File downloaded to: {output_path}")
+                return result
 
-async def storage_interaction(naptha, storage_type, command, path, data, schema, options):
-    storage_provider = StorageProvider(naptha.node)
+        # Handle database and other operations
+        match operation:
+            case "create":
+                if schema:
+                    request = CreateStorageRequest(
+                        storage_type=storage_type,
+                        path=path,
+                        data=json.loads(schema)
+                    )
+                elif data:
+                    request = CreateStorageRequest(
+                        storage_type=storage_type,
+                        path=path,
+                        data=json.loads(data)
+                    )
+                else:
+                    raise ValueError("Either schema or data must be provided for create command")
+                    
+            case "read":
+                request = ReadStorageRequest(
+                    storage_type=storage_type,
+                    path=path,
+                    options=json.loads(options) if options else {}
+                )
+                
+            case "update":
+                if not data:
+                    raise ValueError("Data must be provided for update command")
+                request = UpdateStorageRequest(
+                    storage_type=storage_type,
+                    path=path,
+                    data=json.loads(data),
+                    options=json.loads(options) if options else {}
+                )
+                
+            case "delete":
+                request = DeleteStorageRequest(
+                    storage_type=storage_type,
+                    path=path,
+                    options=json.loads(options) if options else {}
+                )
+                
+            case "list":
+                request = ListStorageRequest(
+                    storage_type=storage_type,
+                    path=path,
+                    options=json.loads(options) if options else {}
+                )
+                
+            case "search":
+                if not data:
+                    raise ValueError("Query data must be provided for search command")
+                request = SearchStorageRequest(
+                    storage_type=storage_type,
+                    path=path,
+                    query=json.loads(data),
+                    options=json.loads(options) if options else {}
+                )
 
-    if command == "create":
-        if schema:
-            create_table_request = CreateTableRequest(
-                storage_type=storage_type,
-                path=path,
-                schema=schema
-            )
-        elif data:
-            create_row_request = CreateRowRequest(
-                storage_type=storage_type,
-                path=path,
-                data=data
-            )
-    elif command == "read":
-        read_request = ReadStorageRequest(
-            storage_type=storage_type,
-            path=path,
-            options=options
-        )
-    elif command == "update":
-        update_request = UpdateStorageRequest(
-            storage_type=storage_type,
-            path=path,
-            options=options
-        )
-        await storage_provider.create(update_request)
-    elif command == "delete":
-        delete_request = DeleteStorageRequest(
-            storage_type=storage_type,
-            path=path,
-            options=options
-        )
-        await storage_provider.create(delete_request)
-    elif command == "list":
-        list_request = ListStorageRequest(
-            storage_type=storage_type,
-            path=path,
-            options=options
-        )
-        await storage_provider.create(list_request)
-    elif command == "search":
-        search_request = SearchStorageRequest(
-            storage_type=storage_type,
-            path=path,
-            options=options
-        )
-        await storage_provider.create(search_request)
-    else:
-        raise ValueError(f"Invalid command: {command}")
+        result = await storage_provider.execute(request)
+        print(result)
+        return result
+
+    except Exception as e:
+        print(f"Storage operation failed: {str(e)}")
+        raise
 
 def _parse_list_arg(args, arg_name, default=None, split_char=','):
     """Helper function to parse list arguments with common logic."""
@@ -963,12 +1004,13 @@ async def main():
     # Storage parser
     storage_parser = subparsers.add_parser("storage", help="Interact with Node storage.")
     storage_parser.add_argument("storage_type", help="The type of storage", choices=["db", "fs", "ipfs"])
-    storage_parser.add_argument("command", help="The command to run", choices=["create", "read"])
+    storage_parser.add_argument("operation", help="The operation to run", choices=["create", "read", "update", "delete", "list", "search"])
     storage_parser.add_argument("path", help="The path to store the object")
     storage_parser.add_argument("-d", "--data", help="Data to write to storage")
     storage_parser.add_argument("-s", "--schema", help="Schema to write to storage")
     storage_parser.add_argument("-o", "--options", help="Options to use with storage")
-
+    storage_parser.add_argument("-f", "--file", help="File path for fs/ipfs operations")
+    storage_parser.add_argument("--output", help="Output path for downloaded files", default="./downloads")
 
     # Signup command
     signup_parser = subparsers.add_parser("signup", help="Sign up a new user.")
@@ -986,9 +1028,14 @@ async def main():
     async with naptha as naptha:
         args = parser.parse_args()
         args = _parse_str_args(args)
+        print(args)
         if args.command == "signup":
             _, _ = await user_setup_flow(hub_url, public_key)
-        elif args.command in ["nodes", "agents", "orchestrators", "environments", "personas", "kbs", "memories", "tools", "run", "inference", "read_storage", "write_storage", "publish", "create"]:
+        elif args.command in [
+            "nodes", "agents", "orchestrators", "environments", 
+            "personas", "kbs", "memories", "tools", "run", "inference", 
+            "publish", "create", "storage"
+        ]:
             if not naptha.hub.is_authenticated:
                 if not hub_username or not hub_password:
                     print(
@@ -1249,7 +1296,6 @@ async def main():
                 else:
                     # Show specific knowledge base info
                     await list_kbs(naptha, args.kb_name)
-
             elif args.command == "create":
                 await create(naptha, args.module, args.agent_modules, args.worker_nodes, args.environment_modules, args.environment_nodes)
             elif args.command == "run":                    
@@ -1261,7 +1307,16 @@ async def main():
                 )
                 await naptha.inference_client.run_inference(request)
             elif args.command == "storage":
-                await storage_interaction(naptha, args.storage_type, args.command, args.path, args.data, args.schema, args.options)
+                await storage_interaction(
+                    naptha, 
+                    args.storage_type, 
+                    args.operation, 
+                    args.path, 
+                    data=args.data, 
+                    schema=args.schema, 
+                    options=args.options, 
+                    file=args.file
+                )
             elif args.command == "publish":
                 await naptha.publish_modules(args.decorator, args.register, args.subdeployments)
         else:
