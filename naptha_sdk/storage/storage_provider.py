@@ -36,14 +36,18 @@ class StorageProvider:
     ) -> Any:
         """Make HTTP request to storage endpoint"""
         endpoint = f"{self.node_url}/storage/{request.storage_type.value}/{request.request_type.value}/{request.path}"
-        
+        print(f"Request: {request}")
         try:
             response = None
             match request:
                 case CreateStorageRequest():
                     form_data = {}
-                    if request.data:
-                        form_data['data'] = json.dumps(request.data)
+                    if not request.data:
+                        request.data = {}
+                    if not request.options:
+                        request.options = {}
+                    form_data['data'] = json.dumps({**request.data, **request.options})
+                    print(f"Form data: {form_data}")
                     files = files if files is not None else {}
                     response = await self.client.post(endpoint, data=form_data, files=files)
 

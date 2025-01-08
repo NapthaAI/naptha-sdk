@@ -786,7 +786,6 @@ async def storage_interaction(naptha, storage_type, operation, path, data=None, 
                         options=json.loads(options) if options else {}
                     )
                     result = await storage_provider.execute(request)
-                    print(result)
                     return result
                     
             elif operation == "read":
