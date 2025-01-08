@@ -358,30 +358,76 @@ naptha run agent:simple_chat_agent -p "tool_name='chat' tool_input_data='who are
 naptha run agent:simple_chat_agent -p "tool_name='chat' tool_input_data='who are you?'" --persona_modules "marketagents_aileenmay"
 ```
 
-## Inference 
+## Local Model Inference 
+
+One of the main functions of a Naptha Module is to access model inference. Naptha Nodes can run inference locally , and do so via the Naptha Inference API. Naptha Modules can import the `InferenceClient` class to interact with the inference provider.
+
+```
+import asyncio
+from naptha_sdk.schemas import NodeConfigUser
+from naptha_sdk.inference import InferenceClient
+
+node = NodeConfigUser(ip="node.naptha.ai", http_port=7001, server_type="http")
+inference_client = InferenceClient(node)
+
+messages = [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "What is the capital of France?"}]
+
+response = asyncio.run(inference_client.run_inference({"model": "phi3:mini",
+                                             "messages": messages,
+                                             "temperature": 0.5,
+                                             "max_tokens": 1000}))
+                                          
+content = response['choices'][0]['message']['content']
+```
+
+You can also run inference on a node using the `naptha inference` command:
 
 ```bash
 naptha inference "How can we create scaling laws for multi-agent systems?" -m "phi3:mini"
 ```
 
-## Interact with Node Storage
+## Local Node Storage
 
-After the agent runs finish, you can download the file from the node using:
+Naptha Modules often need to store and retreive data locally with the Naptha Nodes that they are running on, and do so via the Naptha Storage API. The Naptha Nodes support several types of storage, including filesystem storage, database storage, and IPFS storage. When building a module, you can import the `StorageProvider` class to interact with storage providers. For example, to create a table in a database storage provider, you can use the following code:
 
-```bash
-naptha storage fs read <agent_run_id>
+```
+import asyncio
+from naptha_sdk.schemas import NodeConfigUser
+from naptha_sdk.storage.storage_provider import StorageProvider
+from naptha_sdk.storage.schemas import CreateStorageRequest, StorageType
+
+node = NodeConfigUser(ip="node.naptha.ai", http_port=7001, server_type="http")
+storage_provider = StorageProvider(node)
+
+schema = {
+    "schema": {
+        "id": {"type": "TEXT", "primary_key": True},
+        "text": {"type": "TEXT", "required": True},
+        "embedding": {"type": "vector", "dimension": 384}
+    }
+}
+
+create_table_request = CreateStorageRequest(
+    storage_type=StorageType.DATABASE,
+    path="test_embeddings",
+    data=schema
+)
+
+create_table_result = asyncio.run(storage_provider.create_storage_object(create_table_request))
+print("Create Table Result:", create_table_result)
 ```
 
-You can write to the node using:
+You can also interact with storage directly via the CLI using the `naptha storage` series of commands, followed by the storage provider type (e.g. `db` `fs`, `ipfs`). For example, to upload a file to node storage, list the files in a directory in node storage, and download a file from node storage, you can use:
 
-```bash
-naptha storage fs create -d files/<filename>.jpg
+```
+naptha storage fs create test_upload -f README.md
+naptha storage fs list test_upload
+naptha storage fs read test_upload
 ```
 
-### Interact with IPFS thorugh Node
-```bash
-naptha storage ipfs create -d files/<filename>.jpg
-```
+For more examples of using database, file system and IPFS storage via Naptha Nodes, see the [docs](https://docs.naptha.ai).
+
+
 
 
 # ***More examples and tutorials coming soon.***
