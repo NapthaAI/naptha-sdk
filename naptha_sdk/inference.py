@@ -2,7 +2,7 @@ import json
 from typing import Dict, Union
 import httpx
 from httpx import HTTPStatusError, RemoteProtocolError
-from naptha_sdk.schemas import ChatCompletionRequest, NodeConfigUser
+from naptha_sdk.schemas import ChatCompletionRequest, NodeConfigUser, ModelResponse
 from naptha_sdk.utils import get_logger, node_to_url
 
 logger = get_logger(__name__)
@@ -42,7 +42,7 @@ class InferenceClient:
                 )
                 print("Response: ", response.text)
                 response.raise_for_status()
-                return json.loads(response.text)
+                return ModelResponse(**json.loads(response.text))
         except HTTPStatusError as e:
             logger.info(f"HTTP error occurred: {e}")
             raise
