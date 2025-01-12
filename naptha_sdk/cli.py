@@ -987,13 +987,13 @@ async def main():
     run_parser = subparsers.add_parser("run", help="Execute run command.")
     run_parser.add_argument("agent", help="Select the agent to run")
     run_parser.add_argument("-p", '--parameters', type=str, help='Parameters in "key=value" format')
-    run_parser.add_argument("-n", "--agent_nodes", help="Worker nodes to take part in agent runs.")
-    run_parser.add_argument("-t", "--tool_nodes", help="Tool nodes to take part in agent runs.")
-    run_parser.add_argument("-e", "--environment_nodes", help="Environment nodes to store data during agent runs.")
-    run_parser.add_argument('-k', '--kb_nodes', type=str, help='Knowledge base nodes')
+    run_parser.add_argument("-n", "--agent_nodes", help="Agent nodes to take part in module runs.")
+    run_parser.add_argument("-t", "--tool_nodes", help="Tool nodes to take part in module runs.")
+    run_parser.add_argument("-e", "--environment_nodes", help="Environment nodes to store data during module runs.")
+    run_parser.add_argument('-k', '--kb_nodes', type=str, help='Knowledge base nodes to take part in module runs.')
     run_parser.add_argument('-m', '--memory_nodes', type=str, help='Memory nodes')
     run_parser.add_argument("-pm", "--persona_modules", help="Personas URLs to install before running the agent")
-    run_parser.add_argument("-f", "--file", help="YAML file with agent run parameters")
+    run_parser.add_argument("-f", "--file", help="YAML file with module run parameters")
 
     # Inference parser
     inference_parser = subparsers.add_parser("inference", help="Run model inference.")
