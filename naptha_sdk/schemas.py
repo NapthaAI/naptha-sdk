@@ -162,6 +162,7 @@ class AgentDeployment(BaseModel):
     tool_deployments: Optional[List[ToolDeployment]] = None
     environment_deployments: Optional[List[EnvironmentDeployment]] = None
     kb_deployments: Optional[List[KBDeployment]] = None
+    memory_deployments: Optional[List[MemoryDeployment]] = None
 
 class OrchestratorDeployment(BaseModel):
     node: Union[NodeConfigUser, NodeConfig, Dict]
@@ -171,6 +172,7 @@ class OrchestratorDeployment(BaseModel):
     agent_deployments: Optional[List[AgentDeployment]] = None
     environment_deployments: Optional[List[EnvironmentDeployment]] = None
     kb_deployments: Optional[List[KBDeployment]] = None
+    memory_deployments: Optional[List[MemoryDeployment]] = None
 
 class DockerParams(BaseModel):
     docker_image: str

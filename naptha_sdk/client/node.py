@@ -20,7 +20,7 @@ from httpx import HTTPStatusError, RemoteProtocolError
 from naptha_sdk.client import grpc_server_pb2
 from naptha_sdk.client import grpc_server_pb2_grpc
 from naptha_sdk.schemas import AgentRun, AgentRunInput, ChatCompletionRequest, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, \
-    OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, KBDeployment, KBRunInput, KBRun, ToolRunInput, ToolRun, NodeConfig, NodeConfigUser, ModelResponse, ToolDeployment
+    OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, KBDeployment, KBRunInput, KBRun, MemoryDeployment, MemoryRunInput, MemoryRun, ToolRunInput, ToolRun, NodeConfig, NodeConfigUser, ModelResponse, ToolDeployment
 from naptha_sdk.utils import get_logger, node_to_url
 
 logger = get_logger(__name__)
@@ -332,25 +332,29 @@ class UserClient:
         return run
 
     async def run_agent_and_poll(self, agent_run_input: AgentRunInput) -> AgentRun:
-        """Run an agent and poll for results until completion."""
+        """Run an agent module and poll for results until completion."""
         return await self._run_and_poll(agent_run_input, 'agent')
 
     async def run_tool_and_poll(self, tool_run_input: ToolRunInput) -> ToolRun:
-        """Run a tool and poll for results until completion."""
+        """Run a tool module and poll for results until completion."""
 
         return await self._run_and_poll(tool_run_input, 'tool')
 
     async def run_orchestrator_and_poll(self, orchestrator_run_input: OrchestratorRunInput) -> OrchestratorRun:
-        """Run an orchestrator and poll for results until completion."""
+        """Run an orchestrator module and poll for results until completion."""
         return await self._run_and_poll(orchestrator_run_input, 'orchestrator')
 
     async def run_environment_and_poll(self, environment_input: EnvironmentRunInput) -> EnvironmentRun:
-        """Run an environment and poll for results until completion."""
+        """Run an environment module and poll for results until completion."""
         return await self._run_and_poll(environment_input, 'environment')
     
     async def run_kb_and_poll(self, kb_input: KBDeployment) -> KBDeployment:
-        """Run a knowledge base and poll for results until completion."""
+        """Run a knowledge base module and poll for results until completion."""
         return await self._run_and_poll(kb_input, 'kb')
+
+    async def run_memory_and_poll(self, memory_input: MemoryDeployment) -> MemoryDeployment:
+        """Run a memory module and poll for results until completion."""
+        return await self._run_and_poll(memory_input, 'memory')
 
     async def check_user(self, user_input: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -428,6 +432,7 @@ class UserClient:
             'orchestrator': OrchestratorRunInput,
             'environment': EnvironmentRunInput,
             'kb': KBRunInput,
+            'memory': MemoryRunInput,
             'tool': ToolRunInput
         }[module_type]
         
@@ -460,6 +465,7 @@ class UserClient:
                     'orchestrator': OrchestratorRun,
                     'environment': EnvironmentRun,
                     'kb': KBRun,
+                    'memory': MemoryRun,
                     'tool': ToolRun
                 }[module_type]
                 return return_class(**json.loads(response.text))
@@ -512,35 +518,39 @@ class UserClient:
             raise
 
     async def run_agent(self, agent_run_input: AgentRunInput) -> AgentRun:
-        """Run an agent on a node"""
+        """Run an agent module on a node"""
         return await self._run_module(agent_run_input, 'agent')
 
     async def run_tool(self, tool_run_input: ToolRunInput) -> ToolRun:
-        """Run a tool on a node"""
+        """Run a tool module on a node"""
         return await self._run_module(tool_run_input, 'tool')
 
     async def run_orchestrator(self, orchestrator_run_input: OrchestratorRunInput) -> OrchestratorRun:
-        """Run an orchestrator on a node"""
+        """Run an orchestrator module on a node"""
         return await self._run_module(orchestrator_run_input, 'orchestrator')
     
     async def run_environment(self, environment_run_input: EnvironmentRunInput) -> EnvironmentRun:
-        """Run an environment on a node"""
+        """Run an environment module on a node"""
         return await self._run_module(environment_run_input, 'environment')
 
     async def run_kb(self, kb_run_input: KBRunInput) -> KBRun:
-        """Run a knowledge base on a node"""
+        """Run a knowledge base module on a node"""
         return await self._run_module(kb_run_input, 'kb')
+
+    async def run_memory(self, memory_run_input: MemoryRunInput) -> MemoryRun:
+        """Run a memory module on a node"""
+        return await self._run_module(memory_run_input, 'memory')
 
     async def check_run(
         self, 
-        module_run: Union[AgentRun, OrchestratorRun, EnvironmentRun, KBRun, ToolRun], 
+        module_run: Union[AgentRun, OrchestratorRun, EnvironmentRun, KBRun, MemoryRun, ToolRun], 
         module_type: str
-    ) -> Union[AgentRun, OrchestratorRun, EnvironmentRun, KBRun, ToolRun]:
+    ) -> Union[AgentRun, OrchestratorRun, EnvironmentRun, KBRun, MemoryRun, ToolRun]:
         """Generic method to check the status of a module run.
         
         Args:
-            module_run: Either AgentRun, OrchestratorRun, EnvironmentRun, ToolRun or KBRun object
-            module_type: Either 'agent', 'orchestrator', 'environment', 'tool' or 'kb'
+            module_run: Either AgentRun, OrchestratorRun, EnvironmentRun, ToolRun, KBRun or MemoryRun object
+            module_type: Either 'agent', 'orchestrator', 'environment', 'tool', 'kb' or 'memory'
         """
         try:
             async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
@@ -555,6 +565,7 @@ class UserClient:
                 'orchestrator': OrchestratorRun,
                 'environment': EnvironmentRun,
                 'kb': KBRun,
+                'memory': MemoryRun,
                 'tool': ToolRun
             }[module_type]
             return return_class(**json.loads(response.text))
@@ -579,6 +590,9 @@ class UserClient:
 
     async def check_kb_run(self, kb_run: KBRun) -> KBRun:
         return await self.check_run(kb_run, 'kb')
+
+    async def check_memory_run(self, memory_run: MemoryRun) -> MemoryRun:
+        return await self.check_run(memory_run, 'memory')
 
     async def create_agent_run(self, agent_run_input: AgentRunInput) -> AgentRun:
         try:
