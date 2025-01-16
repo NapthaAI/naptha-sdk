@@ -765,6 +765,8 @@ async def run(
             signature=sign_consumer_id(user['id'], os.getenv("PRIVATE_KEY"))
         )
         kb_run = await naptha.node.run_kb_and_poll(kb_run_input)
+    else:
+        print(f"Module type {module_type} not supported.")
 
 async def storage_interaction(naptha, storage_type, operation, path, data=None, schema=None, options=None, file=None):
     """Handle storage interactions using StorageProvider"""
