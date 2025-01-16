@@ -94,6 +94,20 @@ class KBConfig(BaseModel):
         model_dict['storage_type'] = self.storage_type
         return model_dict
 
+class MemoryConfig(BaseModel):
+    config_name: Optional[str] = None
+    storage_type: StorageType
+    path: str
+    schema: Dict[str, Any]
+    options: Optional[Dict[str, Any]] = None
+
+    def model_dict(self):
+        if isinstance(self.storage_type, StorageType):
+            self.storage_type = self.storage_type.value
+        model_dict = self.dict()
+        model_dict['storage_type'] = self.storage_type
+        return model_dict
+
 class DataGenerationConfig(BaseModel):
     save_outputs: Optional[bool] = None
     save_outputs_location: Optional[str] = None
@@ -118,6 +132,18 @@ class KBDeployment(BaseModel):
     def model_dict(self):
         model_dict = self.dict()
         if isinstance(self.config, KBConfig):
+            model_dict['config'] = self.config.model_dict()
+        return model_dict
+
+class MemoryDeployment(BaseModel):
+    node: Union[NodeConfigUser, NodeConfig, Dict]
+    name: Optional[str] = None
+    module: Optional[Dict] = None
+    config: Optional[MemoryConfig] = None
+
+    def model_dict(self):
+        model_dict = self.dict()
+        if isinstance(self.config, MemoryConfig):
             model_dict['config'] = self.config.model_dict()
         return model_dict
 
@@ -329,6 +355,35 @@ class KBRun(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
     deployment: KBDeployment
+    orchestrator_runs: List['OrchestratorRun'] = []
+    status: str = "pending"
+    error: bool = False
+    id: Optional[str] = None
+    results: list[Optional[str]] = []
+    error_message: Optional[str] = None
+    created_time: Optional[str] = None
+    start_processing_time: Optional[str] = None
+    completed_time: Optional[str] = None
+    duration: Optional[float] = None
+    signature: str
+
+class MemoryRunInput(BaseModel):
+    consumer_id: str
+    inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
+    deployment: MemoryDeployment
+    orchestrator_runs: List['OrchestratorRun'] = []
+    signature: str
+
+    def model_dict(self):
+        model_dict = self.dict()
+        if isinstance(self.deployment, MemoryDeployment):
+            model_dict['deployment'] = self.deployment.model_dict()
+        return model_dict
+
+class MemoryRun(BaseModel):
+    consumer_id: str
+    inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
+    deployment: MemoryDeployment
     orchestrator_runs: List['OrchestratorRun'] = []
     status: str = "pending"
     error: bool = False
