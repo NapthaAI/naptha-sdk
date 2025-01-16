@@ -1,10 +1,6 @@
 import argparse
 import asyncio
 from dotenv import load_dotenv
-from naptha_sdk.client.naptha import Naptha
-from naptha_sdk.client.hub import user_setup_flow
-from naptha_sdk.user import get_public_key
-from naptha_sdk.schemas import AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, NodeConfigUser
 import os
 import shlex
 from rich.console import Console
@@ -12,12 +8,11 @@ from rich.table import Table
 from rich import box
 import json
 import yaml
-from dotenv import load_dotenv
 
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.schemas import AgentDeployment, ChatCompletionRequest, EnvironmentDeployment, \
-    OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, KBDeployment, KBRunInput, ToolDeployment, ToolRunInput
+    OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, KBDeployment, KBRunInput, MemoryDeployment, MemoryRunInput, ToolDeployment, ToolRunInput, NodeConfigUser
 from naptha_sdk.storage.storage_provider import StorageProvider
 from naptha_sdk.storage.schemas import (
     CreateStorageRequest, DeleteStorageRequest, ListStorageRequest, 
@@ -619,6 +614,11 @@ async def create(
             name=module_name,
             module={"name": module_name},
             node=url_to_node(os.getenv("NODE_URL"))
+        ),
+        "memory": lambda: MemoryDeployment(
+            name=module_name,
+            module={"name": module_name},
+            node=url_to_node(os.getenv("NODE_URL"))
         )
     }
 
@@ -640,6 +640,7 @@ async def run(
     tool_nodes=None,
     environment_nodes=None,
     kb_nodes=None,
+    memory_nodes=None,
     yaml_file=None, 
     persona_modules=None
 ):   
@@ -677,6 +678,10 @@ async def run(
     if kb_nodes:
         for kb_node in kb_nodes:
             kb_deployments.append(KBDeployment(node=NodeConfigUser(ip=kb_node.strip())))
+    memory_deployments = []
+    if memory_nodes:
+        for memory_node in memory_nodes:
+            memory_deployments.append(MemoryDeployment(node=NodeConfigUser(ip=memory_node.strip())))
 
 
     if module_type == "agent":
@@ -688,6 +693,7 @@ async def run(
             config={"persona_module": {"name": persona_modules[0]}} if persona_modules else None,
             tool_deployments=tool_deployments,
             kb_deployments=kb_deployments,
+            memory_deployments=memory_deployments,
             environment_deployments=environment_deployments
         )
 
@@ -723,7 +729,8 @@ async def run(
             node=url_to_node(os.getenv("NODE_URL")),
             agent_deployments=agent_deployments,
             environment_deployments=environment_deployments,
-            kb_deployments=kb_deployments
+            kb_deployments=kb_deployments,
+            memory_deployments=memory_deployments,
         )
 
         orchestrator_run_input = OrchestratorRunInput(
@@ -765,6 +772,21 @@ async def run(
             signature=sign_consumer_id(user['id'], os.getenv("PRIVATE_KEY"))
         )
         kb_run = await naptha.node.run_kb_and_poll(kb_run_input)
+    elif module_type == "memory":
+        print("Running Memory Module...")
+
+        memory_deployment = MemoryDeployment(
+            module={"id": module_name, "name": module_name.split(":")[-1], "module_type": module_type}, 
+            node=url_to_node(os.getenv("NODE_URL"))
+        )
+
+        memory_run_input = MemoryRunInput(
+            consumer_id=user['id'],
+            inputs=parameters,
+            deployment=memory_deployment,
+            signature=sign_consumer_id(user['id'], os.getenv("PRIVATE_KEY"))
+        )
+        memory_run = await naptha.node.run_memory_and_poll(memory_run_input)     
     else:
         print(f"Module type {module_type} not supported.")
 
@@ -909,6 +931,7 @@ def _parse_str_args(args):
     args.tool_nodes = _parse_list_arg(args, 'tool_nodes', default=None)
     args.environment_nodes = _parse_list_arg(args, 'environment_nodes', default=None)
     args.kb_nodes = _parse_list_arg(args, 'kb_nodes', default=None)
+    args.memory_nodes = _parse_list_arg(args, 'memory_nodes', default=None)
     args.agent_modules = _parse_list_arg(args, 'agent_modules', default=None)
     args.environment_modules = _parse_list_arg(args, 'environment_modules', default=None)
     args.persona_modules = _parse_list_arg(args, 'persona_modules', default=None)
@@ -965,17 +988,14 @@ async def main():
     memories_parser.add_argument('memory_name', nargs='?', help='Optional memory name')
     memories_parser.add_argument('-p', '--metadata', type=str, help='Metadata for memory registration in "key=value" format')
     memories_parser.add_argument('-d', '--delete', action='store_true', help='Delete a memory')
-    memories_parser.add_argument('-l', '--list', action='store_true', help='List content in a memory')
-    memories_parser.add_argument('-a', '--add', action='store_true', help='Add data to a memory')
-    memories_parser.add_argument('-c', '--content', type=str, help='Content to add to a memory', required=False)
-    memories_parser.add_argument('-m', '--memory_node_urls', type=str, help='Memory node URLs', default=["http://localhost:7001"])
+    memories_parser.add_argument('-m', '--memory_nodes', type=str, help='Memory nodes', default=["http://localhost:7001"])
 
     # Knowledge base parser
     kbs_parser = subparsers.add_parser("kbs", help="List available knowledge bases.")
     kbs_parser.add_argument('kb_name', nargs='?', help='Optional knowledge base name')
     kbs_parser.add_argument('-p', '--metadata', type=str, help='Metadata for knowledge base registration in "key=value" format')
     kbs_parser.add_argument('-d', '--delete', action='store_true', help='Delete a knowledge base')
-    kbs_parser.add_argument('-k', '--kb_nodes', type=str, help='Knowledge base node URLs')
+    kbs_parser.add_argument('-k', '--kb_nodes', type=str, help='Knowledge base nodes')
 
     # Create parser
     create_parser = subparsers.add_parser("create", help="Execute create command.")
@@ -1301,7 +1321,7 @@ async def main():
             elif args.command == "create":
                 await create(naptha, args.module, args.agent_modules, args.agent_nodes, args.environment_modules, args.environment_nodes)
             elif args.command == "run":                    
-                await run(naptha, args.agent, args.parameters, args.agent_nodes, args.tool_nodes, args.environment_nodes, args.kb_nodes, args.file, args.persona_modules)
+                await run(naptha, args.agent, args.parameters, args.agent_nodes, args.tool_nodes, args.environment_nodes, args.kb_nodes, args.memory_nodes, args.file, args.persona_modules)
             elif args.command == "inference":
                 request = ChatCompletionRequest(
                     messages=[{"role": "user", "content": args.prompt}],
@@ -1326,6 +1346,7 @@ async def main():
 
 def cli():
     import sys
+    import traceback
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
@@ -1333,6 +1354,7 @@ def cli():
         sys.exit(1)
     except Exception as e:
         print(f"Error: {str(e)}")
+        print(f"Full traceback: {traceback.format_exc()}")
         sys.exit(1)
 
 if __name__ == "__main__":
