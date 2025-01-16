@@ -350,6 +350,46 @@ naptha memories memory_name -p "description='Memory description' parameters='{in
 naptha memories -d memory_name
 ```
 
+### Create the Memory Table
+
+```bash
+naptha run memory:cognitive_memory -p "func_name='init'"
+```
+
+### Add to Memory
+
+```bash
+naptha run memory:cognitive_memory -p '{
+    "func_name": "store_cognitive_item",
+    "func_input_data": {
+        "cognitive_step": "reflection",
+        "content": "I am reflecting."
+    }
+}'
+```
+
+### Query Memory
+
+```bash
+naptha run memory:cognitive_memory -p '{
+    "func_name": "get_cognitive_items",
+    "func_input_data": {
+        "cognitive_step": "reflection"
+    }
+}'
+```
+
+## Delete a row in Memory
+
+```bash
+naptha run memory:cognitive_memory -p '{
+    "func_name": "delete_cognitive_items",
+    "func_input_data": {
+        "condition": {"cognitive_step": "reflection"}
+    }
+}'
+```
+
 ## Personas
 
 ### Interact with the Persona Hub
