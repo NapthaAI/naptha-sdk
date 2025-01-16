@@ -4,7 +4,7 @@ from pathlib import Path
 from naptha_sdk.client.hub import list_nodes
 from naptha_sdk.client.node import UserClient
 from naptha_sdk.module_manager import load_persona
-from naptha_sdk.schemas import AgentDeployment, EnvironmentDeployment, LLMConfig, OrchestratorDeployment, ToolDeployment, KBDeployment, KBConfig, AgentConfig, EnvironmentConfig, ToolConfig, OrchestratorConfig, NodeConfig
+from naptha_sdk.schemas import AgentDeployment, EnvironmentDeployment, LLMConfig, OrchestratorDeployment, ToolDeployment, KBDeployment, KBConfig, MemoryDeployment, MemoryConfig, AgentConfig, EnvironmentConfig, ToolConfig, OrchestratorConfig, NodeConfig
 from naptha_sdk.utils import url_to_node
 
 def load_llm_configs(llm_configs_path):
@@ -45,7 +45,8 @@ async def load_module_config_data(module_type, deployment, load_persona_data=Fal
         "environment": EnvironmentConfig,
         "tool": ToolConfig,
         "orchestrator": OrchestratorConfig,
-        "kb": KBConfig
+        "kb": KBConfig,
+        "memory": MemoryConfig
     }
 
     if "llm_config" in deployment["config"] and deployment["config"]["llm_config"] is not None:
@@ -95,6 +96,13 @@ async def load_subdeployments(deployment, node_url=None, user_id=None):
             kb_deployment = await setup_module_deployment("kb", configs_path / "kb_deployments.json", node_url, user_id, deployment_name, is_subdeployment=True)
             kb_deployments.append(kb_deployment)
         deployment["kb_deployments"] = kb_deployments
+    if "memory_deployments" in deployment and deployment["memory_deployments"]:
+        memory_deployments = []
+        for i, memory_deployment in enumerate(deployment["memory_deployments"]):
+            deployment_name = deployment["memory_deployments"][i]["name"]
+            memory_deployment = await setup_module_deployment("memory", configs_path / "memory_deployments.json", node_url, user_id, deployment_name, is_subdeployment=True)
+            memory_deployments.append(memory_deployment)
+        deployment["memory_deployments"] = memory_deployments
     print(f"Subdeployments loaded {deployment}")
     return deployment
 
@@ -106,6 +114,7 @@ async def setup_module_deployment(module_type: str, deployment_path: str, node_u
         "tool": ToolDeployment,
         "environment": EnvironmentDeployment,
         "kb": KBDeployment,
+        "memory": MemoryDeployment,
         "orchestrator": OrchestratorDeployment
     }
 
