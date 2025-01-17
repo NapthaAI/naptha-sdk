@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Dict, List, Optional, Union, Any
 from datetime import datetime
 from pydantic import BaseModel, Field
-from naptha_sdk.storage.schemas import StorageType
+from naptha_sdk.storage.schemas import StorageConfig, StorageType
 
 class User(BaseModel):
     id: str
@@ -77,8 +77,10 @@ class OrchestratorConfig(BaseModel):
     max_rounds: Optional[int] = 5
 
 class EnvironmentConfig(BaseModel):
-    config_name: Optional[str] = "environment_config"
+    config_name: Optional[str] = None
     environment_type: Optional[str] = None
+    max_rounds: Optional[int] = 5
+    storage_config: Optional[StorageConfig] = None
 
 class KBConfig(BaseModel):
     config_name: Optional[str] = None

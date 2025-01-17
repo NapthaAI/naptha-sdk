@@ -8,6 +8,12 @@ class StorageType(str, Enum):
     FILESYSTEM = "fs"
     IPFS = "ipfs"
 
+class StorageConfig(BaseModel):
+    storage_type: StorageType
+    path: str
+    schema: Dict[str, Any]
+    options: Optional[Dict[str, Any]] = None
+
 class StorageLocation(BaseModel):
     storage_type: StorageType
     path: str
