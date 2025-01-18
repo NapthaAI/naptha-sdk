@@ -37,7 +37,7 @@ class NodeClient:
         logger.info(f"Node URL: {self.node_url}")
 
     def node_to_url(self, node: NodeConfig):
-        print('node config:', node)
+
         ports = node.ports
         if len(ports) == 0:
             raise ValueError("No ports found for node")
