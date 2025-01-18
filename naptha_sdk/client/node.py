@@ -37,13 +37,14 @@ class NodeClient:
         logger.info(f"Node URL: {self.node_url}")
 
     def node_to_url(self, node: NodeConfig):
+        print('node config:', node)
         ports = node.ports
         if len(ports) == 0:
             raise ValueError("No ports found for node")
         if node.server_type == 'ws':
-            return f"ws://{node.ip}:{random.choice(ports)}"
+            return f"ws://{node.ip}:{random.choice(ports)}" if len(ports) > 0 else f'ws://{node.ip}'
         elif node.server_type == 'grpc':
-            return f"{node.ip}:{random.choice(ports)}"
+            return f"{node.ip}:{random.choice(ports)}" if len(ports) > 0 else node.ip
         else:
             raise ValueError("Invalid server type. Server type must be either 'ws' or 'grpc'.")
 

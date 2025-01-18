@@ -108,10 +108,16 @@ class AsyncMixin:
         return self.__initobj().__await__()
     
 def node_to_url(node_schema: NodeConfigUser):
-    return f"http://{node_schema.ip}:{node_schema.http_port}"
+
+    protocol = node_schema.server_type or 'http'
+    host = node_schema.ip
+    port = node_schema.http_port
+    url = f'{protocol}://{host}:{port}' if port else f'{protocol}://{host}'
+    return url
     
 def url_to_node(url: str):
     protocol = url.split('://')[0]
-    host = url.split('://')[1].split(':')[0] 
-    http_port = int(url.split(':')[-1])
+    host_portion = url.split('://')[1].split(':')
+    host = host_portion[0]
+    http_port = int(host_portion[1]) if len(host_portion) > 1 else None
     return NodeConfigUser(ip=host, http_port=http_port, server_type=protocol)
