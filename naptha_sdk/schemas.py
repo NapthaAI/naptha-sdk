@@ -8,7 +8,7 @@ class User(BaseModel):
     id: str
 
 class NodeServer(BaseModel):
-    server_type: str
+    communication_protocol: str
     port: int
     node_id: str
 
@@ -17,10 +17,10 @@ class NodeConfig(BaseModel):
     owner: str
     public_key: str
     ip: str = Field(default="localhost")
-    server_type_1: str = Field(default="http")
-    server_type_2: str = Field(default="ws")
-    http_port: int = Field(default=7001)
-    num_servers: int = Field(default=1)
+    user_communication_protocol: str = Field(default="http")
+    node_communication_protocol: str = Field(default="ws")
+    user_communication_port: int = Field(default=7001)
+    num_node_communication_servers: int = Field(default=1)
     provider_types: List[str] = Field(default=["models", "storage", "modules"])
     servers: List[NodeServer]
     models: List[str]
@@ -36,8 +36,8 @@ class NodeConfig(BaseModel):
 
 class NodeConfigUser(BaseModel):
     ip: str
-    http_port: Optional[int] = None
-    server_type: Optional[str] = None
+    user_communication_port: Optional[int] = None
+    user_communication_protocol: Optional[str] = None
 
 class LLMClientType(str, Enum):
     OPENAI = "openai"
