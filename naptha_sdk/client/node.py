@@ -30,7 +30,7 @@ HTTP_TIMEOUT = 300
 class NodeClient:
     def __init__(self, node: NodeConfig):
         self.node = node
-        self.server_type = node.server_type
+        self.server_type = node.server_type_2
         self.node_url = self.node_to_url(node)
         self.connections = {}
 

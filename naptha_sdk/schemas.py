@@ -17,7 +17,8 @@ class NodeConfig(BaseModel):
     owner: str
     public_key: str
     ip: str = Field(default="localhost")
-    server_type: str = Field(default="ws")
+    server_type_1: str = Field(default="http")
+    server_type_2: str = Field(default="ws")
     http_port: int = Field(default=7001)
     num_servers: int = Field(default=1)
     provider_types: List[str] = Field(default=["models", "storage", "modules"])
