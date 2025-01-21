@@ -277,6 +277,49 @@ class Hub:
             logger.info(f"Module already exists. Updating existing module: {module_config.get('id')}")
             return await self.surrealdb.update(module_config.pop('id'), module_config)
 
+    async def fetch_existing_secrets_data(self) -> List[Dict]:
+        existing_secrets = await self.surrealdb.query("SELECT * FROM api_secrets")
+        return existing_secrets[0]['result']
+
+    def prepare_batch_query(self, secret_config: List[Dict], existing_data: List) -> str:
+        existing_data_dict = {secret['key_name'] for secret in existing_data}
+        records_to_insert = []
+        
+        for secret in secret_config:
+            user_id = secret['user_id']
+            key_name = secret['key_name']
+            key_value = secret['secret_value']
+
+            if key_name not in existing_data_dict:
+                records_to_insert.append(f'{{"user_id": {user_id}, "key_name": "{key_name}", "secret_value": "{key_value}"}}')
+
+        insert_query = ""
+        if records_to_insert:
+            insert_query = f"""
+                INSERT INTO api_secrets [
+                    {', '.join(records_to_insert)}
+                ];
+            """
+        
+        return insert_query
+
+    async def create_secret(self, secret_config: List[Dict]) -> str:
+        existing_data = await self.fetch_existing_secrets_data()
+        query = self.prepare_batch_query(secret_config, existing_data)
+
+        if query:
+            result = await self.surrealdb.query(query)
+
+            return "Records added successfully" if result[0]['status'] == 'OK' else "Something went wrong"
+        else:
+            return "Records already exists"
+    
+    async def get_user_secret(self, key_name: str) -> str:
+        result = await self.surrealdb.query("SELECT secret_value FROM api_secrets WHERE key_name=$key_name", {
+            'key_name': key_name
+        })
+        return result[0]['result']
+
     async def close(self):
         """Close the database connection"""
         try:

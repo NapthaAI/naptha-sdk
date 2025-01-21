@@ -18,9 +18,13 @@ from naptha_sdk.storage.schemas import (
     ReadStorageRequest, UpdateStorageRequest, SearchStorageRequest, StorageType
 )
 from naptha_sdk.user import get_public_key, sign_consumer_id
-from naptha_sdk.utils import url_to_node
+from naptha_sdk.utils import url_to_node, get_env_data, get_logger
+from naptha_sdk.secrets import create_secret
 
 load_dotenv(override=True)
+logger = get_logger(__name__)
+
+HTTP_TIMEOUT = 300
 
 async def list_nodes(naptha):
     nodes = await naptha.hub.list_nodes()
@@ -795,6 +799,12 @@ async def main():
                               const=True,
                               metavar="URL")
     publish_parser.add_argument("-s", "--subdeployments", help="Publish subdeployments", action="store_true")
+
+    # Add API Key Command
+    deploy_secrets_parser = subparsers.add_parser("deploy-secrets", help="Add API keys or tokens.")
+    deploy_secrets_parser.add_argument("-e", "--env", help="Add API key from environment variable. Provide the key name.", action="store_true")
+    deploy_secrets_parser.add_argument("-o", "--override", help="Override API key in DB with env file values.", action="store_true")
+
         
     async with naptha as naptha:
         args = parser.parse_args()
@@ -805,7 +815,7 @@ async def main():
         elif args.command in [
             "nodes", "agents", "orchestrators", "environments", 
             "personas", "kbs", "memories", "tools", "run", "inference", 
-            "publish", "create", "storage"
+            "publish", "create", "storage", "deploy-secrets"
         ]:
             if not naptha.hub.is_authenticated:
                 if not hub_username or not hub_password:
@@ -954,6 +964,26 @@ async def main():
                 )
             elif args.command == "publish":
                 await naptha.publish_modules(args.decorator, args.register, args.subdeployments)
+            elif args.command == "deploy-secrets":
+                if args.override:
+                    # TODO: Implement the override function to update the API key in DB with values from the env file
+                    return
+                    
+                if args.env:
+                    encrypted_data = create_secret(get_env_data(), naptha.hub.user_id)
+                else:
+                    key_name = input("Enter the key name: ").strip()
+                    key_value = input(f"Enter the value for {key_name}: ").strip()
+                    
+                    if not key_name or not key_value:
+                        logger.error("Both key name and key value are required.")
+                        return
+                    
+                    data_dict = {key_name: key_value}
+                    encrypted_data = create_secret(data_dict, naptha.hub.user_id)
+
+                result = await naptha.hub.create_secret(encrypted_data)
+                logger.info(result)
         else:
             parser.print_help()
 
