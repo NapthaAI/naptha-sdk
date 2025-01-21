@@ -804,6 +804,7 @@ async def main():
     deploy_secrets_parser = subparsers.add_parser("deploy-secrets", help="Add API keys or tokens.")
     deploy_secrets_parser.add_argument("-e", "--env", help="Add API key from environment variable. Provide the key name.", action="store_true")
     deploy_secrets_parser.add_argument("-o", "--override", help="Override API key in DB with env file values.", action="store_true")
+    deploy_secrets_parser.add_argument("-r", "--remove-key", help="Specify the key name to remove from DB.")
 
         
     async with naptha as naptha:
@@ -965,10 +966,10 @@ async def main():
             elif args.command == "publish":
                 await naptha.publish_modules(args.decorator, args.register, args.subdeployments)
             elif args.command == "deploy-secrets":
-                if args.override:
-                    # TODO: Implement the override function to update the API key in DB with values from the env file
+                if args.remove_key:
+                    await naptha.hub.delete_secret(key_name=args.remove_key)
                     return
-                    
+
                 if args.env:
                     encrypted_data = create_secret(get_env_data(), naptha.hub.user_id)
                 else:
@@ -982,8 +983,7 @@ async def main():
                     data_dict = {key_name: key_value}
                     encrypted_data = create_secret(data_dict, naptha.hub.user_id)
 
-                result = await naptha.hub.create_secret(encrypted_data)
-                logger.info(result)
+                await naptha.hub.create_secret(encrypted_data, update=args.override)
         else:
             parser.print_help()
 
