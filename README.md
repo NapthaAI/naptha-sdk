@@ -109,6 +109,9 @@ Now you've found a node and a agent you'd like to run, so let's run it locally! 
 naptha run agent:hello_world_agent -p "firstname=sam surname=altman"
 ```
 
+naptha run agent:test_module1 -p "message='hello world'"
+naptha run agent:test_module2 -p "message='hello world'"
+
 Try an agent that uses the local LLM running on your node:
 
 ```bash
@@ -151,13 +154,13 @@ Now you've found a node and a tool you'd like to run, so let's run it locally! Y
 
 ```bash
 # usage: naptha run <tool_name> -p "<tool args>"
-naptha run tool:generate_image_tool -p "tool_name='generate_image_tool' tool_input_data='A beautiful image of a cat'"
+naptha run tool:generate_image_tool -p "tool_name='generate_image_tool' prompt='A beautiful image of a cat'"
 ```
 
 ### Run an Agent that interacts with the Tool
 
 ```bash
-naptha run agent:generate_image_agent -p "tool_name='generate_image_tool' tool_input_data='A beautiful image of a cat'" --tool_nodes "localhost"
+naptha run agent:generate_image_agent -p "tool_name='generate_image_tool' prompt='A beautiful image of a cat'" --tool_nodes "localhost"
 ```
 
 ## Agent Orchestrators
