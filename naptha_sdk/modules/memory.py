@@ -1,5 +1,5 @@
 from naptha_sdk.client.node import NodeClient
-from naptha_sdk.schemas import AgentRun, ToolRunInput
+from naptha_sdk.schemas import AgentRun, MemoryRunInput
 from naptha_sdk.utils import get_logger
 from typing import Union
 from dotenv import load_dotenv
