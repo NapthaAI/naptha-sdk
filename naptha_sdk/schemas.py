@@ -90,9 +90,9 @@ class KBConfig(BaseModel):
     storage_config: Optional[StorageConfig] = None
 
     def model_dict(self):
+        model_dict = self.dict()
         if isinstance(self.storage_config, StorageConfig):
             self.storage_config = self.storage_config.model_dict()
-        model_dict = self.dict()
         model_dict['storage_config'] = self.storage_config
         return model_dict
 

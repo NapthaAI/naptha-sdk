@@ -96,7 +96,7 @@ class NodeClient:
                 'public_key': response.public_key,
             }
 
-    async def run_module(self, module_type: str, run_input: Union[AgentRunInput, KBRunInput, ToolRunInput, EnvironmentRunInput]):
+    async def run_module(self, module_type: str, run_input: Union[AgentRunInput, KBRunInput, ToolRunInput, MemoryRunInput, EnvironmentRunInput]):
         if self.node.server_type == 'ws':
             return await self.run_module_ws(module_type, run_input)
         elif self.node.server_type == 'grpc':
@@ -104,8 +104,8 @@ class NodeClient:
         else:
             raise ValueError("Invalid server type. Server type must be either 'ws' or 'grpc'.")
 
-    async def run_module_ws(self, module_type: str, run_input):
-        response = await self.send_receive_ws(run_input, f"{module_type}/run")
+    async def run_module_ws(self, module_type: str, run_input: Union[AgentRunInput, KBRunInput, ToolRunInput, MemoryRunInput, EnvironmentRunInput]):
+        response = await self.send_receive_ws(run_input.model_dict(), f"{module_type}/run")
         
         output_types = {
             "agent": AgentRun,
