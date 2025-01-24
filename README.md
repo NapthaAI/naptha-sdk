@@ -19,7 +19,7 @@
 Naptha is a framework and infrastructure for developing and running multi-agent systems across many devices. The Naptha SDK is made up of:
 
 1. A client for interacting with the Naptha Hub (like the huggingface_hug library but for multi-agent apps)
-2. Abstractions for the composable building blocks of multi-agent apps like Agent, Orchestrator, Tool, Environment, Persona (i.e. Naptha Modules). With Naptha, communication between these modules happens via API.
+2. Abstractions for the composable building blocks of multi-agent apps like Agent, Orchestrator, Tool, Environment, Persona, Knowledge Base, and Memory (i.e. Naptha Modules). With Naptha, communication between these modules happens via API.
 3. Decorators for easily onboarding modules from agent frameworks like CrewAI.
 3. A CLI for interacting with the Naptha Hub and Node
 
@@ -91,7 +91,13 @@ For each agent, you will see a url where you can check out the code.
 ### Create a New Agent
 
 ```bash
-naptha agents agent_name -p "description='Agent description' parameters='{tool_name: str, tool_input_data: str}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
+naptha agents agent_name -c "description='Agent description' parameters='{tool_name: str, tool_input_data: str}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
+```
+
+### Update an Agent
+
+```bash
+naptha agents agent_name -u "module_version='v0.2'" 
 ```
 
 ### Delete an Agent
@@ -108,9 +114,6 @@ Now you've found a node and a agent you'd like to run, so let's run it locally! 
 # usage: naptha run <agent_name> <agent args>
 naptha run agent:hello_world_agent -p "firstname=sam surname=altman"
 ```
-
-naptha run agent:test_module1 -p "message='hello world'"
-naptha run agent:test_module2 -p "message='hello world'"
 
 Try an agent that uses the local LLM running on your node:
 
@@ -139,7 +142,13 @@ For each tool, you will see a url where you can check out the code.
 ### Create a New Tool
 
 ```bash
-naptha tools tool_name -p "description='Tool description' parameters='{tool_input_1: str, tool_input_2: str}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
+naptha tools tool_name -c "description='Tool description' parameters='{tool_input_1: str, tool_input_2: str}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
+```
+
+### Update a Tool
+
+```bash
+naptha tools tool_name -u "module_version='v0.2'" 
 ```
 
 ### Delete a Tool
@@ -178,7 +187,13 @@ For each orchestrator, you will see a url where you can check out the code.
 ### Create a New Agent Orchestrator
 
 ```bash
-naptha orchestrators orchestrator_name -p "description='Orchestrator description' parameters='{input_parameter_1: str, input_parameter_2: int}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
+naptha orchestrators orchestrator_name -c "description='Orchestrator description' parameters='{input_parameter_1: str, input_parameter_2: int}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
+```
+
+### Update an Agent Orchestrator
+
+```bash
+naptha orchestrators orchestrator_name -u "module_version='v0.2'" 
 ```
 
 ### Delete an Agent Orchestrator
@@ -222,16 +237,6 @@ Tesla faces growing competition and softening demand, impacting its stock price 
 '" --agent_nodes "node.naptha.ai,node1.naptha.ai"
 ```
 
-## Environment Modules
-
-Environment modules in Naptha provide shared state and communication infrastructure for multi-agent workflows. They act as a common space where agents can interact, share information, and maintain persistent state across workflow executions. Think of them as the "world" or "environment" in which agents operate and communicate.
-
-For example, an environment module might:
-- Maintain a shared conversation history for a group chat
-- Store and manage a knowledge base that multiple agents can read from and write to
-- Provide a shared task queue for coordinating work between agents
-- Manage game state for multi-agent simulations
-
 ## Knowledge Base Modules
 
 ### Interact with the Knowledge Base Hub
@@ -245,7 +250,13 @@ naptha kbs
 ### Register a New Knowledge Base Module on the Hub
 
 ```bash
-naptha kbs kb_name -p "description='Knowledge Base description' parameters='{input_parameter_1: str, input_parameter_2: int}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
+naptha kbs kb_name -c "description='Knowledge Base description' parameters='{input_parameter_1: str, input_parameter_2: int}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
+```
+
+### Update a Knowledge Base Module
+
+```bash
+naptha kbs kb_name -u "module_version='v0.2'" 
 ```
 
 ### Delete a Knowledge Base Module
@@ -344,7 +355,13 @@ naptha memories
 ### Register a New Memory Module on the Hub
 
 ```bash
-naptha memories memory_name -p "description='Memory description' parameters='{input_parameter_1: str, input_parameter_2: int}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
+naptha memories memory_name -c "description='Memory description' parameters='{input_parameter_1: str, input_parameter_2: int}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
+```
+
+### Update a Memory Module
+
+```bash
+naptha memories memory_name -u "module_version='v0.2'" 
 ```
 
 ### Delete a Memory Module
@@ -393,6 +410,42 @@ naptha run memory:cognitive_memory -p '{
 }'
 ```
 
+## Environment Modules
+
+Environment modules in Naptha provide shared state and communication infrastructure for multi-agent workflows. They act as a common space where agents can interact, share information, and maintain persistent state across workflow executions. Think of them as the "world" or "environment" in which agents operate and communicate.
+
+For example, an environment module might:
+- Maintain a shared conversation history for a group chat
+- Store and manage a knowledge base that multiple agents can read from and write to
+- Provide a shared task queue for coordinating work between agents
+- Manage game state for multi-agent simulations
+
+### Interact with the Environment Hub
+
+You can also use the CLI to explore available environment modules that you can use with agents:
+
+```bash
+naptha environments   
+```
+
+### Register a New Environment Module on the Hub
+
+```bash
+naptha environments environment_name -c "description='Environment description' parameters='{input_parameter_1: str, input_parameter_2: int}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
+```
+
+### Update an Environment Module
+
+```bash
+naptha environments environment_name -u "module_version='v0.2'" 
+```
+
+### Delete an Environment Module
+
+```bash
+naptha environments -d environment_name
+```
+
 ## Personas
 
 ### Interact with the Persona Hub
@@ -408,7 +461,13 @@ For each persona, you will see a url where you can check out the data.
 ### Create a New Persona
 
 ```bash
-naptha personas sam_altman_twitter -p "description='Persona for Sam Altman' parameters='{name: str, bio: str, openness: int}' module_url='https://huggingface.co/datasets/OpenAI/twitter_personas' module_entrypoint='data/sam.json'" 
+naptha personas sam_altman_twitter -c "description='Persona for Sam Altman' parameters='{name: str, bio: str, openness: int}' module_url='https://huggingface.co/datasets/OpenAI/twitter_personas' module_entrypoint='data/sam.json'" 
+```
+
+### Update a Persona
+
+```bash
+naptha personas sam_altman_twitter -u "module_version='v0.2'" 
 ```
 
 Make sure that the `module_url` is the url of the main repo (e.g the huggingface dataset, github repo, or repo stored on ipfs) and the `module_entrypoint` is the path to the file in the dataset (currently can be json or yaml).
@@ -416,7 +475,7 @@ Make sure that the `module_url` is the url of the main repo (e.g the huggingface
 ### Delete a Persona
 
 ```bash
-naptha personas -d persona_name
+naptha personas -d sam_altman_twitter
 ```
 
 ### Run an Agent with a Persona
