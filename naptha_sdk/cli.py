@@ -939,7 +939,7 @@ def _parse_metadata_args(args, module_type):
         "author": f"user:{args.public_key}",
         "module_url": parsed_params['module_url'],
         "module_type": parsed_params.get('module_type', module_type),
-        "module_version": parsed_params.get('module_version', '0.1'),
+        "module_version": parsed_params.get('module_version', 'v0.1'),
         "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py'),
         "execution_type": parsed_params.get('execution_type', 'package')
     }
