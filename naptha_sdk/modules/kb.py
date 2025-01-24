@@ -8,8 +8,8 @@ class KnowledgeBase:
     def __init__(self, kb_deployment: KBDeployment):
         self.kb_deployment = kb_deployment
         self.kb_node = NodeClient(self.kb_deployment.node)
-        self.table_name = kb_deployment.config.path
-        self.schema = kb_deployment.config.schema
+        self.table_name = kb_deployment.config.storage_config.path
+        self.storage_schema = kb_deployment.config.storage_config.storage_schema
         if "id_column" in kb_deployment.config:
             self.id_column = kb_deployment.config.id_column
         else:
@@ -27,7 +27,7 @@ class KnowledgeBase:
         try:
             tables = await self.kb_node.list_tables()
             if self.table_name not in tables:
-                await self.kb_node.create_table(self.table_name, self.schema)
+                await self.kb_node.create_table(self.table_name, self.storage_schema)
         except Exception as e:
             logger.error(f"Error initializing knowledge base: {str(e)}")
             raise
