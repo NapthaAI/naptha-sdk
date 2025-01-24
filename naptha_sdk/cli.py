@@ -517,38 +517,6 @@ async def list_servers(naptha):
     console.print(table)
     console.print(f"\n[green]Total servers:[/green] {len(servers)}")
 
-async def create_agent(naptha, agent_config):
-    print(f"Agent Config: {agent_config}")
-    agent = await naptha.hub.create_agent(agent_config)
-    if isinstance(agent, dict):
-        print(f"Agent created: {agent}")
-    elif isinstance(agent, list):
-        print(f"Agent created: {agent[0]}")
-
-async def create_orchestrator(naptha, orchestrator_config):
-    print(f"Orchestrator Config: {orchestrator_config}")
-    orchestrator = await naptha.hub.create_orchestrator(orchestrator_config)
-    if isinstance(orchestrator, dict):
-        print(f"Orchestrator created: {orchestrator}")
-    elif isinstance(orchestrator, list):
-        print(f"Orchestrator created: {orchestrator[0]}")
-
-async def create_environment(naptha, environment_config):
-    print(f"Environment Config: {environment_config}")
-    environment = await naptha.hub.create_environment(environment_config)
-    if isinstance(environment, dict):
-        print(f"Environment created: {environment}")
-    elif isinstance(environment, list):
-        print(f"Environment created: {environment[0]}")
-
-async def create_persona(naptha, persona_config):
-    print(f"Persona Config: {persona_config}")
-    persona = await naptha.hub.create_persona(persona_config)
-    if isinstance(persona, dict):
-        print(f"Persona created: {persona}")
-    elif isinstance(persona, list):
-        print(f"Persona created: {persona[0]}")
-
 async def create(
         naptha,
         module_name,
@@ -938,6 +906,44 @@ def _parse_str_args(args):
     args.parameters = _parse_parameters(args)
     return args
 
+def _parse_metadata_args(args, module_type):
+    """Parse metadata arguments and return a module configuration dictionary.
+    
+    Args:
+        args: The command line arguments
+        module_type: The type of module (agent, orchestrator, etc.)
+        
+    Returns:
+        dict: Module configuration dictionary
+    """
+    if not hasattr(args, 'metadata') or args.metadata is None:
+        return None
+        
+    params = shlex.split(args.metadata)
+    parsed_params = {}
+    for param in params:
+        key, value = param.split('=')
+        parsed_params[key] = value
+
+    required_metadata = ['description', 'parameters', 'module_url']
+    missing_metadata = [param for param in required_metadata if param not in parsed_params]
+    if missing_metadata:
+        print(f"Missing required metadata: {', '.join(missing_metadata)}")
+        return None
+        
+    return {
+        "id": f"{module_type}:{args.module_name}",
+        "name": args.module_name,
+        "description": parsed_params['description'],
+        "parameters": parsed_params['parameters'],
+        "author": f"user:{args.public_key}",
+        "module_url": parsed_params['module_url'],
+        "module_type": parsed_params.get('module_type', module_type),
+        "module_version": parsed_params.get('module_version', '0.1'),
+        "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py'),
+        "execution_type": parsed_params.get('execution_type', 'package')
+    }
+
 async def main():
     public_key = get_public_key(os.getenv("PRIVATE_KEY")) if os.getenv("PRIVATE_KEY") else None
     hub_username = os.getenv("HUB_USERNAME")
@@ -955,44 +961,44 @@ async def main():
 
     # Agent parser
     agents_parser = subparsers.add_parser("agents", help="List available agents.")
-    agents_parser.add_argument('agent_name', nargs='?', help='Optional agent name')
+    agents_parser.add_argument('module_name', nargs='?', help='Optional agent name')
     agents_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
     agents_parser.add_argument('-d', '--delete', action='store_true', help='Delete a agent')
 
     # Orchestrator parser
     orchestrators_parser = subparsers.add_parser("orchestrators", help="List available orchestrators.")
-    orchestrators_parser.add_argument('orchestrator_name', nargs='?', help='Optional orchestrator name')
+    orchestrators_parser.add_argument('module_name', nargs='?', help='Optional orchestrator name')
     orchestrators_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
     orchestrators_parser.add_argument('-d', '--delete', action='store_true', help='Delete an orchestrator')
 
     # Environment parser
     environments_parser = subparsers.add_parser("environments", help="List available environments.")
-    environments_parser.add_argument('environment_name', nargs='?', help='Optional environment name')
+    environments_parser.add_argument('module_name', nargs='?', help='Optional environment name')
     environments_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
     environments_parser.add_argument('-d', '--delete', action='store_true', help='Delete an environment')
 
     # Persona parser
     personas_parser = subparsers.add_parser("personas", help="List available personas.")
-    personas_parser.add_argument('persona_name', nargs='?', help='Optional persona name')
+    personas_parser.add_argument('module_name', nargs='?', help='Optional persona name')
     personas_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
     personas_parser.add_argument('-d', '--delete', action='store_true', help='Delete a persona')
 
     # Tool parser
     tools_parser = subparsers.add_parser("tools", help="List available tools.")
-    tools_parser.add_argument('tool_name', nargs='?', help='Optional tool name')
+    tools_parser.add_argument('module_name', nargs='?', help='Optional tool name')
     tools_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
     tools_parser.add_argument('-d', '--delete', action='store_true', help='Delete a tool')
 
     # Memory parser
     memories_parser = subparsers.add_parser("memories", help="List available memories.")
-    memories_parser.add_argument('memory_name', nargs='?', help='Optional memory name')
+    memories_parser.add_argument('module_name', nargs='?', help='Optional memory name')
     memories_parser.add_argument('-p', '--metadata', type=str, help='Metadata for memory registration in "key=value" format')
     memories_parser.add_argument('-d', '--delete', action='store_true', help='Delete a memory')
     memories_parser.add_argument('-m', '--memory_nodes', type=str, help='Memory nodes', default=["http://localhost:7001"])
 
     # Knowledge base parser
     kbs_parser = subparsers.add_parser("kbs", help="List available knowledge bases.")
-    kbs_parser.add_argument('kb_name', nargs='?', help='Optional knowledge base name')
+    kbs_parser.add_argument('module_name', nargs='?', help='Optional knowledge base name')
     kbs_parser.add_argument('-p', '--metadata', type=str, help='Metadata for knowledge base registration in "key=value" format')
     kbs_parser.add_argument('-d', '--delete', action='store_true', help='Delete a knowledge base')
     kbs_parser.add_argument('-k', '--kb_nodes', type=str, help='Knowledge base nodes')
@@ -1050,6 +1056,7 @@ async def main():
     async with naptha as naptha:
         args = parser.parse_args()
         args = _parse_str_args(args)
+        args.public_key = naptha.hub.public_key
         print(args)
         if args.command == "signup":
             _, _ = await user_setup_flow(hub_url, public_key)
@@ -1074,250 +1081,82 @@ async def main():
                 else:
                     await list_servers(naptha)
             elif args.command == "agents":
-                if not args.agent_name:
+                if not args.module_name:
                     await list_agents(naptha)
-                elif args.delete and len(args.agent_name.split()) == 1:
-                    await naptha.hub.delete_agent(args.agent_name)
-                elif len(args.agent_name.split()) == 1:
-                    if hasattr(args, 'metadata') and args.metadata is not None:
-                        params = shlex.split(args.metadata)
-                        parsed_params = {}
-                        for param in params:
-                            key, value = param.split('=')
-                            parsed_params[key] = value
-
-                        required_metadata = ['description', 'parameters', 'module_url']
-                        missing_metadata = [param for param in required_metadata if param not in parsed_params]
-                        if missing_metadata:
-                            print(f"Missing required metadata: {', '.join(missing_metadata)}")
-                            return
-                        agent_config = {
-                            "id": f"agent:{args.agent_name}",
-                            "name": args.agent_name,
-                            "description": parsed_params['description'],
-                            "parameters": parsed_params['parameters'],
-                            "author": f"user:{naptha.hub.public_key}",
-                            "module_url": parsed_params['module_url'],
-                            "module_type": parsed_params.get('module_type', 'agent'),
-                            "module_version": parsed_params.get('module_version', '0.1'),
-                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py'),
-                            "execution_type": parsed_params.get('execution_type', 'package')
-                        }
-                        await create_agent(naptha, agent_config)
+                elif args.delete and len(args.module_name.split()) == 1:
+                    await naptha.hub.delete_agent(args.module_name)
+                elif len(args.module_name.split()) == 1:
+                    module_config = _parse_metadata_args(args, "agent")
+                    if module_config:
+                        await naptha.hub.create_agent(module_config)
                 else:
                     print("Invalid command.")
             elif args.command == "orchestrators":
-                if not args.orchestrator_name:
+                if not args.module_name:
                     await list_orchestrators(naptha)
-                elif args.delete and len(args.orchestrator_name.split()) == 1:
-                    await naptha.hub.delete_orchestrator(args.orchestrator_name)
-                elif len(args.orchestrator_name.split()) == 1:
-                    if hasattr(args, 'metadata') and args.metadata is not None:
-                        params = shlex.split(args.metadata)
-                        parsed_params = {}
-                        for param in params:
-                            key, value = param.split('=')
-                            parsed_params[key] = value
-
-                        required_metadata = ['description', 'parameters', 'module_url']
-                        if not all(param in parsed_params for param in required_metadata):
-                            print(f"Missing one or more of the following required metadata: {required_metadata}")
-                            return
-                            
-                        orchestrator_config = {
-                            "id": f"orchestrator:{args.orchestrator_name}",
-                            "name": args.orchestrator_name,
-                            "description": parsed_params['description'],
-                            "parameters": parsed_params['parameters'],
-                            "author": f"user:{naptha.hub.public_key}",
-                            "module_url": parsed_params['module_url'],
-                            "module_type": parsed_params.get('module_type', 'orchestrator'),
-                            "module_version": parsed_params.get('module_version', '0.1'),
-                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py'),
-                            "execution_type": parsed_params.get('execution_type', 'package')
-                        }
-                        await create_orchestrator(naptha, orchestrator_config)
+                elif args.delete and len(args.module_name.split()) == 1:
+                    await naptha.hub.delete_orchestrator(args.module_name)
+                elif len(args.module_name.split()) == 1:
+                    module_config = _parse_metadata_args(args, "orchestrator")
+                    if module_config:
+                        await naptha.hub.create_orchestrator(module_config)
                 else:
                     print("Invalid command.")
             elif args.command == "environments":
-                if not args.environment_name:
+                if not args.module_name:
                     await list_environments(naptha)
-                elif args.delete and len(args.environment_name.split()) == 1:
-                    await naptha.hub.delete_environment(args.environment_name)
-                elif len(args.environment_name.split()) == 1:
-                    if hasattr(args, 'metadata') and args.metadata is not None:
-                        params = shlex.split(args.metadata)
-                        parsed_params = {}
-                        for param in params:
-                            key, value = param.split('=')
-                            parsed_params[key] = value
-
-                        required_metadata = ['description', 'parameters', 'module_url']
-                        if not all(param in parsed_params for param in required_metadata):
-                            print(f"Missing one or more of the following required metadata: {required_metadata}")
-                            return
-                            
-                        environment_config = {
-                            "id": f"environment:{args.environment_name}",
-                            "name": args.environment_name,
-                            "description": parsed_params['description'],
-                            "parameters": parsed_params['parameters'],
-                            "author": f"user:{naptha.hub.public_key}",
-                            "module_url": parsed_params['module_url'],
-                            "module_type": parsed_params.get('module_type', 'environment'),
-                            "module_version": parsed_params.get('module_version', '0.1'),
-                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py'),
-                            "execution_type": parsed_params.get('execution_type', 'package')
-                        }
-                        await create_environment(naptha, environment_config)
+                elif args.delete and len(args.module_name.split()) == 1:
+                    await naptha.hub.delete_environment(args.module_name)
+                elif len(args.module_name.split()) == 1:
+                    module_config = _parse_metadata_args(args, "environment")
+                    if module_config:
+                        await naptha.hub.create_environment(module_config)
                 else:
                     print("Invalid command.")
             elif args.command == "tools":
-                if not args.tool_name:
+                if not args.module_name:
                     await list_tools(naptha)
-                elif args.delete and len(args.tool_name.split()) == 1:
-                    await naptha.hub.delete_tool(args.tool_name)
-                elif len(args.tool_name.split()) == 1:
-                    if hasattr(args, 'metadata') and args.metadata is not None:
-                        params = shlex.split(args.metadata)
-                        parsed_params = {}
-                        for param in params:
-                            key, value = param.split('=')
-                            parsed_params[key] = value
-
-                        required_metadata = ['description', 'parameters', 'module_url']
-                        if not all(param in parsed_params for param in required_metadata):
-                            print(f"Missing one or more of the following required metadata: {required_metadata}")
-                            return
-                            
-                        tool_config = {
-                            "id": f"tool:{args.tool_name}",
-                            "name": args.tool_name,
-                            "description": parsed_params['description'],
-                            "parameters": parsed_params['parameters'],
-                            "author": f"user:{naptha.hub.public_key}",
-                            "module_url": parsed_params['module_url'],
-                            "module_type": parsed_params.get('module_type', 'tool'),
-                            "module_version": parsed_params.get('module_version', '0.1'),
-                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py'),
-                            "execution_type": parsed_params.get('execution_type', 'package')
-                        }
-                        await naptha.hub.create_tool(tool_config)
+                elif args.delete and len(args.module_name.split()) == 1:
+                    await naptha.hub.delete_tool(args.module_name)
+                elif len(args.module_name.split()) == 1:
+                    module_config = _parse_metadata_args(args, "tool")
+                    if module_config:
+                        await naptha.hub.create_tool(module_config)
                 else:
                     print("Invalid command.")
             elif args.command == "personas":
-                if not args.persona_name:
+                if not args.module_name:
                     await list_personas(naptha)
-                elif args.delete and len(args.persona_name.split()) == 1:
-                    await naptha.hub.delete_persona(args.persona_name)
-                elif len(args.persona_name.split()) == 1:
-                    if hasattr(args, 'metadata') and args.metadata is not None:
-                        params = shlex.split(args.metadata)
-                        parsed_params = {}
-                        for param in params:
-                            key, value = param.split('=')
-                            parsed_params[key] = value
-
-                        required_metadata = ['description', 'parameters', 'module_url']
-                        if not all(param in parsed_params for param in required_metadata):
-                            print(f"Missing one or more of the following required metadata: {required_metadata}")
-                            return
-                            
-                        persona_config = {
-                            "id": f"persona:{args.persona_name}",
-                            "name": args.persona_name,
-                            "description": parsed_params['description'],
-                            "parameters": parsed_params['parameters'],
-                            "author": f"user:{naptha.hub.public_key}",
-                            "module_url": parsed_params['module_url'],
-                            "module_type": parsed_params.get('module_type', 'persona'),
-                            "module_version": parsed_params.get('module_version', '0.1'),
-                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py'),
-                            "execution_type": parsed_params.get('execution_type', 'package')
-                        }
-                        await create_persona(naptha, persona_config)
+                elif args.delete and len(args.module_name.split()) == 1:
+                    await naptha.hub.delete_persona(args.module_name)
+                elif len(args.module_name.split()) == 1:
+                    module_config = _parse_metadata_args(args, "persona")
+                    if module_config:
+                        await naptha.hub.create_persona(module_config)
                 else:
                     print("Invalid command.")
             elif args.command == "memories":
-                if not args.memory_name:
-                    # List all memories
+                if not args.module_name:
                     await list_memories(naptha)
-                elif args.list:
-                    # List content of specific memory
-                    await list_memory_content(naptha, args.memory_name)
-                elif args.add:
-                    # Add data to memory
-                    if not args.content:
-                        console = Console()
-                        console.print("[red]Data is required for add command.[/red]")
-                        return
-                    await add_data_to_memory(naptha, args.memory_name, args.content, user_id=f"user:{naptha.hub.public_key}", memory_node_url=args.memory_node_urls[0])
-                elif args.delete and len(args.memory_name.split()) == 1:
-                    await naptha.hub.delete_memory(args.memory_name)
-                elif len(args.memory_name.split()) == 1:
-                    if hasattr(args, 'metadata') and args.metadata is not None:
-                        params = shlex.split(args.metadata)
-                        parsed_params = {}
-                        for param in params:
-                            key, value = param.split('=')
-                            parsed_params[key] = value
-
-                        required_metadata = ['description', 'parameters', 'module_url']
-                        if not all(param in parsed_params for param in required_metadata):
-                            print(f"Missing one or more of the following required metadata: {required_metadata}")
-                            return
-                            
-                        memory_config = {
-                            "id": f"memory:{args.memory_name}",
-                            "name": args.memory_name,
-                            "description": parsed_params['description'],
-                            "parameters": parsed_params['parameters'],
-                            "author": f"user:{naptha.hub.public_key}",
-                            "module_url": parsed_params['module_url'],
-                            "module_type": parsed_params.get('module_type', 'memory'),
-                            "module_version": parsed_params.get('module_version', '0.1'),
-                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py'),
-                            "execution_type": parsed_params.get('execution_type', 'package')
-                        }
-                        await naptha.hub.create_memory(memory_config)
+                elif args.delete and len(args.module_name.split()) == 1:
+                    await naptha.hub.delete_memory(args.module_name)
+                elif len(args.module_name.split()) == 1:
+                    module_config = _parse_metadata_args(args, "memory")
+                    if module_config:
+                        await naptha.hub.create_memory(module_config)
                 else:
-                    # Show specific memory info
-                    await list_memories(naptha, args.memory_name)
+                    await list_memories(naptha, args.module_name)
             elif args.command == "kbs":
-                if not args.kb_name:
-                    # List all knowledge bases
+                if not args.module_name:
                     await list_kbs(naptha)
-                elif args.delete and len(args.kb_name.split()) == 1:
-                    await naptha.hub.delete_kb(args.kb_name)
-                elif len(args.kb_name.split()) == 1:
-                    if hasattr(args, 'metadata') and args.metadata is not None:
-                        params = shlex.split(args.metadata)
-                        parsed_params = {}
-                        for param in params:
-                            key, value = param.split('=')
-                            parsed_params[key] = value
-
-                        required_metadata = ['description', 'parameters', 'module_url']
-                        if not all(param in parsed_params for param in required_metadata):
-                            print(f"Missing one or more of the following required metadata: {required_metadata}")
-                            return
-                            
-                        kb_config = {
-                            "id": f"kb:{args.kb_name}",
-                            "name": args.kb_name,
-                            "description": parsed_params['description'],
-                            "parameters": parsed_params['parameters'],
-                            "author": f"user:{naptha.hub.public_key}",
-                            "module_url": parsed_params['module_url'],
-                            "module_type": parsed_params.get('module_type', 'kb'),
-                            "module_version": parsed_params.get('module_version', '0.1'),
-                            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py'),
-                            "execution_type": parsed_params.get('execution_type', 'package')
-                        }
-                        await naptha.hub.create_kb(kb_config)
+                elif args.delete and len(args.module_name.split()) == 1:
+                    await naptha.hub.delete_kb(args.module_name)
+                elif len(args.module_name.split()) == 1:
+                    module_config = _parse_metadata_args(args, "kb")
+                    if module_config:
+                        await naptha.hub.create_kb(module_config)
                 else:
-                    # Show specific knowledge base info
-                    await list_kbs(naptha, args.kb_name)
+                    await list_kbs(naptha, args.module_name)
             elif args.command == "create":
                 await create(naptha, args.module, args.agent_modules, args.agent_nodes, args.environment_modules, args.environment_nodes)
             elif args.command == "run":                    

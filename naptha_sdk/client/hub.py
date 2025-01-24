@@ -312,45 +312,59 @@ class Hub:
 
     async def create_agent(self, agent_config: Dict) -> Tuple[bool, Optional[Dict]]:
         if not agent_config.get('id'):
-            return await self.surrealdb.create("agent", agent_config)
+            agent = await self.surrealdb.create("agent", agent_config)
         else:
-            return await self.surrealdb.create(agent_config.pop('id'), agent_config)
+            agent = await self.surrealdb.create(agent_config.pop('id'), agent_config)
+        print(f"Agent created: {agent}")
+        return agent
 
     async def create_tool(self, tool_config: Dict) -> Tuple[bool, Optional[Dict]]:
         if not tool_config.get('id'):
-            return await self.surrealdb.create("tool", tool_config)
+            tool = await self.surrealdb.create("tool", tool_config)
         else:
-            return await self.surrealdb.create(tool_config.pop('id'), tool_config)
+            tool = await self.surrealdb.create(tool_config.pop('id'), tool_config)
+        print(f"Tool created: {tool}")
+        return tool
 
     async def create_orchestrator(self, orchestrator_config: Dict) -> Tuple[bool, Optional[Dict]]:
         if not orchestrator_config.get('id'):
-            return await self.surrealdb.create("orchestrator", orchestrator_config)
+            orchestrator = await self.surrealdb.create("orchestrator", orchestrator_config)
         else:
-            return await self.surrealdb.create(orchestrator_config.pop('id'), orchestrator_config)
+            orchestrator = await self.surrealdb.create(orchestrator_config.pop('id'), orchestrator_config)
+        print(f"Orchestrator created: {orchestrator}")
+        return orchestrator
 
     async def create_environment(self, environment_config: Dict) -> Tuple[bool, Optional[Dict]]:
         if not environment_config.get('id'):
-            return await self.surrealdb.create("environment", environment_config)
+            environment = await self.surrealdb.create("environment", environment_config)
         else:
-            return await self.surrealdb.create(environment_config.pop('id'), environment_config)
+            environment = await self.surrealdb.create(environment_config.pop('id'), environment_config)
+        print(f"Environment created: {environment}")
+        return environment
 
     async def create_persona(self, persona_config: Dict) -> Tuple[bool, Optional[Dict]]:
         if not persona_config.get('id'):
-            return await self.surrealdb.create("persona", persona_config)
+            persona = await self.surrealdb.create("persona", persona_config)
         else:
-            return await self.surrealdb.create(persona_config.pop('id'), persona_config)
+            persona = await self.surrealdb.create(persona_config.pop('id'), persona_config)
+        print(f"Persona created: {persona}")
+        return persona
         
     async def create_memory(self, memory_config: Dict) -> Tuple[bool, Optional[Dict]]:
         if not memory_config.get('id'):
-            return await self.surrealdb.create("memory", memory_config)
+            memory = await self.surrealdb.create("memory", memory_config)
         else:
-            return await self.surrealdb.create(memory_config.pop('id'), memory_config)
+            memory = await self.surrealdb.create(memory_config.pop('id'), memory_config)
+        print(f"Memory created: {memory}")
+        return memory
 
     async def create_kb(self, kb_config: Dict) -> Tuple[bool, Optional[Dict]]:
         if not kb_config.get('id'):
-            return await self.surrealdb.create("kb", kb_config)
+            kb = await self.surrealdb.create("kb", kb_config)
         else:
-            return await self.surrealdb.create(kb_config.pop('id'), kb_config)
+            kb = await self.surrealdb.create(kb_config.pop('id'), kb_config)
+        print(f"Knowledge base created: {kb}")
+        return kb
 
     async def update_agent(self, agent_config: Dict) -> Tuple[bool, Optional[Dict]]:
         return await self.surrealdb.update("agent", agent_config)
