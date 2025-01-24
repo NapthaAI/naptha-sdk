@@ -1,3 +1,4 @@
+from copy import deepcopy
 import json
 import os
 import shutil
@@ -105,7 +106,9 @@ class NodeClient:
             raise ValueError("Invalid server type. Server type must be either 'ws' or 'grpc'.")
 
     async def run_module_ws(self, module_type: str, run_input: Union[AgentRunInput, KBRunInput, ToolRunInput, MemoryRunInput, EnvironmentRunInput]):
-        response = await self.send_receive_ws(run_input.model_dict(), f"{module_type}/run")
+        run_input_dict = deepcopy(run_input)
+        run_input_dict = run_input_dict.model_dict()
+        response = await self.send_receive_ws(run_input_dict, f"{module_type}/run")
         
         output_types = {
             "agent": AgentRun,
