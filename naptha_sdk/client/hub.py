@@ -310,6 +310,39 @@ class Hub:
             print("Failed to delete knowledge base")
         return success
 
+    async def update_module(self, module_type: str, module_config: Dict) -> Tuple[bool, Optional[Dict]]:
+        """
+        Unified method to update any module type (agent, tool, orchestrator, etc.)
+        
+        Args:
+            module_type: Type of module ('agent', 'tool', 'orchestrator', 'environment', 'persona', 'memory', 'kb')
+            module_config: Configuration dictionary for the module
+            
+        Returns:
+            Tuple containing the updated module data
+        """
+        valid_types = {'agent', 'tool', 'orchestrator', 'environment', 'persona', 'memory', 'kb'}
+        if module_type not in valid_types:
+            raise ValueError(f"Invalid module type. Must be one of: {', '.join(valid_types)}")
+
+        if not module_config.get('id'):
+            module = await self.surrealdb.update(module_type, module_config)
+        else:
+            # For partial updates, use MERGE to only update specified fields
+            module_id = module_config.pop('id')
+            query = "UPDATE $module_id MERGE $updates RETURN AFTER;"
+            result = await self.surrealdb.query(
+                query,
+                {
+                    "module_id": module_id,
+                    "updates": module_config
+                }
+            )
+            module = result[0]['result'][0] if result and result[0]['result'] else None
+            
+        logger.info(f"Updated {module_type}: {module}")
+        return module
+
     async def create_agent(self, agent_config: Dict) -> Tuple[bool, Optional[Dict]]:
         if not agent_config.get('id'):
             agent = await self.surrealdb.create("agent", agent_config)
@@ -365,9 +398,6 @@ class Hub:
             kb = await self.surrealdb.create(kb_config.pop('id'), kb_config)
         print(f"Knowledge base created: {kb}")
         return kb
-
-    async def update_agent(self, agent_config: Dict) -> Tuple[bool, Optional[Dict]]:
-        return await self.surrealdb.update("agent", agent_config)
 
     async def create_or_update_module(self, module_type, module_config: Dict) -> Tuple[bool, Optional[Dict]]:
         list_modules = await self.list_modules(module_type, module_config.get('id'))

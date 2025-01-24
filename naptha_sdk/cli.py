@@ -916,33 +916,48 @@ def _parse_metadata_args(args, module_type):
     Returns:
         dict: Module configuration dictionary
     """
-    if not hasattr(args, 'metadata') or args.metadata is None:
+    metadata = None
+    if hasattr(args, 'metadata') and args.metadata is not None:
+        metadata = args.metadata
+    elif hasattr(args, 'update') and args.update is not None:
+        metadata = args.update
+        
+    if metadata is None:
         return None
         
-    params = shlex.split(args.metadata)
+    params = shlex.split(metadata)
     parsed_params = {}
     for param in params:
         key, value = param.split('=')
         parsed_params[key] = value
 
-    required_metadata = ['description', 'parameters', 'module_url']
-    missing_metadata = [param for param in required_metadata if param not in parsed_params]
-    if missing_metadata:
-        print(f"Missing required metadata: {', '.join(missing_metadata)}")
-        return None
+    # Only check required metadata if this is a new module creation
+    if hasattr(args, 'metadata') and args.metadata is not None:
+        required_metadata = ['description', 'parameters', 'module_url']
+        missing_metadata = [param for param in required_metadata if param not in parsed_params]
+        if missing_metadata:
+            print(f"Missing required metadata: {', '.join(missing_metadata)}")
+            return None
         
-    return {
-        "id": f"{module_type}:{args.module_name}",
-        "name": args.module_name,
-        "description": parsed_params['description'],
-        "parameters": parsed_params['parameters'],
-        "author": f"user:{args.public_key}",
-        "module_url": parsed_params['module_url'],
-        "module_type": parsed_params.get('module_type', module_type),
-        "module_version": parsed_params.get('module_version', 'v0.1'),
-        "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py'),
-        "execution_type": parsed_params.get('execution_type', 'package')
-    }
+        module_config = {
+            "id": f"{module_type}:{args.module_name}",
+            "name": args.module_name,
+            "description": parsed_params['description'],
+            "parameters": parsed_params['parameters'],
+            "author": f"user:{args.public_key}",
+            "module_url": parsed_params['module_url'],
+            "module_type": parsed_params.get('module_type', module_type),
+            "module_version": parsed_params.get('module_version', 'v0.1'),
+            "module_entrypoint": parsed_params.get('module_entrypoint', 'run.py'),
+            "execution_type": parsed_params.get('execution_type', 'package')
+        }
+    else:
+        module_config = {
+            "id": f"{module_type}:{args.module_name}",
+            **parsed_params
+        }
+
+    return module_config
 
 async def main():
     public_key = get_public_key(os.getenv("PRIVATE_KEY")) if os.getenv("PRIVATE_KEY") else None
@@ -963,36 +978,42 @@ async def main():
     agents_parser = subparsers.add_parser("agents", help="List available agents.")
     agents_parser.add_argument('module_name', nargs='?', help='Optional agent name')
     agents_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
+    agents_parser.add_argument("-u", '--update', type=str, help='Metadata in "key=value" format')
     agents_parser.add_argument('-d', '--delete', action='store_true', help='Delete a agent')
 
     # Orchestrator parser
     orchestrators_parser = subparsers.add_parser("orchestrators", help="List available orchestrators.")
     orchestrators_parser.add_argument('module_name', nargs='?', help='Optional orchestrator name')
     orchestrators_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
+    orchestrators_parser.add_argument("-u", '--update', type=str, help='Metadata in "key=value" format')
     orchestrators_parser.add_argument('-d', '--delete', action='store_true', help='Delete an orchestrator')
 
     # Environment parser
     environments_parser = subparsers.add_parser("environments", help="List available environments.")
     environments_parser.add_argument('module_name', nargs='?', help='Optional environment name')
     environments_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
+    environments_parser.add_argument("-u", '--update', type=str, help='Metadata in "key=value" format')
     environments_parser.add_argument('-d', '--delete', action='store_true', help='Delete an environment')
 
     # Persona parser
     personas_parser = subparsers.add_parser("personas", help="List available personas.")
     personas_parser.add_argument('module_name', nargs='?', help='Optional persona name')
     personas_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
+    personas_parser.add_argument("-u", '--update', type=str, help='Metadata in "key=value" format')
     personas_parser.add_argument('-d', '--delete', action='store_true', help='Delete a persona')
 
     # Tool parser
     tools_parser = subparsers.add_parser("tools", help="List available tools.")
     tools_parser.add_argument('module_name', nargs='?', help='Optional tool name')
     tools_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
+    tools_parser.add_argument("-u", '--update', type=str, help='Metadata in "key=value" format')
     tools_parser.add_argument('-d', '--delete', action='store_true', help='Delete a tool')
 
     # Memory parser
     memories_parser = subparsers.add_parser("memories", help="List available memories.")
     memories_parser.add_argument('module_name', nargs='?', help='Optional memory name')
     memories_parser.add_argument('-p', '--metadata', type=str, help='Metadata for memory registration in "key=value" format')
+    memories_parser.add_argument('-u', '--update', type=str, help='Metadata for memory update in "key=value" format')
     memories_parser.add_argument('-d', '--delete', action='store_true', help='Delete a memory')
     memories_parser.add_argument('-m', '--memory_nodes', type=str, help='Memory nodes', default=["http://localhost:7001"])
 
@@ -1000,6 +1021,7 @@ async def main():
     kbs_parser = subparsers.add_parser("kbs", help="List available knowledge bases.")
     kbs_parser.add_argument('module_name', nargs='?', help='Optional knowledge base name')
     kbs_parser.add_argument('-p', '--metadata', type=str, help='Metadata for knowledge base registration in "key=value" format')
+    kbs_parser.add_argument('-u', '--update', type=str, help='Metadata for knowledge base update in "key=value" format')
     kbs_parser.add_argument('-d', '--delete', action='store_true', help='Delete a knowledge base')
     kbs_parser.add_argument('-k', '--kb_nodes', type=str, help='Knowledge base nodes')
 
@@ -1083,6 +1105,10 @@ async def main():
             elif args.command == "agents":
                 if not args.module_name:
                     await list_agents(naptha)
+                elif args.update and len(args.module_name.split()) == 1:
+                    module_config = _parse_metadata_args(args, "agent")
+                    if module_config:
+                        await naptha.hub.update_module("agent", module_config)
                 elif args.delete and len(args.module_name.split()) == 1:
                     await naptha.hub.delete_agent(args.module_name)
                 elif len(args.module_name.split()) == 1:
@@ -1094,6 +1120,10 @@ async def main():
             elif args.command == "orchestrators":
                 if not args.module_name:
                     await list_orchestrators(naptha)
+                elif args.update and len(args.module_name.split()) == 1:
+                    module_config = _parse_metadata_args(args, "orchestrator")
+                    if module_config:
+                        await naptha.hub.update_module("orchestrator", module_config)
                 elif args.delete and len(args.module_name.split()) == 1:
                     await naptha.hub.delete_orchestrator(args.module_name)
                 elif len(args.module_name.split()) == 1:
@@ -1105,6 +1135,10 @@ async def main():
             elif args.command == "environments":
                 if not args.module_name:
                     await list_environments(naptha)
+                elif args.update and len(args.module_name.split()) == 1:
+                    module_config = _parse_metadata_args(args, "environment")
+                    if module_config:
+                        await naptha.hub.update_module("environment", module_config)
                 elif args.delete and len(args.module_name.split()) == 1:
                     await naptha.hub.delete_environment(args.module_name)
                 elif len(args.module_name.split()) == 1:
@@ -1116,6 +1150,10 @@ async def main():
             elif args.command == "tools":
                 if not args.module_name:
                     await list_tools(naptha)
+                elif args.update and len(args.module_name.split()) == 1:
+                    module_config = _parse_metadata_args(args, "tool")
+                    if module_config:
+                        await naptha.hub.update_module("tool", module_config)
                 elif args.delete and len(args.module_name.split()) == 1:
                     await naptha.hub.delete_tool(args.module_name)
                 elif len(args.module_name.split()) == 1:
@@ -1127,6 +1165,10 @@ async def main():
             elif args.command == "personas":
                 if not args.module_name:
                     await list_personas(naptha)
+                elif args.update and len(args.module_name.split()) == 1:
+                    module_config = _parse_metadata_args(args, "persona")
+                    if module_config:
+                        await naptha.hub.update_module("persona", module_config)
                 elif args.delete and len(args.module_name.split()) == 1:
                     await naptha.hub.delete_persona(args.module_name)
                 elif len(args.module_name.split()) == 1:
@@ -1138,6 +1180,10 @@ async def main():
             elif args.command == "memories":
                 if not args.module_name:
                     await list_memories(naptha)
+                elif args.update and len(args.module_name.split()) == 1:
+                    module_config = _parse_metadata_args(args, "memory")
+                    if module_config:
+                        await naptha.hub.update_module("memory", module_config)
                 elif args.delete and len(args.module_name.split()) == 1:
                     await naptha.hub.delete_memory(args.module_name)
                 elif len(args.module_name.split()) == 1:
@@ -1149,6 +1195,10 @@ async def main():
             elif args.command == "kbs":
                 if not args.module_name:
                     await list_kbs(naptha)
+                elif args.update and len(args.module_name.split()) == 1:
+                    module_config = _parse_metadata_args(args, "kb")
+                    if module_config:
+                        await naptha.hub.update_module("kb", module_config)
                 elif args.delete and len(args.module_name.split()) == 1:
                     await naptha.hub.delete_kb(args.module_name)
                 elif len(args.module_name.split()) == 1:
