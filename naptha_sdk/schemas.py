@@ -47,6 +47,12 @@ class LLMClientType(str, Enum):
     OLLAMA = "ollama"
     STABILITY = "stability"
 
+class EmbeddingModelOptions(BaseModel):
+    chunk_size: Optional[int] = None
+    chunk_overlap: Optional[int] = None
+    separators: Optional[List[str]] = None
+    embedding_dim: Optional[int] = None
+
 class LLMConfig(BaseModel):
     config_name: Optional[str] = "llm_config"
     client: Optional[LLMClientType] = None
@@ -54,6 +60,7 @@ class LLMConfig(BaseModel):
     max_tokens: Optional[int] = None
     temperature: Optional[float] = None
     api_base: Optional[str] = None
+    options: Optional[EmbeddingModelOptions] = None
 
 class AgentModuleType(str, Enum):
     package = "package"
@@ -71,10 +78,12 @@ class ToolConfig(BaseModel):
 
 class OrchestratorConfig(BaseModel):
     config_name: Optional[str] = "orchestrator_config"
+    llm_config: Optional[LLMConfig] = None
     max_rounds: Optional[int] = 5
 
 class EnvironmentConfig(BaseModel):
     config_name: Optional[str] = "environment_config"
+    llm_config: Optional[LLMConfig] = None
     environment_type: Optional[str] = None
     storage_config: Optional[StorageConfig] = None
 
@@ -87,6 +96,7 @@ class EnvironmentConfig(BaseModel):
 
 class KBConfig(BaseModel):
     config_name: Optional[str] = None
+    llm_config: Optional[LLMConfig] = None
     storage_config: Optional[StorageConfig] = None
 
     def model_dict(self):
@@ -98,6 +108,7 @@ class KBConfig(BaseModel):
 
 class MemoryConfig(BaseModel):
     config_name: Optional[str] = None
+    llm_config: Optional[LLMConfig] = None
     storage_config: Optional[StorageConfig] = None
 
     def model_dict(self):
