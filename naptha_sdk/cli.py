@@ -188,10 +188,16 @@ async def list_servers(naptha):
 async def create(
         naptha,
         module_name,
-        agent_modules = None,
-        agent_nodes = None,
-        environment_modules = None,
-        environment_nodes = None
+        agent_modules: list = None,
+        agent_nodes: list = None,
+        tool_modules: list = None,
+        tool_nodes: list = None,
+        kb_modules: list = None,
+        kb_nodes: list = None,
+        memory_modules: list = None,
+        memory_nodes: list = None,
+        environment_modules: list = None,
+        environment_nodes: list = None
 ):
     module_type = module_name.split(":")[0] if ":" in module_name else "agent"
     module_name = module_name.split(":")[-1]  # Remove prefix if exists
@@ -211,16 +217,37 @@ async def create(
             AgentDeployment(
                 name=agent_module,
                 module={"name": agent_module},
-                node=url_to_node(agent_node)
+                node=NodeConfigUser(ip=agent_node.strip())
             ) for agent_module, agent_node in zip(agent_modules or [], agent_nodes or [])
+        ],
+        "tool_deployments": [
+            ToolDeployment(
+                name=tool_module,
+                module={"name": tool_module},
+                node=NodeConfigUser(ip=tool_node.strip())
+            ) for tool_module, tool_node in zip(tool_modules or [], tool_nodes or [])
+        ],
+        "kb_deployments": [
+            KBDeployment(
+                name=kb_module,
+                module={"name": kb_module},
+                node=NodeConfigUser(ip=kb_node.strip())
+            ) for kb_module, kb_node in zip(kb_modules or [], kb_nodes or [])
+        ],
+        "memory_deployments": [
+            MemoryDeployment(
+                name=memory_module,
+                module={"name": memory_module},
+                node=NodeConfigUser(ip=memory_node.strip())
+            ) for memory_module, memory_node in zip(memory_modules or [], memory_nodes or [])
         ],
         "environment_deployments": [
             EnvironmentDeployment(
                 name=env_module,
                 module={"name": env_module},
-                node=url_to_node(env_node)
+                node=NodeConfigUser(ip=env_node.strip())
             ) for env_module, env_node in zip(environment_modules or [], environment_nodes or [])
-        ]
+        ],
     }
 
     # Define deployment configurations for each module type
@@ -262,7 +289,6 @@ async def create(
     if module_type not in deployment_configs:
         raise ValueError(f"Unsupported module type: {module_type}")
 
-    print(f"Creating {module_type.title()}...")
     deployment = deployment_configs[module_type]()
     result = await naptha.node.create(module_type, deployment)
     print(f"{module_type.title()} creation result: {result}")
@@ -569,6 +595,9 @@ def _parse_str_args(args):
     args.kb_nodes = _parse_list_arg(args, 'kb_nodes', default=None)
     args.memory_nodes = _parse_list_arg(args, 'memory_nodes', default=None)
     args.agent_modules = _parse_list_arg(args, 'agent_modules', default=None)
+    args.tool_modules = _parse_list_arg(args, 'tool_modules', default=None)
+    args.kb_modules = _parse_list_arg(args, 'kb_modules', default=None)
+    args.memory_modules = _parse_list_arg(args, 'memory_modules', default=None)
     args.environment_modules = _parse_list_arg(args, 'environment_modules', default=None)
     args.persona_modules = _parse_list_arg(args, 'persona_modules', default=None)
     args.parameters = _parse_parameters(args)
@@ -696,10 +725,16 @@ async def main():
     # Create parser
     create_parser = subparsers.add_parser("create", help="Execute create command.")
     create_parser.add_argument("module", help="Select the module to create")
-    create_parser.add_argument("-a", "--agent_modules", help="Agent modules to create")
-    create_parser.add_argument("-n", "--agent_nodes", help="Agent nodes to take part in orchestrator runs.")
-    create_parser.add_argument("-e", "--environment_modules", help="Environment module to create")
-    create_parser.add_argument("-m", "--environment_nodes", help="Environment nodes to store data during agent runs.")
+    create_parser.add_argument("-am", "--agent_modules", help="Agent modules to create")
+    create_parser.add_argument("-an", "--agent_nodes", help="Agent nodes to take part in orchestrator runs.")
+    create_parser.add_argument("-tm", "--tool_modules", help="Tool modules to create")
+    create_parser.add_argument("-tn", "--tool_nodes", help="Tool nodes to take part in module runs.")
+    create_parser.add_argument("-km", "--kb_modules", help="Knowledge base modules to create")
+    create_parser.add_argument("-kn", "--kb_nodes", help="Knowledge base nodes to take part in module runs.")
+    create_parser.add_argument("-mm", "--memory_modules", help="Memory modules to create")
+    create_parser.add_argument("-mn", "--memory_nodes", help="Memory nodes to take part in module runs.")
+    create_parser.add_argument("-em", "--environment_modules", help="Environment module to create")
+    create_parser.add_argument("-en", "--environment_nodes", help="Environment nodes to store data during agent runs.")
 
     # Run parser
     run_parser = subparsers.add_parser("run", help="Execute run command.")
@@ -876,7 +911,7 @@ async def main():
                 else:
                     await list_modules(naptha, module_type='kb')
             elif args.command == "create":
-                await create(naptha, args.module, args.agent_modules, args.agent_nodes, args.environment_modules, args.environment_nodes)
+                await create(naptha, args.module, args.agent_modules, args.agent_nodes, args.tool_modules, args.tool_nodes, args.kb_modules, args.kb_nodes, args.memory_modules, args.memory_nodes, args.environment_modules, args.environment_nodes)
             elif args.command == "run":                    
                 await run(naptha, args.agent, args.parameters, args.agent_nodes, args.tool_nodes, args.environment_nodes, args.kb_nodes, args.memory_nodes, args.file, args.persona_modules)
             elif args.command == "inference":
