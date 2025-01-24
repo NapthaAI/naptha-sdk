@@ -58,7 +58,7 @@ class Naptha:
                 "author": self.hub.user_id,
                 "module_url": "None",
                 "module_type": "agent",
-                "module_version": "0.1",
+                "module_version": "v0.1",
                 "execution_type": "agent"
             }
             logger.info(f"Registering Agent {agent_config}")

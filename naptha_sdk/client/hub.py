@@ -121,10 +121,6 @@ class Hub:
             return result[0]["result"][0]
         return None
 
-    async def get_credits(self) -> List:
-        user = await self.get_user(self.user_id)
-        return user['credits']
-
     async def get_node(self, node_id: str) -> Optional[Dict]:
         return await self.surrealdb.select(node_id)
 
@@ -154,206 +150,120 @@ class Hub:
             node['ports'] = alt_ports
             return node
 
-    async def list_agents(self, agent_name=None) -> List:
-        if not agent_name:
-            agents = await self.surrealdb.query("SELECT * FROM agent;")
-            return agents[0]['result']
-        else:
-            agent = await self.surrealdb.query("SELECT * FROM agent WHERE id=$agent_name;", {"agent_name": agent_name})
-            return agent[0]['result']
-
-    async def list_tools(self, tool_name=None) -> List:
-        if not tool_name:
-            tools = await self.surrealdb.query("SELECT * FROM tool;")
-            return tools[0]['result']
-        else:
-            tool = await self.surrealdb.query("SELECT * FROM tool WHERE name=$tool_name;", {"tool_name": tool_name})
-            return tool[0]['result']
-
-    async def list_orchestrators(self, orchestrator_name=None) -> List:
-        if not orchestrator_name:
-            orchestrators = await self.surrealdb.query("SELECT * FROM orchestrator;")
-            return orchestrators[0]['result']
-        else:
-            orchestrator = await self.surrealdb.query("SELECT * FROM orchestrator WHERE id=$orchestrator_name;", {"orchestrator_name": orchestrator_name})
-            return orchestrator[0]['result']
-
-    async def list_environments(self, environment_name=None) -> List:
-        if not environment_name:
-            environments = await self.surrealdb.query("SELECT * FROM environment;")
-            return environments[0]['result']
-        else:
-            environment = await self.surrealdb.query("SELECT * FROM environment WHERE id=$environment_name;", {"environment_name": environment_name})
-            return environment[0]['result']
-
-    async def list_personas(self, persona_name=None) -> List:
-        if not persona_name:
-            personas = await self.surrealdb.query("SELECT * FROM persona;")
-            return personas[0]['result']
-        else:
-            if not "persona:" in persona_name:
-                persona_name = f"persona:{persona_name}"
-            persona = await self.surrealdb.query("SELECT * FROM persona WHERE id=$persona_name;", {"persona_name": persona_name})
-            return persona[0]['result']
-    
-    async def list_memories(self, memory_name=None) -> List:
-        if not memory_name:
-            memories = await self.surrealdb.query("SELECT * FROM memory;")
-            return memories[0]['result']
-        else:
-            memory = await self.surrealdb.query("SELECT * FROM memory WHERE id=$memory_name;", {"memory_name": memory_name})
-            return memory[0]['result']
-
-    async def list_kbs(self, kb_name=None) -> List:
-        if not kb_name:
-            kbs = await self.surrealdb.query("SELECT * FROM kb;")
-            return kbs[0]['result']
-        else:
-            kb = await self.surrealdb.query("SELECT * FROM kb WHERE name=$kb_name;", {"kb_name": kb_name})
-            return kb[0]['result']
-
-    async def list_modules(self, module_type, module_name) -> List:
-        if module_type == 'agent':
-            modules = await self.surrealdb.query("SELECT * FROM agent WHERE id=$module_name;", {"module_name": module_name})
-        elif module_type == 'tool':
-            modules = await self.surrealdb.query("SELECT * FROM tool WHERE id=$module_name;", {"module_name": module_name})
-        elif module_type == 'orchestrator':
-            modules = await self.surrealdb.query("SELECT * FROM orchestrator WHERE id=$module_name;", {"module_name": module_name})
-        elif module_type == 'environment':
-            modules = await self.surrealdb.query("SELECT * FROM environment WHERE id=$module_name;", {"module_name": module_name})
-        elif module_type == 'persona':
-            modules = await self.surrealdb.query("SELECT * FROM persona WHERE id=$module_name;", {"module_name": module_name})
-        elif module_type == 'memory':
-            modules = await self.surrealdb.query("SELECT * FROM memory WHERE id=$module_name;", {"module_name": module_name})
-        elif module_type == 'kb':
-            modules = await self.surrealdb.query("SELECT * FROM kb WHERE id=$module_name;", {"module_name": module_name})
-        return modules[0]['result']
-
-    async def list_kb_content(self, kb_name: str) -> List:
-        kb_content = await self.surrealdb.query("SELECT * FROM kb_content WHERE kb_id=$kb_id;", {"kb_id": f"kb:{kb_name}"})
-        return kb_content[0]['result']
-
-    async def delete_agent(self, agent_id: str) -> Tuple[bool, Optional[Dict]]:
-        if ":" not in agent_id:
-            agent_id = f"agent:{agent_id}".strip()
-        print(f"Deleting agent: {agent_id}")
-        success = await self.surrealdb.delete(agent_id)
-        if success:
-            print("Deleted agent")
-        else:
-            print("Failed to delete agent")
-        return success
-
-    async def delete_tool(self, tool_id: str) -> Tuple[bool, Optional[Dict]]:
-        if ":" not in tool_id:
-            tool_id = f"tool:{tool_id}".strip()
-        print(f"Deleting tool: {tool_id}")
-        success = await self.surrealdb.delete(tool_id)
-        if success:
-            print("Deleted tool")
-        else:
-            print("Failed to delete tool")
-        return success
-
-    async def delete_orchestrator(self, orchestrator_id: str) -> Tuple[bool, Optional[Dict]]:
-        if ":" not in orchestrator_id:
-            orchestrator_id = f"orchestrator:{orchestrator_id}".strip()
-        print(f"Deleting orchestrator: {orchestrator_id}")
-        success = await self.surrealdb.delete(orchestrator_id)
-        if success:
-            print("Deleted orchestrator")
-        else:
-            print("Failed to delete orchestrator")
-        return success
-
-    async def delete_environment(self, environment_id: str) -> Tuple[bool, Optional[Dict]]:
-        if ":" not in environment_id:
-            environment_id = f"environment:{environment_id}".strip()
-        print(f"Deleting environment: {environment_id}")
-        success = await self.surrealdb.delete(environment_id)
-        if success:
-            print("Deleted environment")
-        else:
-            print("Failed to delete environment")
-        return success
-
-    async def delete_persona(self, persona_id: str) -> Tuple[bool, Optional[Dict]]:
-        if ":" not in persona_id:
-            persona_id = f"persona:{persona_id}".strip()
-        print(f"Deleting persona: {persona_id}")
-        success = await self.surrealdb.delete(persona_id)
-        if success:
-            print("Deleted persona")
-        else:
-            print("Failed to delete persona")
-        return success
-    
-    async def delete_memory(self, memory_id: str) -> Tuple[bool, Optional[Dict]]:
-        if ":" not in memory_id:
-            memory_id = f"memory:{memory_id}".strip()
-        print(f"Deleting memory: {memory_id}")
-        success = await self.surrealdb.delete(memory_id)
-        if success:
-            print("Deleted memory")
-        else:
-            print("Failed to delete memory")
-        return success
-
-    async def delete_kb(self, kb_id: str) -> Tuple[bool, Optional[Dict]]:
-        if ":" not in kb_id:
-            kb_id = f"kb:{kb_id}".strip()
-        print(f"Deleting knowledge base: {kb_id}")
-        success = await self.surrealdb.delete(kb_id)
-        if success:
-            print("Deleted knowledge base")
-        else:
-            print("Failed to delete knowledge base")
-        return success
-
-    async def create_agent(self, agent_config: Dict) -> Tuple[bool, Optional[Dict]]:
-        if not agent_config.get('id'):
-            return await self.surrealdb.create("agent", agent_config)
-        else:
-            return await self.surrealdb.create(agent_config.pop('id'), agent_config)
-
-    async def create_tool(self, tool_config: Dict) -> Tuple[bool, Optional[Dict]]:
-        if not tool_config.get('id'):
-            return await self.surrealdb.create("tool", tool_config)
-        else:
-            return await self.surrealdb.create(tool_config.pop('id'), tool_config)
-
-    async def create_orchestrator(self, orchestrator_config: Dict) -> Tuple[bool, Optional[Dict]]:
-        if not orchestrator_config.get('id'):
-            return await self.surrealdb.create("orchestrator", orchestrator_config)
-        else:
-            return await self.surrealdb.create(orchestrator_config.pop('id'), orchestrator_config)
-
-    async def create_environment(self, environment_config: Dict) -> Tuple[bool, Optional[Dict]]:
-        if not environment_config.get('id'):
-            return await self.surrealdb.create("environment", environment_config)
-        else:
-            return await self.surrealdb.create(environment_config.pop('id'), environment_config)
-
-    async def create_persona(self, persona_config: Dict) -> Tuple[bool, Optional[Dict]]:
-        if not persona_config.get('id'):
-            return await self.surrealdb.create("persona", persona_config)
-        else:
-            return await self.surrealdb.create(persona_config.pop('id'), persona_config)
+    async def create_module(self, module_type: str, module_config: Dict) -> Tuple[bool, Optional[Dict]]:
+        """
+        Unified method to create any module type (agent, tool, orchestrator, etc.)
         
-    async def create_memory(self, memory_config: Dict) -> Tuple[bool, Optional[Dict]]:
-        if not memory_config.get('id'):
-            return await self.surrealdb.create("memory", memory_config)
-        else:
-            return await self.surrealdb.create(memory_config.pop('id'), memory_config)
+        Args:
+            module_type: Type of module ('agent', 'tool', 'orchestrator', 'environment', 'persona', 'memory', 'kb')
+            module_config: Configuration dictionary for the module
+            
+        Returns:
+            Created module data
+        """
+        valid_types = {'agent', 'tool', 'orchestrator', 'environment', 'persona', 'memory', 'kb'}
+        if module_type not in valid_types:
+            raise ValueError(f"Invalid module type. Must be one of: {', '.join(valid_types)}")
 
-    async def create_kb(self, kb_config: Dict) -> Tuple[bool, Optional[Dict]]:
-        if not kb_config.get('id'):
-            return await self.surrealdb.create("kb", kb_config)
+        if not module_config.get('id'):
+            module = await self.surrealdb.create(module_type, module_config)
         else:
-            return await self.surrealdb.create(kb_config.pop('id'), kb_config)
+            module_id = module_config.pop('id')
+            module = await self.surrealdb.create(module_id, module_config)
+            
+        logger.info(f"Created {module_type}: {module}")
+        return module
 
-    async def update_agent(self, agent_config: Dict) -> Tuple[bool, Optional[Dict]]:
-        return await self.surrealdb.update("agent", agent_config)
+    async def update_module(self, module_type: str, module_config: Dict) -> Tuple[bool, Optional[Dict]]:
+        """
+        Unified method to update any module type (agent, tool, orchestrator, etc.)
+        
+        Args:
+            module_type: Type of module ('agent', 'tool', 'orchestrator', 'environment', 'persona', 'memory', 'kb')
+            module_config: Configuration dictionary for the module
+            
+        Returns:
+            Tuple containing the updated module data
+        """
+        valid_types = {'agent', 'tool', 'orchestrator', 'environment', 'persona', 'memory', 'kb'}
+        if module_type not in valid_types:
+            raise ValueError(f"Invalid module type. Must be one of: {', '.join(valid_types)}")
+
+        if not module_config.get('id'):
+            module = await self.surrealdb.update(module_type, module_config)
+        else:
+            # For partial updates, use MERGE to only update specified fields
+            module_id = module_config.pop('id')
+            query = "UPDATE $module_id MERGE $updates RETURN AFTER;"
+            result = await self.surrealdb.query(
+                query,
+                {
+                    "module_id": module_id,
+                    "updates": module_config
+                }
+            )
+            module = result[0]['result'][0] if result and result[0]['result'] else None
+            
+        logger.info(f"Updated {module_type}: {module}")
+        return module
+
+    async def delete_module(self, module_type: str, module_id: str) -> Tuple[bool, Optional[Dict]]:
+        """
+        Unified method to delete any module type (agent, tool, orchestrator, etc.)
+        
+        Args:
+            module_type: Type of module ('agent', 'tool', 'orchestrator', 'environment', 'persona', 'memory', 'kb')
+            module_id: ID of the module to delete
+            
+        Returns:
+            bool: True if deletion was successful, False otherwise
+        """
+        valid_types = {'agent', 'tool', 'orchestrator', 'environment', 'persona', 'memory', 'kb'}
+        if module_type not in valid_types:
+            raise ValueError(f"Invalid module type. Must be one of: {', '.join(valid_types)}")
+
+        if ":" not in module_id:
+            module_id = f"{module_type}:{module_id}".strip()
+            
+        logger.info(f"Deleting {module_type}: {module_id}")
+        success = await self.surrealdb.delete(module_id)
+        
+        if success:
+            logger.info(f"Deleted {module_type}")
+        else:
+            logger.warning(f"Failed to delete {module_type}")
+            
+        return success
+
+    async def list_modules(self, module_type: str, module_name: Optional[str] = None) -> List:
+        """
+        Unified method to list any module type (agent, tool, orchestrator, etc.)
+        
+        Args:
+            module_type: Type of module ('agent', 'tool', 'orchestrator', 'environment', 'persona', 'memory', 'kb')
+            module_name: Optional name/id of specific module to retrieve
+            
+        Returns:
+            List of modules or specific module if module_name is provided
+        """
+        valid_types = {'agent', 'tool', 'orchestrator', 'environment', 'persona', 'memory', 'kb'}
+        if module_type not in valid_types:
+            raise ValueError(f"Invalid module type. Must be one of: {', '.join(valid_types)}")
+
+        if not module_name:
+            result = await self.surrealdb.query(f"SELECT * FROM {module_type};")
+            return result[0]['result']
+        else:
+            # Handle special case for personas where we need to add prefix
+            if module_type == 'persona' and not "persona:" in module_name:
+                module_name = f"persona:{module_name}"
+                
+            # For specific module queries, use the id field
+            result = await self.surrealdb.query(
+                f"SELECT * FROM {module_type} WHERE id=$module_name;",
+                {"module_name": module_name}
+            )
+            return result[0]['result']
 
     async def create_or_update_module(self, module_type, module_config: Dict) -> Tuple[bool, Optional[Dict]]:
         list_modules = await self.list_modules(module_type, module_config.get('id'))
