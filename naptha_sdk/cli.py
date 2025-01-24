@@ -83,401 +83,69 @@ async def list_nodes(naptha):
     console.print(table)
     console.print(f"\n[green]Total nodes:[/green] {len(nodes)}")
 
-async def list_agents(naptha):
-    agents = await naptha.hub.list_agents()
+async def list_modules(naptha, module_type=None, module_name=None):
+    """List modules of a specific type or all modules if no type specified.
     
-    if not agents:
+    Args:
+        naptha: Naptha client instance
+        module_type (str, optional): Type of module to list (agent, tool, etc.)
+        module_name (str, optional): Specific module name to filter by
+    """
+    # Get modules of specified type or all modules
+    modules = await naptha.hub.list_modules(module_type=module_type)
+    
+    if not modules:
         console = Console()
-        console.print("[red]No agents found.[/red]")
+        console.print(f"[red]No {module_type or 'modules'} found.[/red]")
         return
 
+    # Configure table
+    title = f"Available {module_type.title() if module_type else 'Modules'}"
     console = Console()
     table = Table(
         box=box.ROUNDED,
         show_lines=True,
-        title="Available Agents",
-        title_style="bold cyan",
-        header_style="bold blue",
-        row_styles=["", "dim"]  # Alternating row styles
-    )
-
-    # Define columns with specific formatting
-    table.add_column("Name", justify="left", style="green")
-    table.add_column("ID", justify="left")
-    table.add_column("Author", justify="left")
-    table.add_column("Description", justify="left", max_width=50)
-    table.add_column("Parameters", justify="left", max_width=30)
-    table.add_column("Module URL", justify="left", max_width=30)
-    table.add_column("Module Version", justify="center")
-
-    # Add rows
-    for agent in agents:
-        table.add_row(
-            agent['name'],
-            agent['id'],
-            agent['author'],
-            agent['description'],
-            str(agent['parameters']),
-            agent['module_url'],
-            agent['module_version'],
-        )
-
-    # Print table and summary
-    console.print()
-    console.print(table)
-    console.print(f"\n[green]Total agents:[/green] {len(agents)}")
-
-async def list_tools(naptha):
-    tools = await naptha.hub.list_tools()
-    
-    if not tools:
-        console = Console()
-        console.print("[red]No tools found.[/red]")
-        return
-
-    console = Console()
-    table = Table(
-        box=box.ROUNDED,
-        show_lines=True,
-        title="Available Tools", 
-        title_style="bold cyan",
-        header_style="bold blue",
-        row_styles=["", "dim"]  # Alternating row styles
-    )
-
-    # Define columns with specific formatting
-    table.add_column("Name", justify="left", style="green")
-    table.add_column("ID", justify="left")
-    table.add_column("Author", justify="left")
-    table.add_column("Description", justify="left", max_width=50)
-    table.add_column("Parameters", justify="left", max_width=30)
-    table.add_column("Module URL", justify="left", max_width=30)
-    table.add_column("Module Version", justify="center")
-
-    # Add rows
-    for tool in tools:
-        table.add_row(
-            tool['name'],
-            tool['id'],
-            tool['author'],
-            tool['description'],
-            str(tool['parameters']),
-            tool['module_url'],
-            tool['module_version'],
-        )
-
-    # Print table and summary
-    console.print()
-    console.print(table)
-    console.print(f"\n[green]Total tools:[/green] {len(tools)}")
-
-async def list_orchestrators(naptha):
-    orchestrators = await naptha.hub.list_orchestrators()
-    
-    if not orchestrators:
-        console = Console()
-        console.print("[red]No orchestrators found.[/red]")
-        return
-
-    console = Console()
-    table = Table(
-        box=box.ROUNDED,
-        show_lines=True,
-        title="Available Orchestrators",
-        title_style="bold cyan",
-        header_style="bold blue",
-        row_styles=["", "dim"]  # Alternating row styles
-    )
-
-    # Define columns with specific formatting
-    table.add_column("Name", justify="left", style="green")
-    table.add_column("ID", justify="left")
-    table.add_column("Author", justify="left")
-    table.add_column("Description", justify="left", max_width=50)
-    table.add_column("Parameters", justify="left", max_width=30)
-    table.add_column("Module URL", justify="left", max_width=30)
-    table.add_column("Module Version", justify="center")
-
-    # Add rows
-    for orchestrator in orchestrators:
-        table.add_row(
-            orchestrator['name'],
-            orchestrator['id'],
-            orchestrator['author'],
-            orchestrator['description'],
-            str(orchestrator['parameters']),
-            orchestrator['module_url'],
-            orchestrator['module_version'],
-        )
-
-    # Print table and summary
-    console.print()
-    console.print(table)
-    console.print(f"\n[green]Total orchestrators:[/green] {len(orchestrators)}")
-
-async def list_environments(naptha):
-    environments = await naptha.hub.list_environments()
-    
-    if not environments:
-        console = Console()
-        console.print("[red]No environments found.[/red]")
-        return
-
-    console = Console()
-    table = Table(
-        box=box.ROUNDED,
-        show_lines=True,
-        title="Available Environments",
-        title_style="bold cyan",
-        header_style="bold blue",
-        row_styles=["", "dim"]  # Alternating row styles
-    )
-
-    # Define columns with specific formatting
-    table.add_column("Name", justify="left", style="green")
-    table.add_column("ID", justify="left")
-    table.add_column("Author", justify="left")
-    table.add_column("Description", justify="left", max_width=50)
-    table.add_column("Parameters", justify="left", max_width=30)
-    table.add_column("Module URL", justify="left", max_width=30)
-    table.add_column("Module Version", justify="center")
-
-    # Add rows
-    for environment in environments:
-        table.add_row(
-            environment['name'],
-            environment['id'],
-            environment['author'],
-            environment['description'],
-            str(environment['parameters']),
-            environment['module_url'],
-            environment['module_version'],
-        )
-
-    # Print table and summary
-    console.print()
-    console.print(table)
-    console.print(f"\n[green]Total environments:[/green] {len(environments)}")
-
-async def list_personas(naptha):
-    personas = await naptha.hub.list_personas()
-    
-    if not personas:
-        console = Console()
-        console.print("[red]No personas found.[/red]")
-        return
-
-    console = Console()
-    table = Table(
-        box=box.ROUNDED,
-        show_lines=True,
-        title="Available Personas",
-        title_style="bold cyan",
-        header_style="bold blue",
-        row_styles=["", "dim"]  # Alternating row styles
-    )
-
-    # Define columns with specific formatting
-    table.add_column("Name", justify="left", style="green")
-    table.add_column("ID", justify="left")
-    table.add_column("Author", justify="left")
-    table.add_column("Description", justify="left", max_width=50)
-    table.add_column("Parameters", justify="left", max_width=30)
-    table.add_column("Module URL", justify="left", max_width=40)
-    table.add_column("Module Version", justify="center")
-    table.add_column("Module Entrypoint", justify="center")
-
-    # Add rows
-    for persona in personas:
-        table.add_row(
-            persona['name'],
-            persona['id'],
-            persona['author'],
-            persona['description'],
-            persona['parameters'],
-            persona['module_url'],
-            persona['module_version'],
-            persona['module_entrypoint']
-        )
-
-    # Print table and summary
-    console.print()
-    console.print(table)
-    console.print(f"\n[green]Total personas:[/green] {len(personas)}")
-
-async def list_memories(naptha, memory_name=None):
-    memories = await naptha.hub.list_memories(memory_name=memory_name)
-
-    if not memories:
-        console = Console()
-        console.print("[red]No memories found.[/red]")
-        return
-    
-    console = Console()
-    table = Table(
-        box=box.ROUNDED,
-        show_lines=True,
-        title="Available memories",
+        title=title,
         title_style="bold cyan",
         header_style="bold blue",
         row_styles=["", "dim"]
     )
 
-    table.add_column("Name", justify="left", style="green")
-    table.add_column("ID", justify="left")
-    table.add_column("Author", justify="left")
-    table.add_column("Description", justify="left", max_width=50)
-    table.add_column("Parameters", justify="left", max_width=40)
-    table.add_column("Module URL", justify="left", max_width=40)
-    table.add_column("Module Version", justify="center")
+    # Define columns with consistent formatting
+    columns = {
+        "Name": {"justify": "left", "style": "green"},
+        "ID": {"justify": "left"},
+        "Author": {"justify": "left"},
+        "Description": {"justify": "left", "max_width": 50},
+        "Parameters": {"justify": "left", "max_width": 40},
+        "Module URL": {"justify": "left", "max_width": 40},
+        "Module Version": {"justify": "left"},
+        "Module Type": {"justify": "left"},
+        "Module Entrypoint": {"justify": "left"}
+    }
+
+    # Add columns to table
+    for col_name, col_props in columns.items():
+        table.add_column(col_name, **col_props)
 
     # Add rows
-    for memory in memories:
+    for module in modules:
         table.add_row(
-            memory['name'],
-            memory['id'],
-            memory['author'],
-            memory['description'],
-            memory['parameters'],
-            memory['module_url'],
-            memory['module_version']
+            module['name'],
+            module['id'],
+            module['author'],
+            module['description'],
+            str(module['parameters']),
+            module['module_url'],
+            module['module_version'],
+            module.get('module_type', ''),
+            module.get('module_entrypoint', '')
         )
 
     # Print table and summary
     console.print()
     console.print(table)
-    console.print(f"\n[green]Total memories:[/green] {len(memories)}")
-
-async def list_memory_content(naptha, memory_name):
-    rows = await naptha.node.query_table(
-        table_name=memory_name,   
-        columns="*",
-        condition=None,
-        order_by=None,
-        limit=None
-    )
-    
-    if not rows.get('rows'):
-        console = Console()
-        console.print("[red]No content found in memory.[/red]")
-        return
-
-    console = Console()
-    table = Table(
-        box=box.ROUNDED,
-        show_lines=True,
-        title=f"Memory Content: {memory_name}",
-        title_style="bold cyan",
-        header_style="bold blue",
-        row_styles=["", "dim"]
-    )
-
-    # Add headers
-    headers = list(rows['rows'][0].keys())
-    for header in headers:
-        if header.lower() in ['id', 'module_url']:
-            table.add_column(header, justify="left", max_width=40)
-        elif header.lower() in ['title', 'name']:
-            table.add_column(header, justify="left", style="green", max_width=40)
-        elif header.lower() in ['text', 'description', 'content']:
-            table.add_column(header, justify="left", max_width=60)
-        else:
-            table.add_column(header, justify="left", max_width=30)
-
-    # Add rows
-    for row in rows['rows']:
-        table.add_row(*[str(row.get(key, '')) for key in headers])
-
-    # Print table and summary
-    console.print()
-    console.print(table)
-    console.print(f"\n[green]Total rows:[/green] {len(rows['rows'])}")
-
-async def add_data_to_memory(naptha, memory_name, data, user_id=None, memory_node_url="http://localhost:7001"):
-    try:
-        # Parse the data string into a dictionary
-        data_dict = {}
-        # Split by spaces, but keep quoted strings together
-        parts = shlex.split(data)
-        
-        for part in parts:
-            if '=' in part:
-                key, value = part.split('=', 1)
-                # Remove quotes if they exist
-                value = value.strip("'\"")
-                data_dict[key] = value
-
-        data_dict = [data_dict]
-        
-        memory_run_input = {
-            "consumer_id": user_id,
-            "inputs": {
-                "mode": "add_data",
-                "data": json.dumps(data_dict)
-            },
-            "memory_deployment": {
-                "name": memory_name,
-                "module": {
-                    "name": memory_name
-                },
-                "memory_node_url": memory_node_url
-            }
-        }
-
-        memory_run = await naptha.node.run_memory_and_poll(memory_run_input)
-        console = Console()
-        console.print(f"\n[green]Successfully added data to memory:[/green] {memory_name}")
-        console.print(memory_run)
-        
-    except Exception as e:
-        console = Console()
-        console.print(f"\n[red]Error adding data to memory:[/red] {str(e)}")
-                  
-async def list_kbs(naptha, kb_name=None):
-    kbs = await naptha.hub.list_kbs(kb_name=kb_name)
-    
-    if not kbs:
-        console = Console()
-        console.print("[red]No knowledge bases found.[/red]")
-        return
-
-    console = Console()
-    table = Table(
-        box=box.ROUNDED,
-        show_lines=True,
-        title="Available Knowledge Bases",
-        title_style="bold cyan", 
-        header_style="bold blue",
-        row_styles=["", "dim"]  # Alternating row styles
-    )
-
-    # Define columns with specific formatting
-    table.add_column("Name", justify="left", style="green")
-    table.add_column("ID", justify="left")
-    table.add_column("Author", justify="left")
-    table.add_column("Description", justify="left", max_width=50)
-    table.add_column("Parameters", justify="left", max_width=40)
-    table.add_column("Module URL", justify="left", max_width=40)
-    table.add_column("Module Type", justify="left")
-    table.add_column("Module Version", justify="center")
-
-    # Add rows
-    for kb in kbs:
-        table.add_row(
-            kb['name'],
-            kb['id'],
-            kb['author'],
-            kb['description'],
-            kb['parameters'],
-            kb['module_url'],
-            kb['module_type'],
-            kb['module_version']
-        )
-
-    # Print table and summary
-    console.print()
-    console.print(table)
-    console.print(f"\n[green]Total knowledge bases:[/green] {len(kbs)}")
+    console.print(f"\n[green]Total {module_type or 'modules'}:[/green] {len(modules)}")
 
 async def list_servers(naptha):
     servers = await naptha.hub.list_servers()
@@ -917,8 +585,8 @@ def _parse_metadata_args(args, module_type):
         dict: Module configuration dictionary
     """
     metadata = None
-    if hasattr(args, 'metadata') and args.metadata is not None:
-        metadata = args.metadata
+    if hasattr(args, 'create') and args.create is not None:
+        metadata = args.create
     elif hasattr(args, 'update') and args.update is not None:
         metadata = args.update
         
@@ -932,7 +600,7 @@ def _parse_metadata_args(args, module_type):
         parsed_params[key] = value
 
     # Only check required metadata if this is a new module creation
-    if hasattr(args, 'metadata') and args.metadata is not None:
+    if hasattr(args, 'create') and args.create is not None:
         required_metadata = ['description', 'parameters', 'module_url']
         missing_metadata = [param for param in required_metadata if param not in parsed_params]
         if missing_metadata:
@@ -977,51 +645,51 @@ async def main():
     # Agent parser
     agents_parser = subparsers.add_parser("agents", help="List available agents.")
     agents_parser.add_argument('module_name', nargs='?', help='Optional agent name')
-    agents_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
+    agents_parser.add_argument("-c", '--create', type=str, help='Metadata in "key=value" format')
     agents_parser.add_argument("-u", '--update', type=str, help='Metadata in "key=value" format')
     agents_parser.add_argument('-d', '--delete', action='store_true', help='Delete a agent')
 
     # Orchestrator parser
     orchestrators_parser = subparsers.add_parser("orchestrators", help="List available orchestrators.")
     orchestrators_parser.add_argument('module_name', nargs='?', help='Optional orchestrator name')
-    orchestrators_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
+    orchestrators_parser.add_argument("-c", '--create', type=str, help='Metadata in "key=value" format')
     orchestrators_parser.add_argument("-u", '--update', type=str, help='Metadata in "key=value" format')
     orchestrators_parser.add_argument('-d', '--delete', action='store_true', help='Delete an orchestrator')
 
     # Environment parser
     environments_parser = subparsers.add_parser("environments", help="List available environments.")
     environments_parser.add_argument('module_name', nargs='?', help='Optional environment name')
-    environments_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
+    environments_parser.add_argument("-c", '--create', type=str, help='Metadata in "key=value" format')
     environments_parser.add_argument("-u", '--update', type=str, help='Metadata in "key=value" format')
     environments_parser.add_argument('-d', '--delete', action='store_true', help='Delete an environment')
 
     # Persona parser
     personas_parser = subparsers.add_parser("personas", help="List available personas.")
     personas_parser.add_argument('module_name', nargs='?', help='Optional persona name')
-    personas_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
+    personas_parser.add_argument("-c", '--create', type=str, help='Metadata in "key=value" format')
     personas_parser.add_argument("-u", '--update', type=str, help='Metadata in "key=value" format')
     personas_parser.add_argument('-d', '--delete', action='store_true', help='Delete a persona')
 
     # Tool parser
     tools_parser = subparsers.add_parser("tools", help="List available tools.")
     tools_parser.add_argument('module_name', nargs='?', help='Optional tool name')
-    tools_parser.add_argument("-p", '--metadata', type=str, help='Metadata in "key=value" format')
+    tools_parser.add_argument("-c", '--create', type=str, help='Metadata in "key=value" format')
     tools_parser.add_argument("-u", '--update', type=str, help='Metadata in "key=value" format')
     tools_parser.add_argument('-d', '--delete', action='store_true', help='Delete a tool')
 
     # Memory parser
     memories_parser = subparsers.add_parser("memories", help="List available memories.")
     memories_parser.add_argument('module_name', nargs='?', help='Optional memory name')
-    memories_parser.add_argument('-p', '--metadata', type=str, help='Metadata for memory registration in "key=value" format')
-    memories_parser.add_argument('-u', '--update', type=str, help='Metadata for memory update in "key=value" format')
+    memories_parser.add_argument("-c", '--create', type=str, help='Metadata in "key=value" format')
+    memories_parser.add_argument("-u", '--update', type=str, help='Metadata in "key=value" format')
     memories_parser.add_argument('-d', '--delete', action='store_true', help='Delete a memory')
     memories_parser.add_argument('-m', '--memory_nodes', type=str, help='Memory nodes', default=["http://localhost:7001"])
 
     # Knowledge base parser
     kbs_parser = subparsers.add_parser("kbs", help="List available knowledge bases.")
     kbs_parser.add_argument('module_name', nargs='?', help='Optional knowledge base name')
-    kbs_parser.add_argument('-p', '--metadata', type=str, help='Metadata for knowledge base registration in "key=value" format')
-    kbs_parser.add_argument('-u', '--update', type=str, help='Metadata for knowledge base update in "key=value" format')
+    kbs_parser.add_argument("-c", '--create', type=str, help='Metadata in "key=value" format')
+    kbs_parser.add_argument("-u", '--update', type=str, help='Metadata in "key=value" format')
     kbs_parser.add_argument('-d', '--delete', action='store_true', help='Delete a knowledge base')
     kbs_parser.add_argument('-k', '--kb_nodes', type=str, help='Knowledge base nodes')
 
@@ -1104,109 +772,109 @@ async def main():
                     await list_servers(naptha)
             elif args.command == "agents":
                 if not args.module_name:
-                    await list_agents(naptha)
+                    await list_modules(naptha, module_type='agent')
                 elif args.update and len(args.module_name.split()) == 1:
                     module_config = _parse_metadata_args(args, "agent")
                     if module_config:
                         await naptha.hub.update_module("agent", module_config)
                 elif args.delete and len(args.module_name.split()) == 1:
-                    await naptha.hub.delete_agent(args.module_name)
+                    await naptha.hub.delete_module("agent", args.module_name)
                 elif len(args.module_name.split()) == 1:
                     module_config = _parse_metadata_args(args, "agent")
                     if module_config:
-                        await naptha.hub.create_agent(module_config)
+                        await naptha.hub.create_module("agent", module_config)
                 else:
                     print("Invalid command.")
             elif args.command == "orchestrators":
                 if not args.module_name:
-                    await list_orchestrators(naptha)
+                    await list_modules(naptha, module_type='orchestrator')
                 elif args.update and len(args.module_name.split()) == 1:
                     module_config = _parse_metadata_args(args, "orchestrator")
                     if module_config:
                         await naptha.hub.update_module("orchestrator", module_config)
                 elif args.delete and len(args.module_name.split()) == 1:
-                    await naptha.hub.delete_orchestrator(args.module_name)
+                    await naptha.hub.delete_module("orchestrator", args.module_name)
                 elif len(args.module_name.split()) == 1:
                     module_config = _parse_metadata_args(args, "orchestrator")
                     if module_config:
-                        await naptha.hub.create_orchestrator(module_config)
+                        await naptha.hub.create_module("orchestrator", module_config)
                 else:
                     print("Invalid command.")
             elif args.command == "environments":
                 if not args.module_name:
-                    await list_environments(naptha)
+                    await list_modules(naptha, module_type='environment')
                 elif args.update and len(args.module_name.split()) == 1:
                     module_config = _parse_metadata_args(args, "environment")
                     if module_config:
                         await naptha.hub.update_module("environment", module_config)
                 elif args.delete and len(args.module_name.split()) == 1:
-                    await naptha.hub.delete_environment(args.module_name)
+                    await naptha.hub.delete_module("environment", args.module_name)
                 elif len(args.module_name.split()) == 1:
                     module_config = _parse_metadata_args(args, "environment")
                     if module_config:
-                        await naptha.hub.create_environment(module_config)
+                        await naptha.hub.create_module("environment", module_config)
                 else:
                     print("Invalid command.")
             elif args.command == "tools":
                 if not args.module_name:
-                    await list_tools(naptha)
+                    await list_modules(naptha, module_type='tool')
                 elif args.update and len(args.module_name.split()) == 1:
                     module_config = _parse_metadata_args(args, "tool")
                     if module_config:
                         await naptha.hub.update_module("tool", module_config)
                 elif args.delete and len(args.module_name.split()) == 1:
-                    await naptha.hub.delete_tool(args.module_name)
+                    await naptha.hub.delete_module("tool", args.module_name)
                 elif len(args.module_name.split()) == 1:
                     module_config = _parse_metadata_args(args, "tool")
                     if module_config:
-                        await naptha.hub.create_tool(module_config)
+                        await naptha.hub.create_module("tool", module_config)
                 else:
                     print("Invalid command.")
             elif args.command == "personas":
                 if not args.module_name:
-                    await list_personas(naptha)
+                    await list_modules(naptha, module_type='persona')
                 elif args.update and len(args.module_name.split()) == 1:
                     module_config = _parse_metadata_args(args, "persona")
                     if module_config:
                         await naptha.hub.update_module("persona", module_config)
                 elif args.delete and len(args.module_name.split()) == 1:
-                    await naptha.hub.delete_persona(args.module_name)
+                    await naptha.hub.delete_module("persona", args.module_name)
                 elif len(args.module_name.split()) == 1:
                     module_config = _parse_metadata_args(args, "persona")
                     if module_config:
-                        await naptha.hub.create_persona(module_config)
+                        await naptha.hub.create_module("persona", module_config)
                 else:
                     print("Invalid command.")
             elif args.command == "memories":
                 if not args.module_name:
-                    await list_memories(naptha)
+                    await list_modules(naptha, module_type='memory')
                 elif args.update and len(args.module_name.split()) == 1:
                     module_config = _parse_metadata_args(args, "memory")
                     if module_config:
                         await naptha.hub.update_module("memory", module_config)
                 elif args.delete and len(args.module_name.split()) == 1:
-                    await naptha.hub.delete_memory(args.module_name)
+                    await naptha.hub.delete_module("memory", args.module_name)
                 elif len(args.module_name.split()) == 1:
                     module_config = _parse_metadata_args(args, "memory")
                     if module_config:
-                        await naptha.hub.create_memory(module_config)
+                        await naptha.hub.create_module("memory", module_config)
                 else:
-                    await list_memories(naptha, args.module_name)
+                    await list_modules(naptha, module_type='memory')
             elif args.command == "kbs":
                 if not args.module_name:
-                    await list_kbs(naptha)
+                    await list_modules(naptha, module_type='kb')
                 elif args.update and len(args.module_name.split()) == 1:
                     module_config = _parse_metadata_args(args, "kb")
                     if module_config:
                         await naptha.hub.update_module("kb", module_config)
                 elif args.delete and len(args.module_name.split()) == 1:
-                    await naptha.hub.delete_kb(args.module_name)
+                    await naptha.hub.delete_module("kb", args.module_name)
                 elif len(args.module_name.split()) == 1:
                     module_config = _parse_metadata_args(args, "kb")
                     if module_config:
-                        await naptha.hub.create_kb(module_config)
+                        await naptha.hub.create_module("kb", module_config)
                 else:
-                    await list_kbs(naptha, args.module_name)
+                    await list_modules(naptha, module_type='kb')
             elif args.command == "create":
                 await create(naptha, args.module, args.agent_modules, args.agent_nodes, args.environment_modules, args.environment_nodes)
             elif args.command == "run":                    
