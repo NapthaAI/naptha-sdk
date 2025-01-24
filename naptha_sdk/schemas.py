@@ -33,9 +33,6 @@ class NodeConfig(BaseModel):
     ram: Optional[int] = Field(default=None)
     vram: Optional[int] = Field(default=None)
 
-    class Config:
-        allow_mutation = True
-
 class NodeConfigUser(BaseModel):
     ip: str
     http_port: Optional[int] = None
@@ -187,15 +184,6 @@ class DockerParams(BaseModel):
     docker_output_dir: Optional[str] = None
     save_location: str = "node"
 
-    class Config:
-        allow_mutation = True
-
-    class Config:
-        allow_mutation = True
-        json_encoders = {
-            datetime: lambda v: v.isoformat(),
-        }
-
     def model_dict(self):
         model_dict = self.dict()
         for key, value in model_dict.items():
@@ -221,11 +209,6 @@ class AgentRun(BaseModel):
     duration: Optional[float] = None
     input_schema_ipfs_hash: Optional[str] = None
     signature: str
-    class Config:
-        allow_mutation = True
-        json_encoders = {
-            datetime: lambda v: v.isoformat(),
-        }
 
     def model_dict(self):
         model_dict = self.dict()
