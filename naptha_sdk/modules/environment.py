@@ -10,7 +10,7 @@ class Environment:
         self.environment_deployment = environment_deployment
         self.environment_node = NodeClient(self.environment_deployment.node)
 
-    async def call_environment_func(self, module_run: EnvironmentRunInput):
+    async def call_environment_func(self, module_run_input: EnvironmentRunInput):
         logger.info(f"Running environment on environment node {self.environment_node}")
-        environment_run = await self.environment_node.run_module(module_type="environment", run_input=module_run)
+        environment_run = await self.environment_node.run_module(module_type="environment", run_input=module_run_input)
         return environment_run
