@@ -121,12 +121,6 @@ Try an agent that uses the local LLM running on your node:
 naptha run agent:simple_chat_agent -p "tool_name='chat' tool_input_data='what is an ai agent?'"
 ```
 
-You can also run agents from docker images (if running your own node, make sure the DOCKER_JOBS=True in the config):
-
-```bash
-naptha run docker_hello_world -p "docker_image=hello-world"
-```
-
 ## Tools
 
 ### Interact with the Tool Hub
@@ -274,15 +268,15 @@ naptha create kb:wikipedia_kb
 ### Initialize the content in the Knowledge Base
 
 ```bash
-naptha run kb:wikipedia_kb -p "function_name='init'"
+naptha run kb:wikipedia_kb -p "func_name='init'"
 ```
 
 ### List content in the Knowledge Base
 
 ```bash
 naptha run kb:wikipedia_kb -p '{
-    "function_name": "list_rows",
-    "function_input_data": {
+    "func_name": "list_rows",
+    "func_input_data": {
         "limit": "10"
     }
 }'
@@ -292,8 +286,8 @@ naptha run kb:wikipedia_kb -p '{
 
 ```bash
 naptha run kb:wikipedia_kb -p '{
-    "function_name": "add_data",
-    "function_input_data": {
+    "func_name": "add_data",
+    "func_input_data": {
         "url": "https://en.wikipedia.org/wiki/Socrates",
         "title": "Socrates",
         "text": "Socrates was a Greek philosopher from Athens who is credited as the founder of Western philosophy and as among the first moral philosophers of the ethical tradition of thought."
@@ -305,8 +299,8 @@ naptha run kb:wikipedia_kb -p '{
 
 ```bash
 naptha run kb:wikipedia_kb -p '{
-    "function_name": "run_query",
-    "function_input_data": {
+    "func_name": "run_query",
+    "func_input_data": {
         "query": "Elon Musk"
     }
 }'
@@ -316,8 +310,8 @@ naptha run kb:wikipedia_kb -p '{
 
 ```bash
 naptha run kb:wikipedia_kb -p '{
-    "function_name": "delete_row",
-    "function_input_data": {
+    "func_name": "delete_row",
+    "func_input_data": {
         "condition": {
             "title": "Elon Musk"
         }
@@ -329,8 +323,8 @@ naptha run kb:wikipedia_kb -p '{
 
 ```bash
 naptha run kb:wikipedia_kb -p '{
-    "function_name": "delete_table",
-    "function_input_data": {
+    "func_name": "delete_table",
+    "func_input_data": {
         "table_name": "wikipedia_kb"
     }
 }'
@@ -339,7 +333,7 @@ naptha run kb:wikipedia_kb -p '{
 ### Run an Agent that interacts with the Knowledge Base
 
 ```bash
-naptha run agent:wikipedia_agent -p "function_name='run_query' query='Elon Musk' question='Who is Elon Musk?'" --kb_nodes "localhost"
+naptha run agent:wikipedia_agent -p "func_name='run_query' query='Elon Musk' question='Who is Elon Musk?'" --kb_nodes "localhost"
 ```
 
 ## Memory Modules
