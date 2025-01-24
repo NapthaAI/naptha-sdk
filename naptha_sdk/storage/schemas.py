@@ -133,3 +133,13 @@ class SearchStorageRequest(BaseStorageRequest):
     query_type: str = "text"
     limit: Optional[int] = None
 
+class StorageConfig(BaseModel):
+    storage_type: StorageType
+    path: str
+    storage_schema: Dict[str, Any]
+    options: Dict[str, Any] = Field(default_factory=dict)
+
+    def model_dict(self):
+        model_dict = self.dict()
+        model_dict['storage_type'] = self.storage_type.value
+        return model_dict

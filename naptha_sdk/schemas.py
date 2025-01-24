@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Dict, List, Optional, Union, Any
 from datetime import datetime
 from pydantic import BaseModel, Field
-from naptha_sdk.storage.schemas import StorageType
+from naptha_sdk.storage.schemas import StorageConfig
 
 class User(BaseModel):
     id: str
@@ -33,9 +33,6 @@ class NodeConfig(BaseModel):
     ram: Optional[int] = Field(default=None)
     vram: Optional[int] = Field(default=None)
 
-    class Config:
-        allow_mutation = True
-
 class NodeConfigUser(BaseModel):
     ip: str
     http_port: Optional[int] = None
@@ -50,6 +47,12 @@ class LLMClientType(str, Enum):
     OLLAMA = "ollama"
     STABILITY = "stability"
 
+class EmbeddingModelOptions(BaseModel):
+    chunk_size: Optional[int] = None
+    chunk_overlap: Optional[int] = None
+    separators: Optional[List[str]] = None
+    embedding_dim: Optional[int] = None
+
 class LLMConfig(BaseModel):
     config_name: Optional[str] = "llm_config"
     client: Optional[LLMClientType] = None
@@ -57,6 +60,7 @@ class LLMConfig(BaseModel):
     max_tokens: Optional[int] = None
     temperature: Optional[float] = None
     api_base: Optional[str] = None
+    options: Optional[EmbeddingModelOptions] = None
 
 class AgentModuleType(str, Enum):
     package = "package"
@@ -74,38 +78,44 @@ class ToolConfig(BaseModel):
 
 class OrchestratorConfig(BaseModel):
     config_name: Optional[str] = "orchestrator_config"
+    llm_config: Optional[LLMConfig] = None
     max_rounds: Optional[int] = 5
 
 class EnvironmentConfig(BaseModel):
     config_name: Optional[str] = "environment_config"
+    llm_config: Optional[LLMConfig] = None
     environment_type: Optional[str] = None
+    storage_config: Optional[StorageConfig] = None
+
+    def model_dict(self):
+        if isinstance(self.storage_config, StorageConfig):
+            self.storage_config = self.storage_config.model_dict()
+        model_dict = self.dict()
+        model_dict['storage_config'] = self.storage_config
+        return model_dict
 
 class KBConfig(BaseModel):
     config_name: Optional[str] = None
-    storage_type: StorageType
-    path: str
-    schema: Dict[str, Any]
-    options: Optional[Dict[str, Any]] = None
+    llm_config: Optional[LLMConfig] = None
+    storage_config: Optional[StorageConfig] = None
 
     def model_dict(self):
-        if isinstance(self.storage_type, StorageType):
-            self.storage_type = self.storage_type.value
         model_dict = self.dict()
-        model_dict['storage_type'] = self.storage_type
+        if isinstance(self.storage_config, StorageConfig):
+            self.storage_config = self.storage_config.model_dict()
+        model_dict['storage_config'] = self.storage_config
         return model_dict
 
 class MemoryConfig(BaseModel):
     config_name: Optional[str] = None
-    storage_type: StorageType
-    path: str
-    schema: Dict[str, Any]
-    options: Optional[Dict[str, Any]] = None
+    llm_config: Optional[LLMConfig] = None
+    storage_config: Optional[StorageConfig] = None
 
     def model_dict(self):
-        if isinstance(self.storage_type, StorageType):
-            self.storage_type = self.storage_type.value
+        if isinstance(self.storage_config, StorageConfig):
+            self.storage_config = self.storage_config.model_dict()
         model_dict = self.dict()
-        model_dict['storage_type'] = self.storage_type
+        model_dict['storage_config'] = self.storage_config
         return model_dict
 
 class DataGenerationConfig(BaseModel):
@@ -185,15 +195,6 @@ class DockerParams(BaseModel):
     docker_output_dir: Optional[str] = None
     save_location: str = "node"
 
-    class Config:
-        allow_mutation = True
-
-    class Config:
-        allow_mutation = True
-        json_encoders = {
-            datetime: lambda v: v.isoformat(),
-        }
-
     def model_dict(self):
         model_dict = self.dict()
         for key, value in model_dict.items():
@@ -219,11 +220,6 @@ class AgentRun(BaseModel):
     duration: Optional[float] = None
     input_schema_ipfs_hash: Optional[str] = None
     signature: str
-    class Config:
-        allow_mutation = True
-        json_encoders = {
-            datetime: lambda v: v.isoformat(),
-        }
 
     def model_dict(self):
         model_dict = self.dict()

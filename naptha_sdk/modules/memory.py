@@ -16,7 +16,7 @@ class Memory:
         self.deployment = deployment
         self.node_client = NodeClient(self.deployment.node)
 
-    async def run_module(self, module_run: Union[AgentRun, MemoryRunInput]):
+    async def run_module(self, module_run_input: Union[AgentRun, MemoryRunInput]):
         logger.info(f"Running memory module on worker node {self.deployment.node}")
-        memory_run = await self.node_client.run_module(module_type="memory", run_input=module_run.model_dict())
+        memory_run = await self.node_client.run_module(module_type="memory", run_input=module_run_input)
         return memory_run

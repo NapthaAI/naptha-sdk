@@ -18,5 +18,5 @@ class Agent:
     async def call_agent_func(self, module_run_input: AgentRunInput, *args, **kwargs):
         logger.info(f"Running agent on worker node {self.agent_node.node_url}")
         
-        agent_run = await self.agent_node.run_module(module_type="agent", run_input=module_run_input.model_dict())
+        agent_run = await self.agent_node.run_module(module_type="agent", run_input=module_run_input)
         return agent_run

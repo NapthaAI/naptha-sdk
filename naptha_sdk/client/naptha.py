@@ -102,7 +102,7 @@ class Naptha:
                     "execution_type": "package"
                 }
         for module in modules:
-            if "module_url" in module and module['module_url'] is not "None":
+            if "module_url" in module and module['module_url'] != "None":
                 module_url = module['module_url']
             # For decorator=False, only the main module should not have a module_url
             else:

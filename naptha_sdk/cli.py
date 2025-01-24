@@ -145,7 +145,7 @@ async def list_modules(naptha, module_type=None, module_name=None):
     # Print table and summary
     console.print()
     console.print(table)
-    console.print(f"\n[green]Total {module_type or 'modules'}:[/green] {len(modules)}")
+    console.print(f"\n[green]Total {module_type} modules:[/green] {len(modules)}")
 
 async def list_servers(naptha):
     servers = await naptha.hub.list_servers()
@@ -782,7 +782,6 @@ async def main():
         args = parser.parse_args()
         args = _parse_str_args(args)
         args.public_key = naptha.hub.public_key
-        print(args)
         if args.command == "signup":
             _, _ = await user_setup_flow(hub_url, public_key)
         elif args.command in [
