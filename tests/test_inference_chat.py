@@ -7,7 +7,7 @@ from naptha_sdk.client.naptha import Naptha
 
 async def test_inference_chat_endpoint(naptha: Naptha):
     chat_request = ChatCompletionRequest(
-        model="gpt-4o-mini",
+        model="NousResearch/Hermes-3-Llama-3.1-8B",
         messages=[
             ChatMessage(role="user", content="Hello, how are you today?"),
             ChatMessage(role="assistant", content="I am doing well, thank you! How can I help?"),
@@ -17,7 +17,7 @@ async def test_inference_chat_endpoint(naptha: Naptha):
     )
 
     output = await naptha.inference_client.run_inference(chat_request)
-    print(output['choices'][0]['message']['content'])
+    print(output.choices[0].message.content)
 
 
 async def test_inference_chat_structured_output(naptha: Naptha):
@@ -41,7 +41,7 @@ async def test_inference_chat_structured_output(naptha: Naptha):
     prompt = """Sam is an intern at NapthaAI. His role is to help with the development of the NapthaAI platform. 
     You can find more information about him on his LinkedIn profile. You can also reach out to him on his email. sam@naptha.ai"""
     chat_request = ChatCompletionRequest(
-        model="gpt-4o-mini",
+        model="NousResearch/Hermes-3-Llama-3.1-8B",
         messages=[
             ChatMessage(role="user", content=prompt)
         ],
@@ -50,9 +50,8 @@ async def test_inference_chat_structured_output(naptha: Naptha):
     )
 
     output = await naptha.inference_client.run_inference(chat_request)
-    output = output['choices'][0]['message']['content']
-    user_output = User.model_validate_json(output)
-    print(user_output)
+    output = output.choices[0].message.content
+    print(output)
 
 
 async def main():
