@@ -1,3 +1,0 @@
-docker_image: "hello-world"
-docker_command: ""
-docker_num_gpus: 0

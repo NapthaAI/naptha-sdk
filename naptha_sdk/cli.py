@@ -7,7 +7,6 @@ from rich.console import Console
 from rich.table import Table
 from rich import box
 import json
-import yaml
 
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.client.naptha import Naptha
@@ -22,12 +21,6 @@ from naptha_sdk.user import get_public_key, sign_consumer_id
 from naptha_sdk.utils import url_to_node
 
 load_dotenv(override=True)
-
-def load_yaml_to_dict(file_path):
-    with open(file_path, 'r') as file:
-        # Load the YAML content into a Python dictionary
-        yaml_content = yaml.safe_load(file)
-    return yaml_content
 
 async def list_nodes(naptha):
     nodes = await naptha.hub.list_nodes()
@@ -303,14 +296,8 @@ async def run(
     environment_nodes=None,
     kb_nodes=None,
     memory_nodes=None,
-    yaml_file=None, 
     persona_modules=None
 ):   
-    if yaml_file and parameters:
-        raise ValueError("Cannot pass both yaml_file and parameters")
-    
-    if yaml_file:
-        parameters = load_yaml_to_dict(yaml_file)
 
     module_type = module_name.split(":")[0] if ":" in module_name else "agent" # Default to agent for backwards compatibility
 
@@ -746,7 +733,6 @@ async def main():
     run_parser.add_argument('-k', '--kb_nodes', type=str, help='Knowledge base nodes to take part in module runs.')
     run_parser.add_argument('-m', '--memory_nodes', type=str, help='Memory nodes')
     run_parser.add_argument("-pm", "--persona_modules", help="Personas URLs to install before running the agent")
-    run_parser.add_argument("-f", "--file", help="YAML file with module run parameters")
 
     # Inference parser
     inference_parser = subparsers.add_parser("inference", help="Run model inference.")
@@ -912,7 +898,7 @@ async def main():
             elif args.command == "create":
                 await create(naptha, args.module, args.agent_modules, args.agent_nodes, args.tool_modules, args.tool_nodes, args.kb_modules, args.kb_nodes, args.memory_modules, args.memory_nodes, args.environment_modules, args.environment_nodes)
             elif args.command == "run":                    
-                await run(naptha, args.agent, args.parameters, args.agent_nodes, args.tool_nodes, args.environment_nodes, args.kb_nodes, args.memory_nodes, args.file, args.persona_modules)
+                await run(naptha, args.agent, args.parameters, args.agent_nodes, args.tool_nodes, args.environment_nodes, args.kb_nodes, args.memory_nodes, args.persona_modules)
             elif args.command == "inference":
                 request = ChatCompletionRequest(
                     messages=[{"role": "user", "content": args.prompt}],
