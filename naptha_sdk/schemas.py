@@ -128,14 +128,14 @@ class DataGenerationConfig(BaseModel):
     default_filename: Optional[str] = None
 
 class ToolDeployment(BaseModel):
-    node: Union[NodeConfigUser, NodeConfig, Dict]
+    node: Union[NodeConfig, NodeConfigUser, Dict]
     name: Optional[str] = None
     module: Optional[Dict] = None
     config: Optional[ToolConfig] = None
     data_generation_config: Optional[DataGenerationConfig] = None
 
 class KBDeployment(BaseModel):
-    node: Union[NodeConfigUser, NodeConfig, Dict]
+    node: Union[NodeConfig, NodeConfigUser, Dict]
     name: Optional[str] = None
     module: Optional[Dict] = None
     config: Optional[KBConfig] = None
@@ -147,7 +147,7 @@ class KBDeployment(BaseModel):
         return model_dict
 
 class MemoryDeployment(BaseModel):
-    node: Union[NodeConfigUser, NodeConfig, Dict]
+    node: Union[NodeConfig, NodeConfigUser, Dict]
     name: Optional[str] = None
     module: Optional[Dict] = None
     config: Optional[MemoryConfig] = None
@@ -159,13 +159,13 @@ class MemoryDeployment(BaseModel):
         return model_dict
 
 class EnvironmentDeployment(BaseModel):
-    node: Union[NodeConfigUser, NodeConfig, Dict]
+    node: Union[NodeConfig, NodeConfigUser, Dict]
     name: Optional[str] = None
     module: Optional[Dict] = None
     config: Optional[EnvironmentConfig] = None
 
 class AgentDeployment(BaseModel):
-    node: Union[NodeConfigUser, NodeConfig, Dict]
+    node: Union[NodeConfig, NodeConfigUser, Dict]
     name: Optional[str] = None
     module: Optional[Dict] = None
     config: Optional[AgentConfig] = None
@@ -176,7 +176,7 @@ class AgentDeployment(BaseModel):
     memory_deployments: Optional[List[MemoryDeployment]] = None
 
 class OrchestratorDeployment(BaseModel):
-    node: Union[NodeConfigUser, NodeConfig, Dict]
+    node: Union[NodeConfig, NodeConfigUser, Dict]
     name: Optional[str] = None
     module: Optional[Dict] = None
     config: Optional[OrchestratorConfig] = None
@@ -282,6 +282,7 @@ class ToolRun(BaseModel):
     completed_time: Optional[str] = None
     duration: Optional[float] = None
     signature: str
+
 class OrchestratorRunInput(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
