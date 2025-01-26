@@ -30,7 +30,7 @@ HTTP_TIMEOUT = 300
 class NodeClient:
     def __init__(self, node: NodeConfig):
         self.node = node
-        self.server_type = node.server_type
+        self.node_communication_protocol = node.node_communication_protocol
         self.node_url = self.node_to_url(node)
         self.connections = {}
 
@@ -41,20 +41,20 @@ class NodeClient:
         ports = node.ports
         if len(ports) == 0:
             raise ValueError("No ports found for node")
-        if node.server_type == 'ws':
+        if node.node_communication_protocol == 'ws':
             return f"ws://{node.ip}:{random.choice(ports)}"
-        elif node.server_type == 'grpc':
+        elif node.node_communication_protocol == 'grpc':
             return f"{node.ip}:{random.choice(ports)}"
         else:
-            raise ValueError("Invalid server type. Server type must be either 'ws' or 'grpc'.")
+            raise ValueError("Invalid node communication protocol. Node communication protocol must be either 'ws' or 'grpc'.")
 
     async def check_user(self, user_input: Dict[str, str]) -> Dict[str, Any]:
-        if self.node.server_type == 'ws':
+        if self.node.node_communication_protocol == 'ws':
             return await self.check_user_ws(user_input)
-        elif self.node.server_type == 'grpc':
+        elif self.node.node_communication_protocol == 'grpc':
             return await self.check_user_grpc(user_input)
         else:
-            raise ValueError("Invalid server type. Server type must be either 'ws' or 'grpc'.")
+            raise ValueError("Invalid node communication protocol. Node communication protocol must be either 'ws' or 'grpc'.")
 
     async def check_user_ws(self, user_input: Dict[str, str]):
         response = await self.send_receive_ws(user_input, "user/check")
@@ -73,12 +73,12 @@ class NodeClient:
             return MessageToDict(response, preserving_proto_field_name=True)
 
     async def register_user(self, user_input: Dict[str, str]) -> Dict[str, Any]:
-        if self.node.server_type == 'ws':
+        if self.node.node_communication_protocol == 'ws':
             return await self.register_user_ws(user_input)
-        elif self.node.server_type == 'grpc':
+        elif self.node.node_communication_protocol == 'grpc':
             return await self.register_user_grpc(user_input)
         else:
-            raise ValueError("Invalid server type. Server type must be either 'ws' or 'grpc'.")
+            raise ValueError("Invalid node communication protocol. Node communication protocol must be either 'ws' or 'grpc'.")
         
     async def register_user_ws(self, user_input: Dict[str, str]):
         response = await self.send_receive_ws(user_input, "user/register")
@@ -98,12 +98,12 @@ class NodeClient:
             }
 
     async def run_module(self, module_type: str, run_input: Union[AgentRunInput, KBRunInput, ToolRunInput, MemoryRunInput, EnvironmentRunInput]):
-        if self.node.server_type == 'ws':
+        if self.node.node_communication_protocol == 'ws':
             return await self.run_module_ws(module_type, run_input)
-        elif self.node.server_type == 'grpc':
+        elif self.node.node_communication_protocol == 'grpc':
             return await self.run_module_grpc(module_type, run_input)
         else:
-            raise ValueError("Invalid server type. Server type must be either 'ws' or 'grpc'.")
+            raise ValueError("Invalid node communication protocol. Node communication protocol must be either 'ws' or 'grpc'.")
 
     async def run_module_ws(self, module_type: str, run_input: Union[AgentRunInput, KBRunInput, ToolRunInput, MemoryRunInput, EnvironmentRunInput]):
         run_input_dict = deepcopy(run_input)
@@ -138,8 +138,8 @@ class NodeClient:
             # Create node config
             node_config = grpc_server_pb2.NodeConfigUser(
                 ip=run_input.deployment.node.ip,
-                http_port=run_input.deployment.node.http_port,
-                server_type=run_input.deployment.node.server_type
+                user_communication_port=run_input.deployment.node.user_communication_port,
+                user_communication_protocol=run_input.deployment.node.user_communication_protocol
             )
 
             # Create module

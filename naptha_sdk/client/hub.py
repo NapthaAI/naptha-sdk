@@ -142,12 +142,12 @@ class Hub:
                 servers.append(server)
             node['servers'] = servers
 
-            alt_ports = [
+            node_communication_ports = [
                 server['port'] 
                 for server in servers
-                if server['server_type'] in ['ws', 'grpc']
+                if server['node_communication_protocol'] in ['ws', 'grpc']
             ]
-            node['ports'] = alt_ports
+            node['ports'] = node_communication_ports
             return node
 
     async def create_module(self, module_type: str, module_config: Dict) -> Tuple[bool, Optional[Dict]]:

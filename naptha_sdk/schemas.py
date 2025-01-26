@@ -8,7 +8,7 @@ class User(BaseModel):
     id: str
 
 class NodeServer(BaseModel):
-    server_type: str
+    communication_protocol: str
     port: int
     node_id: str
 
@@ -17,9 +17,10 @@ class NodeConfig(BaseModel):
     owner: str
     public_key: str
     ip: str = Field(default="localhost")
-    server_type: str = Field(default="ws")
-    http_port: int = Field(default=7001)
-    num_servers: int = Field(default=1)
+    user_communication_protocol: str = Field(default="http")
+    node_communication_protocol: str = Field(default="ws")
+    user_communication_port: int = Field(default=7001)
+    num_node_communication_servers: int = Field(default=1)
     provider_types: List[str] = Field(default=["models", "storage", "modules"])
     servers: List[NodeServer]
     models: List[str]
@@ -35,8 +36,8 @@ class NodeConfig(BaseModel):
 
 class NodeConfigUser(BaseModel):
     ip: str
-    http_port: Optional[int] = None
-    server_type: Optional[str] = None
+    user_communication_port: Optional[int] = None
+    user_communication_protocol: Optional[str] = None
 
 class LLMClientType(str, Enum):
     OPENAI = "openai"
@@ -127,14 +128,14 @@ class DataGenerationConfig(BaseModel):
     default_filename: Optional[str] = None
 
 class ToolDeployment(BaseModel):
-    node: Union[NodeConfigUser, NodeConfig, Dict]
+    node: Union[NodeConfig, NodeConfigUser, Dict]
     name: Optional[str] = None
     module: Optional[Dict] = None
     config: Optional[ToolConfig] = None
     data_generation_config: Optional[DataGenerationConfig] = None
 
 class KBDeployment(BaseModel):
-    node: Union[NodeConfigUser, NodeConfig, Dict]
+    node: Union[NodeConfig, NodeConfigUser, Dict]
     name: Optional[str] = None
     module: Optional[Dict] = None
     config: Optional[KBConfig] = None
@@ -146,7 +147,7 @@ class KBDeployment(BaseModel):
         return model_dict
 
 class MemoryDeployment(BaseModel):
-    node: Union[NodeConfigUser, NodeConfig, Dict]
+    node: Union[NodeConfig, NodeConfigUser, Dict]
     name: Optional[str] = None
     module: Optional[Dict] = None
     config: Optional[MemoryConfig] = None
@@ -158,13 +159,13 @@ class MemoryDeployment(BaseModel):
         return model_dict
 
 class EnvironmentDeployment(BaseModel):
-    node: Union[NodeConfigUser, NodeConfig, Dict]
+    node: Union[NodeConfig, NodeConfigUser, Dict]
     name: Optional[str] = None
     module: Optional[Dict] = None
     config: Optional[EnvironmentConfig] = None
 
 class AgentDeployment(BaseModel):
-    node: Union[NodeConfigUser, NodeConfig, Dict]
+    node: Union[NodeConfig, NodeConfigUser, Dict]
     name: Optional[str] = None
     module: Optional[Dict] = None
     config: Optional[AgentConfig] = None
@@ -175,7 +176,7 @@ class AgentDeployment(BaseModel):
     memory_deployments: Optional[List[MemoryDeployment]] = None
 
 class OrchestratorDeployment(BaseModel):
-    node: Union[NodeConfigUser, NodeConfig, Dict]
+    node: Union[NodeConfig, NodeConfigUser, Dict]
     name: Optional[str] = None
     module: Optional[Dict] = None
     config: Optional[OrchestratorConfig] = None
@@ -281,6 +282,7 @@ class ToolRun(BaseModel):
     completed_time: Optional[str] = None
     duration: Optional[float] = None
     signature: str
+
 class OrchestratorRunInput(BaseModel):
     consumer_id: str
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None

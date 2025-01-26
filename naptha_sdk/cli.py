@@ -49,9 +49,10 @@ async def list_nodes(naptha):
     table.add_column("Owner", justify="left")
     table.add_column("OS", justify="left")
     table.add_column("Arch", justify="left")
-    table.add_column("Num Servers", justify="left")
-    table.add_column("Server Type", justify="left")
-    table.add_column("HTTP Port", justify="left")
+    table.add_column("User Comm Protocol", justify="left")
+    table.add_column("User Comm Port", justify="left")
+    table.add_column("Num Node Comm Servers", justify="left")
+    table.add_column("Node Comm Protocol", justify="left")
     table.add_column("Models", justify="left")
     table.add_column("Num GPUs", justify="left")
     table.add_column("Provider Types", justify="left")
@@ -64,9 +65,10 @@ async def list_nodes(naptha):
             node['owner'],
             node['os'],
             node['arch'],
-            str(node['num_servers']),
-            node['server_type'],
-            str(node['http_port']),
+            node['user_communication_protocol'],
+            str(node['user_communication_port']),
+            str(node['num_node_communication_servers']),
+            node['node_communication_protocol'],
             str(node['models']), 
             str(node['num_gpus']),
             str(node['provider_types']) 
@@ -142,7 +144,7 @@ async def list_modules(naptha, module_type=None, module_name=None):
 
 async def list_servers(naptha):
     servers = await naptha.hub.list_servers()
-    
+    print(servers)
     if not servers:
         console = Console()
         console.print("[red]No servers found.[/red]")
@@ -159,18 +161,18 @@ async def list_servers(naptha):
     )
 
     # Add columns
-    table.add_column("Name", justify="left", style="green")
     table.add_column("ID", justify="left")
-    table.add_column("Connection", justify="left")
     table.add_column("Node ID", justify="left", max_width=30)
+    table.add_column("Communication Protocol", justify="left")
+    table.add_column("Port", justify="left")
 
     # Add rows
     for server in servers:
         table.add_row(
-            server['name'],
             server['id'],
-            server['connection_string'],
-            server['node_id'][:30] + "..."  # Truncate long node ID
+            server['node_id'],
+            server['communication_protocol'],
+            str(server['port'])
         )
 
     # Print table and summary

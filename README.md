@@ -491,7 +491,7 @@ import asyncio
 from naptha_sdk.schemas import NodeConfigUser
 from naptha_sdk.inference import InferenceClient
 
-node = NodeConfigUser(ip="node.naptha.ai", http_port=7001, server_type="http")
+node = NodeConfigUser(ip="node.naptha.ai", user_communication_port=7001, user_communication_protocol="http")
 inference_client = InferenceClient(node)
 
 messages = [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "What is the capital of France?"}]
@@ -520,7 +520,7 @@ from naptha_sdk.schemas import NodeConfigUser
 from naptha_sdk.storage.storage_provider import StorageProvider
 from naptha_sdk.storage.schemas import CreateStorageRequest, StorageType
 
-node = NodeConfigUser(ip="node.naptha.ai", http_port=7001, server_type="http")
+node = NodeConfigUser(ip="node.naptha.ai", user_communication_port=7001, user_communication_protocol="http")
 storage_provider = StorageProvider(node)
 
 schema = {
