@@ -57,6 +57,7 @@ async def test_inference_chat_structured_output(naptha: Naptha):
 async def main():
     naptha = Naptha()
     await test_inference_chat_structured_output(naptha)
+    await test_inference_chat_endpoint(naptha)
 
 
 if __name__ == "__main__":
