@@ -277,63 +277,6 @@ class Hub:
             logger.info(f"Module already exists. Updating existing module: {module_config.get('id')}")
             return await self.surrealdb.update(module_config.pop('id'), module_config)
 
-    async def fetch_existing_secrets_data(self) -> List[Dict]:
-        existing_secrets = await self.surrealdb.query("SELECT * FROM api_secrets")
-        return existing_secrets[0]['result']
-
-    def prepare_batch_query(self, secret_config: List[Dict], existing_data: List, update:bool = False) -> str:
-        existing_data_dict = {secret['key_name'] for secret in existing_data}
-        records_to_insert = []
-        records_to_update = []
-        
-        for secret in secret_config:
-            user_id = secret['user_id']
-            key_name = secret['key_name']
-            key_value = secret['secret_value']
-
-            if key_name not in existing_data_dict:
-                records_to_insert.append(f'{{"user_id": {user_id}, "key_name": "{key_name}", "secret_value": "{key_value}"}}')
-            else:
-                if update:
-                    records_to_update.append(
-                        {"secret_value": key_value, "user_id": user_id, "key_name": key_name}
-                    )
-
-        insert_query = ""
-        if records_to_insert:
-            insert_query = f"INSERT INTO api_secrets [{', '.join(records_to_insert)}];"
-
-        update_query = ""
-        if records_to_update:
-            for record in records_to_update:
-                update_query += f"UPDATE api_secrets SET secret_value='{record['secret_value']}' WHERE user_id={record['user_id']} AND key_name='{record['key_name']}';\n"
-
-        final_query = f"{insert_query}\n{update_query}".strip()
-
-        return final_query
-
-    async def create_secret(self, secret_config: List[Dict], update: bool = False) -> str:
-        existing_data = await self.fetch_existing_secrets_data()
-        final_query = self.prepare_batch_query(secret_config, existing_data, update)
-        if final_query:
-            result = await self.surrealdb.query(final_query)
-            logger.info("Records upserted successfully" if result[0]['status'] == 'OK' else "Something went wrong")
-        else:
-            logger.info("Records already exists")
-        
-    async def delete_secret(self, key_name: str) -> str:
-        result = await self.surrealdb.query("DELETE FROM api_secrets WHERE key_name=$key_name", {
-            'key_name': key_name
-        })
-
-        logger.info("Record removed successfully" if result[0]['status'] == 'OK' else "Something went wrong")
-    
-    async def get_user_secret(self, key_name: str) -> str:
-        result = await self.surrealdb.query("SELECT secret_value FROM api_secrets WHERE key_name=$key_name", {
-            'key_name': key_name
-        })
-        return result[0]['result']
-
     async def close(self):
         """Close the database connection"""
         try:

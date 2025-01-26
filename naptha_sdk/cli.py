@@ -7,6 +7,8 @@ from rich.console import Console
 from rich.table import Table
 from rich import box
 import json
+import yaml
+import httpx
 
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.client.naptha import Naptha
@@ -20,6 +22,7 @@ from naptha_sdk.storage.schemas import (
 from naptha_sdk.user import get_public_key, sign_consumer_id
 from naptha_sdk.utils import url_to_node, get_env_data, get_logger
 from naptha_sdk.secrets import create_secret
+from httpx import HTTPStatusError
 
 load_dotenv(override=True)
 logger = get_logger(__name__)
@@ -619,6 +622,34 @@ def _parse_str_args(args):
         
     return args
 
+async def _send_request(method: str, endpoint: str, data: dict = {}, params: dict = {}) -> str:
+    try:
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+            headers = {
+                'Content-Type': 'application/json',
+            }
+
+            if method == "GET":
+                response = await client.get(endpoint, headers=headers)
+            elif method == "POST":
+                response = await client.post(endpoint, json=data, headers=headers, params=params)
+            else:
+                raise ValueError(f"Unsupported HTTP method: {method}")
+
+            response.raise_for_status()
+
+            return response.json()
+    except HTTPStatusError as e:
+        print(f"HTTP error occurred: {e}")
+        raise
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        raise
+
+async def get_server_public_key() -> str:
+    endpoint = f"{os.getenv('NODE_URL')}/public_key"
+    return await _send_request("GET", endpoint)
+
 def _parse_metadata_args(args, module_type):
     """Parse metadata arguments and return a module configuration dictionary.
     
@@ -804,7 +835,9 @@ async def main():
     deploy_secrets_parser = subparsers.add_parser("deploy-secrets", help="Add API keys or tokens.")
     deploy_secrets_parser.add_argument("-e", "--env", help="Add API key from environment variable. Provide the key name.", action="store_true")
     deploy_secrets_parser.add_argument("-o", "--override", help="Override API key in DB with env file values.", action="store_true")
-    deploy_secrets_parser.add_argument("-r", "--remove-key", help="Specify the key name to remove from DB.")
+    
+    # TODO: Implement remove-key functionality
+    # deploy_secrets_parser.add_argument("-r", "--remove-key", help="Specify the key name to remove from DB.")
 
         
     async with naptha as naptha:
@@ -966,13 +999,11 @@ async def main():
             elif args.command == "publish":
                 await naptha.publish_modules(args.decorator, args.register, args.subdeployments)
             elif args.command == "deploy-secrets":
-                if args.remove_key:
-                    await naptha.hub.delete_secret(key_name=args.remove_key)
-                    return
-
                 if args.env:
-                    encrypted_data = create_secret(get_env_data(), naptha.hub.user_id)
+                    response = await get_server_public_key()
+                    encrypted_data = create_secret(get_env_data(), naptha.hub.user_id, response["public_key"])
                 else:
+                    response = await get_server_public_key()
                     key_name = input("Enter the key name: ").strip()
                     key_value = input(f"Enter the value for {key_name}: ").strip()
                     
@@ -981,9 +1012,17 @@ async def main():
                         return
                     
                     data_dict = {key_name: key_value}
-                    encrypted_data = create_secret(data_dict, naptha.hub.user_id)
+                    encrypted_data = create_secret(data_dict, naptha.hub.user_id, response["public_key"])
 
-                await naptha.hub.create_secret(encrypted_data, update=args.override)
+                result = await _send_request(
+                    "POST",
+                    f"{os.getenv('NODE_URL')}/user/secret/create",
+                    encrypted_data,
+                    { "is_update": args.override }
+                )
+
+                logger.info(result)
+                
         else:
             parser.print_help()
 
