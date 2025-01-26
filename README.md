@@ -163,7 +163,7 @@ naptha run tool:generate_image_tool -p "tool_name='generate_image_tool' prompt='
 ### Run an Agent that interacts with the Tool
 
 ```bash
-naptha run agent:generate_image_agent -p "tool_name='generate_image_tool' prompt='A beautiful image of a cat'" --tool_nodes "localhost"
+naptha run agent:generate_image_agent -p "tool_name='generate_image_tool' prompt='A beautiful image of a cat'" --tool_nodes "node.naptha.ai"
 ```
 
 ## Agent Orchestrators
@@ -333,7 +333,7 @@ naptha run kb:wikipedia_kb -p '{
 ### Run an Agent that interacts with the Knowledge Base
 
 ```bash
-naptha run agent:wikipedia_agent -p "func_name='run_query' query='Elon Musk' question='Who is Elon Musk?'" --kb_nodes "localhost"
+naptha run agent:wikipedia_agent -p "func_name='run_query' query='Elon Musk' question='Who is Elon Musk?'" --kb_nodes "node.naptha.ai"
 ```
 
 ## Memory Modules
