@@ -49,8 +49,8 @@ def add_dependencies_to_pyproject(package_name, packages):
     dependencies = data['tool']['poetry']['dependencies']
     dependencies["python"] = ">=3.10,<3.13"
     dependencies["naptha-sdk"] = {
-        "git": "https://github.com/NapthaAI/naptha-sdk.git",
-        "branch": "feat/run-agent-tools"
+        "git": "https://github.com/js-ts/naptha-sdk.git",
+        "branch": "main"
     }
 
     packages_to_add = []
