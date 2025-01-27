@@ -640,10 +640,10 @@ async def _send_request(method: str, endpoint: str, data: dict = {}, params: dic
 
             return response.json()
     except HTTPStatusError as e:
-        print(f"HTTP error occurred: {e}")
+        logger.error(f"HTTP error occurred: {e}")
         raise
     except Exception as e:
-        print(f"An error occurred: {e}")
+        logger.error(f"An error occurred: {e}")
         raise
 
 async def get_server_public_key() -> str:
@@ -1018,11 +1018,10 @@ async def main():
                     "POST",
                     f"{os.getenv('NODE_URL')}/user/secret/create",
                     encrypted_data,
-                    { "is_update": args.override }
+                    { "signature": sign_consumer_id(naptha.hub.user_id, os.getenv("PRIVATE_KEY")), "is_update": args.override }
                 )
 
                 logger.info(result)
-                
         else:
             parser.print_help()
 
