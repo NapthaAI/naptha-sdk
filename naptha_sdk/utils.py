@@ -135,13 +135,15 @@ def url_to_node(url: str):
     return NodeConfigUser(ip=host, user_communication_port=user_communication_port, user_communication_protocol=user_communication_protocol)
 
 
-def is_running_in_docker():
-    # Check for .dockerenv file
-    docker_env = Path('/.dockerenv').exists()
-    
-    # Check docker in cgroup
+def is_running_in_docker() -> bool:
+    import re
+    if os.path.exists('/.dockerenv'):
+        return True
     try:
         with open('/proc/1/cgroup', 'r') as f:
-            return any('docker' in line for line in f)
+            cgroup_data = f.read()
+            if re.search(r'(docker|containerd|kubepods)', cgroup_data):
+                return True
     except:
-        return docker_env
+        pass
+    return False
