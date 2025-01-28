@@ -1,6 +1,7 @@
 import logging
 import os
 import yaml
+from pathlib import Path
 from naptha_sdk.schemas import NodeConfigUser
 
 def get_logger(name):
@@ -108,9 +109,12 @@ class AsyncMixin:
         return self.__initobj().__await__()
     
 def node_to_url(node_schema: NodeConfigUser):
-   if node_schema.user_communication_port is None:
-       return f"{node_schema.user_communication_protocol}://{node_schema.ip}"
-   return f"{node_schema.user_communication_protocol}://{node_schema.ip}:{node_schema.user_communication_port}"
+    host = "node-app" if is_running_in_docker() and node_schema.ip == 'localhost' else node_schema.ip
+    base_url = f"{node_schema.user_communication_protocol}://{host}"
+    
+    if node_schema.user_communication_port is None:
+        return base_url
+    return f"{base_url}:{node_schema.user_communication_port}"
     
 def url_to_node(url: str):
     # Split protocol and rest
@@ -125,3 +129,15 @@ def url_to_node(url: str):
         user_communication_port = None
     
     return NodeConfigUser(ip=host, user_communication_port=user_communication_port, user_communication_protocol=user_communication_protocol)
+
+
+def is_running_in_docker():
+    # Check for .dockerenv file
+    docker_env = Path('/.dockerenv').exists()
+    
+    # Check docker in cgroup
+    try:
+        with open('/proc/1/cgroup', 'r') as f:
+            return any('docker' in line for line in f)
+    except:
+        return docker_env
