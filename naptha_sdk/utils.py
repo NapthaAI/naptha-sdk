@@ -4,6 +4,8 @@ import yaml
 from pathlib import Path
 from naptha_sdk.schemas import NodeConfigUser
 
+logger = logging.getLogger(__name__)
+
 def get_logger(name):
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
@@ -109,6 +111,8 @@ class AsyncMixin:
         return self.__initobj().__await__()
     
 def node_to_url(node_schema: NodeConfigUser):
+    logger.info(f"Node schema: {node_schema}")
+    logger.info(f"Is running in docker: {is_running_in_docker()}")
     host = "node-app" if is_running_in_docker() and node_schema.ip == 'localhost' else node_schema.ip
     base_url = f"{node_schema.user_communication_protocol}://{host}"
     

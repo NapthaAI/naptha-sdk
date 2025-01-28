@@ -38,8 +38,11 @@ class NodeClient:
         logger.info(f"Node URL: {self.node_url}")
 
     def node_to_url(self, node: NodeConfig):
+
         ports = node.ports
         in_docker = is_running_in_docker()
+        logger.info(f"Node: {node}")
+        logger.info(f"In docker: {in_docker}")
         if len(ports) == 0:
             raise ValueError("No ports found for node")
         if node.node_communication_protocol == 'ws':
