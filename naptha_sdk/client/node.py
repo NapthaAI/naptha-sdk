@@ -22,7 +22,7 @@ from naptha_sdk.client import grpc_server_pb2
 from naptha_sdk.client import grpc_server_pb2_grpc
 from naptha_sdk.schemas import AgentRun, AgentRunInput, ChatCompletionRequest, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, \
     OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, KBDeployment, KBRunInput, KBRun, MemoryDeployment, MemoryRunInput, MemoryRun, ToolRunInput, ToolRun, NodeConfig, NodeConfigUser, ModelResponse, ToolDeployment
-from naptha_sdk.utils import get_logger, node_to_url
+from naptha_sdk.utils import get_logger, node_to_url, is_running_in_docker
 
 logger = get_logger(__name__)
 HTTP_TIMEOUT = 300
@@ -39,12 +39,19 @@ class NodeClient:
 
     def node_to_url(self, node: NodeConfig):
         ports = node.ports
+        in_docker = is_running_in_docker()
         if len(ports) == 0:
             raise ValueError("No ports found for node")
         if node.node_communication_protocol == 'ws':
-            return f"ws://{node.ip}:{random.choice(ports)}"
+            if in_docker and node.ip == 'localhost':
+                return f"ws://node-app:{random.choice(ports)}"
+            else:
+                return f"ws://{node.ip}:{random.choice(ports)}"
         elif node.node_communication_protocol == 'grpc':
-            return f"{node.ip}:{random.choice(ports)}"
+            if in_docker and node.ip == 'localhost':
+                return f"node-app:{random.choice(ports)}"
+            else:
+                return f"{node.ip}:{random.choice(ports)}"
         else:
             raise ValueError("Invalid node communication protocol. Node communication protocol must be either 'ws' or 'grpc'.")
 
