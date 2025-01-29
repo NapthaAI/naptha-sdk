@@ -202,131 +202,174 @@ def get_config_values(config_path):
         return {}
     return all_results[0]
 
-def render_agent_code(agent_name, agent_code, obj_name, local_modules, selective_import_modules,
-                     standard_import_modules, variable_modules, union_modules, params):
-    # Add the imports for installed modules (e.g. crewai)
+def render_agent_code(
+    agent_name,
+    agent_code,
+    obj_name,
+    local_modules,
+    selective_import_modules,
+    standard_import_modules,
+    variable_modules,
+    union_modules,
+    params
+):
+    import os
+    import textwrap
+
+    # Start building the content string
     content = ''
-    print(f'CWD { os.path.abspath("./")}')
-    config_values=get_config_values(os.path.abspath("./"))
 
+    # Standard imports
     for module in standard_import_modules:
-        line = f'import {module["name"]} \n'
+        line = f'import {module["name"]}\n'
         content += line
 
+    # Selective imports
     for module in selective_import_modules:
-        line = f'from {module["module"]} import {module["name"]} \n'
+        line = f'from {module["module"]} import {module["name"]}\n'
         content += line
 
+    # Variable modules
     for module in variable_modules:
         if module["module"] and module["import_needed"]:
-            content += f'from {module["module"]} import {module["name"]} \n'
+            content += f'from {module["module"]} import {module["name"]}\n'
 
+    # If any selective import includes 'crewai'
     if any('crewai' in module['module'] for module in selective_import_modules):
         content += "from crewai import Task\n"
 
+    # Union modules
     for module in union_modules:
         content += module['source']
 
-    # Add the naptha imports and logger setup
-    naptha_imports = f'''from dotenv import load_dotenv
-from typing import Dict
-from naptha_sdk.schemas import *
-from naptha_sdk.user import sign_consumer_id
-from naptha_sdk.utils import get_logger
-from {agent_name}.schemas import InputSchema
+    # Naptha imports and logger setup
+    content += textwrap.dedent(f"""\
+    from dotenv import load_dotenv
+    from typing import Dict
+    from naptha_sdk.schemas import *
+    from naptha_sdk.user import sign_consumer_id
+    from naptha_sdk.utils import get_logger
+    from {agent_name}.schemas import InputSchema
 
-logger = get_logger(__name__)
+    logger = get_logger(__name__)
+    load_dotenv()
 
-load_dotenv()
+    """)
 
-'''
-    content += naptha_imports
+    # Add source from selective_import_modules (if any 'source' key exists)
     for module in selective_import_modules:
         if 'source' in module and module['source']:
             content += module['source'] + "\n"
 
-    # Add the source code for the local modules
+    # Local modules source
     for module in local_modules:
         content += module['source'] + "\n"
 
+    # Variable modules source
     for module in variable_modules:
         content += module['source'] + "\n"
 
-    # Convert class method to function - assuming it's directly a function now.
-    # If it's still a class method being passed as agent_code, these lines are still needed.
+    # Adjust the agent_code text (remove 'self.')
     agent_code = agent_code.replace('self.', '')
     agent_code = agent_code.replace('self', '')
 
+    # Include the agent_code
     content += textwrap.dedent(agent_code) + "\n\n"
 
-    param_str = ", ".join(f"inputs.{name}" for name, info in params.items())
+    # Final run function and main block
+    # This block reflects your manually edited run.py logic
+    final_block = textwrap.dedent(f"""\
+    def run(module_run: Dict, *args, **kwargs):
+        \"\"\"
+        Modified run function that creates and executes the financial agent.
+        If 'func_name' is 'financial_agent', we build the agent and run it
+        with the 'description' provided in func_input_data.
+        \"\"\"
+        # Parse the input schema
+        module_run = AgentRunInput(**module_run)
+        module_run.inputs = InputSchema(**module_run.inputs)
 
-    # Define the new function signature - Directly call the function
-    content += f"""def run(module_run: Dict, *args, **kwargs):
-    module_run = {config_values["function"]}(**module_run)
-    module_run.inputs = InputSchema(**module_run.inputs)
+        # Check which function we want to call
+        func_to_call = globals().get(module_run.inputs.func_name)
+        if not func_to_call:
+            raise ValueError(f"Function '{{module_run.inputs.func_name}}' not found.")
 
-    # Get the target function
-    func_to_call = globals().get(module_run.inputs.func_name)
-    if not func_to_call:
-        raise ValueError(f"Function '{{module_run.inputs.func_name}}' not found.")
-    
-    # Check if function accepts arguments
-    import inspect
-    sig = inspect.signature(func_to_call)
-    if len(sig.parameters) == 0:
-        # Function takes no arguments
-        return func_to_call()
-    else:
-        # Function takes arguments, proceed with input data
-        if not module_run.inputs.input_type:
-            input_data = module_run.inputs.func_input_data
+        # If func_name requests 'financial_agent', create and run the agent
+        if module_run.inputs.func_name == "{obj_name}":
+            the_agent = {obj_name}()
+            user_question = module_run.inputs.func_input_data.get("description", "")
+            expected_output = module_run.inputs.func_input_data.get("expected_output", "Analysis results")
+            if not user_question:
+                return {{"error": "No question provided in func_input_data['description']."}}
+
+            # Create a task for the agent with expected_output
+            task = Task(
+                description=user_question,
+                expected_output=expected_output,
+                agent=the_agent,
+                human_input=False
+            )
+
+            # Execute the task
+            return the_agent.execute_task(task)
+
         else:
-            tool_input_class = globals().get(module_run.inputs.input_type)
-            input_data = tool_input_class(**module_run.inputs.func_input_data)
-        return func_to_call(input_data)
+            # Fallback: if there's no direct match or we want to run other functions
+            import inspect
+            sig = inspect.signature(func_to_call)
+            if len(sig.parameters) == 0:
+                return func_to_call()
+            else:
+                tool_input_class = (
+                    globals().get(module_run.inputs.input_type)
+                    if module_run.inputs.input_type else None
+                )
+                input_data = (
+                    tool_input_class(**module_run.inputs.func_input_data)
+                    if tool_input_class else module_run.inputs.func_input_data
+                )
+                return func_to_call(input_data)
 
-if __name__ == "__main__":
-    import asyncio
-    from naptha_sdk.client.naptha import Naptha
-    from naptha_sdk.configs import setup_module_deployment
-    import os
+    if __name__ == "__main__":
+        import asyncio
+        from naptha_sdk.client.naptha import Naptha
+        from naptha_sdk.configs import setup_module_deployment
+        import os
 
-    naptha = Naptha()
-
-    deployment = asyncio.run(
-        setup_module_deployment(
-            "{config_values["module_type"]}",
-            f"{agent_name}/configs/deployment.json",
-            node_url=os.getenv("NODE_URL"),
-            user_id={config_values["user_id"]},
-            load_persona_data={config_values["load_persona_data"]},
-            is_subdeployment={config_values["is_subdeployment"]}
+        naptha = Naptha()
+        deployment = asyncio.run(
+            setup_module_deployment(
+                "agent",
+                "{agent_name}/configs/deployment.json",
+                node_url=os.getenv("NODE_URL"),
+                user_id=None,
+                load_persona_data=False,
+                is_subdeployment=False
+            )
         )
-    )
 
-    # Example input parameters
-    example_inputs = {{
-        "description": "What is the market cap of AMZN?",
-        "expected_output": "The market cap of AMZN"
-    }}
+        example_inputs = {{
+            "description": "What is the market cap of AMZN?",
+            "expected_output": "The market cap of AMZN"
+        }}
 
-    input_params = {{
-        "func_name": "{obj_name}", # Use obj_name which should be function name
-        "func_input_data": example_inputs,
-    }}
+        input_params = {{
+            "func_name": "{obj_name}",
+            "func_input_data": example_inputs
+        }}
 
-    module_run = {{
-        "inputs": input_params,
-        "deployment": deployment,
-        "consumer_id": naptha.user.id,
-        "signature": sign_consumer_id(naptha.user.id, os.getenv("PRIVATE_KEY"))
-    }}
+        module_run = {{
+            "inputs": input_params,
+            "deployment": deployment,
+            "consumer_id": naptha.user.id,
+            "signature": sign_consumer_id(naptha.user.id, os.getenv("PRIVATE_KEY"))
+        }}
 
-    response = run(module_run)
-    print(response)
-"""
+        response = run(module_run)
+        print(response)
+    """)
 
+    content += final_block
     return content
 
 def generate_component_yaml(agent_name, user_id):
