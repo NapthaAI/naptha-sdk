@@ -464,6 +464,7 @@ async def storage_interaction(naptha, storage_type, operation, path, data=None, 
                         options=json.loads(options) if options else {}
                     )
                     result = await storage_provider.execute(request)
+                    print(f"Create {storage_type} result: {result}")
                     return result
                     
             elif operation == "read":
@@ -473,7 +474,7 @@ async def storage_interaction(naptha, storage_type, operation, path, data=None, 
                     options=json.loads(options) if options else {}
                 )
                 result = await storage_provider.execute(request)
-                
+                print(f"Read {storage_type} result: {result}")
                 # Handle downloaded file
                 if isinstance(result.data, bytes):
                     output_dir = "./downloads"
@@ -544,7 +545,7 @@ async def storage_interaction(naptha, storage_type, operation, path, data=None, 
                 )
 
         result = await storage_provider.execute(request)
-        print(result)
+        print(f"{operation} {storage_type} result: {result}")
         return result
 
     except Exception as e:
