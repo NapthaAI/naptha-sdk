@@ -7,8 +7,6 @@ from rich.console import Console
 from rich.table import Table
 from rich import box
 import json
-import yaml
-import httpx
 
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.client.naptha import Naptha
@@ -26,8 +24,6 @@ from httpx import HTTPStatusError
 
 load_dotenv(override=True)
 logger = get_logger(__name__)
-
-HTTP_TIMEOUT = 300
 
 async def list_nodes(naptha):
     nodes = await naptha.hub.list_nodes()
@@ -622,33 +618,9 @@ def _parse_str_args(args):
         
     return args
 
-async def _send_request(method: str, endpoint: str, data: dict = {}, params: dict = {}) -> str:
-    try:
-        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-            headers = {
-                'Content-Type': 'application/json',
-            }
-
-            if method == "GET":
-                response = await client.get(endpoint, headers=headers)
-            elif method == "POST":
-                response = await client.post(endpoint, json=data, headers=headers, params=params)
-            else:
-                raise ValueError(f"Unsupported HTTP method: {method}")
-
-            response.raise_for_status()
-
-            return response.json()
-    except HTTPStatusError as e:
-        logger.error(f"HTTP error occurred: {e}")
-        raise
-    except Exception as e:
-        logger.error(f"An error occurred: {e}")
-        raise
-
-async def get_server_public_key() -> str:
+async def get_server_public_key(naptha: Naptha) -> str:
     endpoint = f"{os.getenv('NODE_URL')}/public_key"
-    return await _send_request("GET", endpoint)
+    return await naptha.node._send_request("GET", endpoint)
 
 def _parse_metadata_args(args, module_type):
     """Parse metadata arguments and return a module configuration dictionary.
@@ -999,11 +971,11 @@ async def main():
             elif args.command == "publish":
                 await naptha.publish_modules(args.decorator, args.register, args.subdeployments)
             elif args.command == "deploy-secrets":
+                response = await get_server_public_key(naptha)
+                
                 if args.env:
-                    response = await get_server_public_key()
-                    encrypted_data = create_secret(get_env_data(), naptha.hub.user_id, response["public_key"])
+                    data_dict = get_env_data()
                 else:
-                    response = await get_server_public_key()
                     key_name = input("Enter the key name: ").strip()
                     key_value = input(f"Enter the value for {key_name}: ").strip()
                     
@@ -1012,9 +984,9 @@ async def main():
                         return
                     
                     data_dict = {key_name: key_value}
-                    encrypted_data = create_secret(data_dict, naptha.hub.user_id, response["public_key"])
 
-                result = await _send_request(
+                encrypted_data = create_secret(data_dict, naptha.hub.user_id, response["public_key"])
+                result = await naptha.node._send_request(
                     "POST",
                     f"{os.getenv('NODE_URL')}/user/secret/create",
                     encrypted_data,
