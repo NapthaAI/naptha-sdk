@@ -799,7 +799,30 @@ class UserClient:
             )
             response.raise_for_status()
             return response.json()
+        
+    async def _send_request(self, method: str, endpoint: str, data: dict = {}, params: dict = {}) -> str:
+        try:
+            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+                headers = {
+                    'Content-Type': 'application/json',
+                }
 
+                if method == "GET":
+                    response = await client.get(endpoint, headers=headers)
+                elif method == "POST":
+                    response = await client.post(endpoint, json=data, headers=headers, params=params)
+                else:
+                    raise ValueError(f"Unsupported HTTP method: {method}")
+
+                response.raise_for_status()
+
+                return response.json()
+        except HTTPStatusError as e:
+            logger.error(f"HTTP error occurred: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
+            raise
 
 def zip_directory(file_path, zip_path):
     """Utility function to zip the content of a directory while preserving the folder structure."""
