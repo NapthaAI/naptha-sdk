@@ -376,87 +376,6 @@ def render_agent_code(
 
     return content
 
-def generate_component_yaml(agent_name, user_id):
-    component = {
-        'name': agent_name,
-        'type': agent_name,
-        'author': user_id,
-        'version': '0.1.0',
-        'description': agent_name,
-        'license': 'MIT',
-        'models': {
-            'default_model_provider': 'ollama',
-            'ollama': {
-                'model': 'ollama/llama3.1:70b',
-                'max_tokens': 1000,
-                'temperature': 0,
-                'api_base': 'http://localhost:11434'
-            }
-        },
-        'inputs': {
-            'system_message': 'You are a helpful AI assistant.',
-            'save': False,
-            'location': 'node'
-        },
-        'outputs': {
-            'filename': 'output.txt',
-            'save': False,
-            'location': 'node'
-        },
-        'implementation': {
-            'package': {
-                'entrypoint': 'run.py'
-            }
-        }
-    }
-
-    deployment = [
-        {
-            "name": "deployment_1",
-            "module": {"name": "module_template"},
-            "node": {"ip": "localhost"},
-            "config": {
-                "config_name": "config_1",
-                "llm_config": {"config_name": "model_2"},
-                "system_prompt": {
-                    "role": "You are a helpful AI assistant.",
-                    "persona": ""
-                }
-            }
-        }
-    ]
-
-    config = [
-        {
-            "config_name": "model_1",
-            "client": "ollama",
-            "model": "ollama/phi",
-            "temperature": 0.7,
-            "max_tokens": 1000,
-            "api_base": "http://localhost:11434"
-        },
-        {
-            "config_name": "model_2",
-            "client": "openai",
-            "model": "gpt-4o-mini",
-            "temperature": 0.7,
-            "max_tokens": 1000,
-            "api_base": "https://api.openai.com/v1"
-        }
-    ]
-
-
-    directory = f'{AGENT_DIR}/{agent_name}/{agent_name}/configs'
-    os.makedirs(directory, exist_ok=True)
-
-    with open(f'{directory}/deployment.json', 'w') as file:
-        # Write the deployment config
-        json.dump(deployment, file, indent=4)
-
-    with open(f'{directory}/config.json', 'w') as file:
-        # Write the deployment config
-        json.dump(config, file, indent=4)
-
 def generate_schema(agent_name, params):
     schema_code = '''from pydantic import BaseModel
 from typing import Union, Dict, Any, List, Optional
@@ -509,7 +428,6 @@ def add_files_to_package(agent_name, params, user_id):
 
     # Generate schema and component yaml
     generate_schema(agent_name, params)
-    # generate_component_yaml(agent_name, user_id)
 
     # Create .env.example file
     env_example_path = os.path.join(package_path, '.env.example')
