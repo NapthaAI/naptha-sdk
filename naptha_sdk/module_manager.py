@@ -216,8 +216,9 @@ def render_agent_code(
     import os
     import textwrap
 
-    # Start building the content string
     content = ''
+    print(f'CWD { os.path.abspath("./")}')
+    config_values=get_config_values(os.path.abspath("./"))
 
     # Standard imports
     for module in standard_import_modules:
@@ -262,6 +263,7 @@ def render_agent_code(
             content += module['source'] + "\n"
 
     # Local modules source
+
     for module in local_modules:
         content += module['source'] + "\n"
 
@@ -270,6 +272,7 @@ def render_agent_code(
         content += module['source'] + "\n"
 
     # Adjust the agent_code text (remove 'self.')
+
     agent_code = agent_code.replace('self.', '')
     agent_code = agent_code.replace('self', '')
 
@@ -370,6 +373,7 @@ def render_agent_code(
     """)
 
     content += final_block
+
     return content
 
 def generate_component_yaml(agent_name, user_id):
