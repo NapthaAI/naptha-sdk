@@ -149,8 +149,20 @@ class Naptha:
         await self.publish_agents()
         await self.hub.close()
 
+    async def connect_user_secret(self, key_name):
+        await self.hub.connect()
+        await self.hub.signin(os.getenv("HUB_USERNAME"), os.getenv("HUB_PASSWORD"))
+        result = await self.hub.get_user_secret(key_name)
+        await self.hub.close()
+
+        return result
+
     def publish(self):
         asyncio.run(self.connect_publish())
+
+    def get_user_secret(self, key_name: str) -> str:
+        result = asyncio.run(self.connect_user_secret(key_name))
+        return result[0]['secret_value'] if len(result) > 0 else []
 
 
 def agent(name):
