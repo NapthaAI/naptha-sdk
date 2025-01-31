@@ -129,19 +129,6 @@ def add_dependencies_to_pyproject(package_name, packages):
     with open(f"{AGENT_DIR}/{package_name}/pyproject.toml", 'w', encoding='utf-8') as file:
         file.write(tomlkit.dumps(data))
 
-def infer_module_type(module_name: str) -> str:
-    """
-    Infer the module type based on the 'module.name' in the JSON.
-    Adjust or expand this logic as needed for your environment.
-    """
-    if 'multiagent_chat' in module_name:
-        return 'orchestrator'
-    elif 'groupchat_kb' in module_name:
-        return 'kb'
-    else:
-        return 'agent'
-
-
 def parse_deployment_file(deployment_file: str):
     """
     Parse a single deployment.json file, returning a list of dicts
@@ -153,7 +140,7 @@ def parse_deployment_file(deployment_file: str):
             data = json.load(f)
         for item in data:
             module_name = item.get('module', {}).get('name', '')
-            module_type = infer_module_type(module_name)
+            module_type = 'agent'
 
             deployment_name = item.get('name', '')
 
@@ -284,8 +271,8 @@ def render_agent_code(
     final_block = textwrap.dedent(f"""\
     def run(module_run: Dict, *args, **kwargs):
         \"\"\"
-        Modified run function that creates and executes the financial agent.
-        If 'func_name' is 'financial_agent', we build the agent and run it
+        Modified run function that creates and executes the agent.
+        If 'func_name' is 'agent_name', we build the agent and run it
         with the 'description' provided in func_input_data.
         \"\"\"
         # Parse the input schema
@@ -297,7 +284,7 @@ def render_agent_code(
         if not func_to_call:
             raise ValueError(f"Function '{{module_run.inputs.func_name}}' not found.")
 
-        # If func_name requests 'financial_agent', create and run the agent
+        # If func_name requests 'agent_name', create and run the agent
         if module_run.inputs.func_name == "{obj_name}":
             the_agent = {obj_name}()
             user_question = module_run.inputs.func_input_data.get("description", "")

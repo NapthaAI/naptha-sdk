@@ -77,9 +77,6 @@ class NodeClient:
             if not ports:
                 raise ValueError("No ports found for 'grpc' node")
             return f"{node.ip}:{random.choice(ports)}"
-        elif node.node_communication_protocol == 'http':
-            # The crucial fix: properly handle HTTP
-            return f"http://{node.ip}:{node.user_communication_port}"
         else:
             raise ValueError(
                 "Invalid node communication protocol. "
@@ -91,8 +88,6 @@ class NodeClient:
             return await self.check_user_ws(user_input)
         elif self.node.node_communication_protocol == 'grpc':
             return await self.check_user_grpc(user_input)
-        elif self.node.node_communication_protocol == 'http':
-            return await self.check_user_http(user_input)
         else:
             raise ValueError(
                 "Invalid node communication protocol. Must be 'ws', 'grpc', or 'http'."
@@ -113,13 +108,6 @@ class NodeClient:
             response = await stub.CheckUser(request)
             logger.info(f"Check user response: {response}")
             return MessageToDict(response, preserving_proto_field_name=True)
-
-    async def check_user_http(self, user_input: Dict[str, str]):
-        endpoint = f"{self.node_url}/user/check"
-        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-            resp = await client.post(endpoint, json=user_input)
-            resp.raise_for_status()
-            return resp.json()
 
     async def register_user(self, user_input: Dict[str, str]) -> Dict[str, Any]:
         if self.node.node_communication_protocol == 'ws':

@@ -75,7 +75,7 @@ class Naptha:
                 "module_entrypoint": "run.py",
                 "parameters": "",
             }
-            logger.info("Registering Agent %s", agent_config)
+            logger.info(f"Registering Agent {agent_config}")
             agent = await self.hub.create_or_update_module("agent", agent_config)
             if agent:
                 logger.info("Agent %s created successfully", name)
@@ -104,8 +104,6 @@ class Naptha:
                     subdeployment = mod_type + "_deployments"
                     if hasattr(deployment, subdeployment) and getattr(deployment, subdeployment):
                         for submodule in getattr(deployment, subdeployment):
-                            if "module_type" not in submodule.module:
-                                submodule.module["module_type"] = mod_type
                             modules.append(submodule.module)
         else:
             path = Path.cwd() / AGENT_DIR
