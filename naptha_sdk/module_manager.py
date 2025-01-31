@@ -3,7 +3,6 @@ import ipfshttpclient
 import json
 from naptha_sdk.client.hub import Hub
 from naptha_sdk.utils import get_logger
-from dotenv import load_dotenv
 from git import Repo
 import os
 from pathlib import Path
@@ -17,7 +16,6 @@ import yaml
 import zipfile
 import fnmatch
 
-load_dotenv()
 logger = get_logger(__name__)
 
 IPFS_GATEWAY_URL="/dns/provider.akash.pro/tcp/31832/http"

@@ -174,3 +174,4 @@ examples/camel_examples/single_agent/.python-version
 poetry.lock
 examples/camel_examples/single_agent/src/single_agent/pyproject.toml
 examples/camel_examples/single_agent/src/single_agent/single_agent.py
+examples/crewAI-examples
