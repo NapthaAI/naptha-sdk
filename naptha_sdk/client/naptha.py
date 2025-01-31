@@ -142,7 +142,7 @@ class Naptha:
                     logger.info("Module URL: %s", module_url)
                     logger.info(
                         "IPFS Hash: %s. You can download it from "
-                        "http://provider.akash.pro:30584/ipfs/%s",
+                        "http://ipfs-gateway.naptha.work/ipfs/%s",
                         response["ipfs_hash"],
                         response["ipfs_hash"]
                     )
