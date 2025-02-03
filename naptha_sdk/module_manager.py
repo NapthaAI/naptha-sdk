@@ -138,7 +138,7 @@ def parse_deployment_file(deployment_file: str):
             data = json.load(f)
         for item in data:
             module_name = item.get('module', {}).get('name', '')
-            module_type = 'agent'
+            module_type = item.get('module', {}).get('type','agent')
 
             deployment_name = item.get('name', '')
 
