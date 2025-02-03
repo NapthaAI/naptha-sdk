@@ -86,7 +86,7 @@ class TestNapthaCLI:
         pytest.param("naptha run tool:generate_image_tool -p \"tool_name='generate_image_tool' prompt='A beautiful image of a cat'\"", id="run_generate_image_tool"),
         pytest.param("naptha run agent:generate_image_agent -p \"tool_name='generate_image_tool' prompt='A beautiful image of a cat'\" --tool_nodes \"localhost\"", id="run_generate_image_agent"),
         pytest.param("naptha run orchestrator:multiagent_chat -p \"prompt='i would like to count up to ten, one number at a time. ill start. one.'\" --agent_nodes \"localhost,localhost\" --kb_nodes \"localhost\"", id="run_multiagent_chat"),
-        pytest.param("naptha run kb:wikipedia_kb -p \"function_name='init'\"", id="init_wikipedia_kb"),
+        pytest.param("naptha run kb:wikipedia_kb -p \"func_name='init'\"", id="init_wikipedia_kb"),
         pytest.param("""naptha run kb:wikipedia_kb -p '{
             "func_name": "list_rows",
             "func_input_data": {
@@ -115,13 +115,13 @@ class TestNapthaCLI:
                 }
             }
         }'""", id="delete_wikipedia_data"),
+        pytest.param("naptha run agent:wikipedia_agent -p \"func_name='run_query' query='Elon Musk' question='Who is Elon Musk?'\" --kb_nodes \"localhost\"", id="run_wiki_agent"),
         pytest.param("""naptha run kb:wikipedia_kb -p '{
             "func_name": "delete_table",
             "func_input_data": {
                 "table_name": "wikipedia_kb"
             }
         }'""", id="delete_wikipedia_table"),
-        pytest.param("naptha run agent:wikipedia_agent -p \"function_name='run_query' query='Elon Musk' question='Who is Elon Musk?'\" --kb_nodes \"localhost\"", id="run_wiki_agent"),
         pytest.param("naptha run memory:cognitive_memory -p \"func_name='init'\"", id="init_cognitive_memory"),
         pytest.param("""naptha run memory:cognitive_memory -p '{
             "func_name": "store_cognitive_item", 
