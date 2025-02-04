@@ -100,7 +100,7 @@ class NodeClient:
             }
 
     async def run_module(self, module_type: str, run_input: Union[AgentRunInput, KBRunInput, ToolRunInput, MemoryRunInput, EnvironmentRunInput]):
-        if self.node.node_communication_protocol == 'ws':
+        if self.node.node_communication_protocol in ['ws', 'wss']:
             return await self.run_module_ws(module_type, run_input)
         elif self.node.node_communication_protocol == 'grpc':
             return await self.run_module_grpc(module_type, run_input)
