@@ -43,6 +43,8 @@ class NodeClient:
             raise ValueError("No ports found for node")
         if node.node_communication_protocol == 'ws':
             return f"ws://{node.ip}:{random.choice(ports)}"
+        elif node.node_communication_protocol == 'wss':
+            return f"wss://{node.ip}"
         elif node.node_communication_protocol == 'grpc':
             return f"{node.ip}:{random.choice(ports)}"
         else:
