@@ -78,13 +78,13 @@ class Naptha:
             logger.info(f"Registering Agent {agent_config}")
             agent = await self.hub.create_or_update_module("agent", agent_config)
             if agent:
-                logger.info("Agent %s created successfully", name)
+                logger.info(f"Agent {name} created successfully")
             else:
-                logger.error("Failed to create agent %s", name)
+                logger.error(f"Failed to create agent {name}")
 
     async def publish_modules(self, decorator=False, register=None, subdeployments=False):
         """Publish module(s)."""
-        logger.info("Publishing Agent Packages...")
+        logger.info(f"Publishing Agent Packages...")
         start_time = time.time()
         if not decorator:
             module_path = Path.cwd()

@@ -60,11 +60,6 @@ class NodeClient:
         logger.info(f"Node URL: {self.node_url}")
 
     def node_to_url(self, node: NodeConfig):
-        """
-        Updated to handle node_communication_protocol == 'http'.
-        If you have an HTTP node at, say, ip=localhost and user_communication_port=7001,
-        you can directly return http://localhost:7001
-        """
         # If your NodeConfig does have a ports list for 'ws' or 'grpc', keep random.choice(ports).
         # For pure HTTP, we just rely on user_communication_port.
         if node.node_communication_protocol == 'ws':
@@ -80,7 +75,7 @@ class NodeClient:
         else:
             raise ValueError(
                 "Invalid node communication protocol. "
-                "Node communication protocol must be 'ws', 'grpc', or 'http'."
+                "Node communication protocol must be 'ws', 'grpc'"
             )
 
     async def check_user(self, user_input: Dict[str, str]) -> Dict[str, Any]:
@@ -90,7 +85,7 @@ class NodeClient:
             return await self.check_user_grpc(user_input)
         else:
             raise ValueError(
-                "Invalid node communication protocol. Must be 'ws', 'grpc', or 'http'."
+                "Invalid node communication protocol. Must be 'ws', 'grpc'"
             )
 
     async def check_user_ws(self, user_input: Dict[str, str]):
@@ -114,11 +109,9 @@ class NodeClient:
             return await self.register_user_ws(user_input)
         elif self.node.node_communication_protocol == 'grpc':
             return await self.register_user_grpc(user_input)
-        elif self.node.node_communication_protocol == 'http':
-            return await self.register_user_http(user_input)
         else:
             raise ValueError(
-                "Invalid node communication protocol. Must be 'ws', 'grpc', or 'http'."
+                "Invalid node communication protocol. Must be 'ws', 'grpc'"
             )
         
     async def register_user_ws(self, user_input: Dict[str, str]):
@@ -153,8 +146,6 @@ class NodeClient:
             return await self.run_module_ws(module_type, run_input)
         elif self.node.node_communication_protocol == 'grpc':
             return await self.run_module_grpc(module_type, run_input)
-        elif self.node.node_communication_protocol == 'http':
-            return await self.run_module_http(module_type, run_input)
         else:
             raise ValueError("Invalid node communication protocol.")
 

@@ -10,30 +10,12 @@ import json
 
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.client.naptha import Naptha
-from naptha_sdk.schemas import (
-    AgentDeployment,
-    ChatCompletionRequest,
-    EnvironmentDeployment,
-    OrchestratorDeployment,
-    OrchestratorRunInput,
-    EnvironmentRunInput,
-    KBDeployment,
-    KBRunInput,
-    MemoryDeployment,
-    MemoryRunInput,
-    ToolDeployment,
-    ToolRunInput,
-    NodeConfigUser
-)
+from naptha_sdk.schemas import AgentDeployment, ChatCompletionRequest, EnvironmentDeployment, \
+    OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, KBDeployment, KBRunInput, MemoryDeployment, MemoryRunInput, ToolDeployment, ToolRunInput, NodeConfigUser
 from naptha_sdk.storage.storage_provider import StorageProvider
 from naptha_sdk.storage.schemas import (
-    CreateStorageRequest,
-    DeleteStorageRequest,
-    ListStorageRequest,
-    ReadStorageRequest,
-    UpdateStorageRequest,
-    SearchStorageRequest,
-    StorageType
+    CreateStorageRequest, DeleteStorageRequest, ListStorageRequest, 
+    ReadStorageRequest, UpdateStorageRequest, SearchStorageRequest,StorageType, 
 )
 from naptha_sdk.user import get_public_key, sign_consumer_id
 from naptha_sdk.utils import url_to_node
@@ -55,7 +37,7 @@ async def list_nodes(naptha):
         title="Available Nodes",
         title_style="bold cyan",
         header_style="bold blue",
-        row_styles=["", "dim"]
+        row_styles=["", "dim"]  # Alternating row styles
     )
 
     # Get dynamic headers from first node
@@ -87,9 +69,9 @@ async def list_nodes(naptha):
             str(node['user_communication_port']),
             str(node['num_node_communication_servers']),
             node['node_communication_protocol'],
-            str(node['models']),
+            str(node['models']), 
             str(node['num_gpus']),
-            str(node['provider_types'])
+            str(node['provider_types']) 
         )
     # Print table and summary
     console.print()
@@ -131,7 +113,7 @@ async def list_modules(naptha, module_type=None, module_name=None):
         "Author": {"justify": "left"},
         "Description": {"justify": "left", "max_width": 50},
         "Parameters": {"justify": "left", "max_width": 40},
-        "Module URL": {"justify": "left", "max_width": 40},
+        "Module URL": {"justify": "left", "no_wrap": True},  # Removed max_width to show full URL
         "Module Version": {"justify": "left"},
         "Module Type": {"justify": "left"},
         "Module Entrypoint": {"justify": "left"}
@@ -143,6 +125,9 @@ async def list_modules(naptha, module_type=None, module_name=None):
 
     # Add rows
     for module in modules:
+        # Make URL clickable with link styling
+        url = f"[link={module['module_url']}]{module['module_url']}[/link]"
+        
         table.add_row(
             module['name'],
             module['id'],
@@ -175,7 +160,7 @@ async def list_servers(naptha):
         title="Available Servers",
         title_style="bold cyan",
         header_style="bold blue",
-        row_styles=["", "dim"]
+        row_styles=["", "dim"]  # Alternating row styles
     )
 
     # Add columns
@@ -199,23 +184,24 @@ async def list_servers(naptha):
     console.print(f"\n[green]Total servers:[/green] {len(servers)}")
 
 async def create(
-    naptha,
-    module_name,
-    agent_modules: list = None,
-    agent_nodes: list = None,
-    tool_modules: list = None,
-    tool_nodes: list = None,
-    kb_modules: list = None,
-    kb_nodes: list = None,
-    memory_modules: list = None,
-    memory_nodes: list = None,
-    environment_modules: list = None,
-    environment_nodes: list = None
+        naptha,
+        module_name,
+        agent_modules: list = None,
+        agent_nodes: list = None,
+        tool_modules: list = None,
+        tool_nodes: list = None,
+        kb_modules: list = None,
+        kb_nodes: list = None,
+        memory_modules: list = None,
+        memory_nodes: list = None,
+        environment_modules: list = None,
+        environment_nodes: list = None
 ):
     module_type = module_name.split(":")[0] if ":" in module_name else "agent"
-    module_name = module_name.split(":")[-1]
+    module_name = module_name.split(":")[-1]  # Remove prefix if exists
 
     user = await naptha.node.check_user(user_input={"public_key": naptha.hub.public_key})
+
     if user['is_registered']:
         print("Found user...", user)
     else:
@@ -305,10 +291,11 @@ async def create(
     result = await naptha.node.create(module_type, deployment)
     print(f"{module_type.title()} creation result: {result}")
 
+
 async def run(
     naptha,
     module_name,
-    parameters=None,
+    parameters=None, 
     agent_nodes=None,
     tool_nodes=None,
     environment_nodes=None,
@@ -316,13 +303,12 @@ async def run(
     memory_nodes=None,
     persona_modules=None
 ):   
-    """
-    The main run(...) function used by 'naptha run agent:foo -p "k=v"'
-    """
-    module_type = module_name.split(":")[0] if ":" in module_name else "agent"
+
+    module_type = module_name.split(":")[0] if ":" in module_name else "agent" # Default to agent for backwards compatibility
 
     user = await naptha.node.check_user(user_input={"public_key": naptha.hub.public_key})
-    if user['is_registered']:
+
+    if user['is_registered'] == True:
         print("Found user...", user)
     else:
         print("No user found. Registering user...")
@@ -334,43 +320,31 @@ async def run(
     if agent_nodes:
         for agent_node in agent_nodes:
             agent_deployments.append(AgentDeployment(node=NodeConfigUser(ip=agent_node.strip())))
-
     tool_deployments = []
     if tool_nodes:
         for tool_node in tool_nodes:
             tool_deployments.append(ToolDeployment(node=NodeConfigUser(ip=tool_node.strip())))
-
     environment_deployments = []
     if environment_nodes:
         for environment_node in environment_nodes:
             environment_deployments.append(EnvironmentDeployment(node=NodeConfigUser(ip=environment_node.strip())))
-
     kb_deployments = []
     if kb_nodes:
         for kb_node in kb_nodes:
             kb_deployments.append(KBDeployment(node=NodeConfigUser(ip=kb_node.strip())))
-
     memory_deployments = []
     if memory_nodes:
         for memory_node in memory_nodes:
             memory_deployments.append(MemoryDeployment(node=NodeConfigUser(ip=memory_node.strip())))
 
+
     if module_type == "agent":
         print("Running Agent...")
 
         agent_deployment = AgentDeployment(
-            module={
-                "id": module_name,
-                "name": module_name.split(":")[-1],
-                "module_type": module_type
-            },
-            node=url_to_node(os.getenv("NODE_URL")),
-            # Guard against empty persona_modules:
-            config=(
-                {"persona_module": {"name": persona_modules[0]}}
-                if persona_modules and len(persona_modules) > 0
-                else None
-            ),
+            module={"id": module_name, "name": module_name.split(":")[-1], "module_type": module_type}, 
+            node=url_to_node(os.getenv("NODE_URL")), 
+            config={"persona_module": {"name": persona_modules[0]}} if persona_modules else None,
             tool_deployments=tool_deployments,
             kb_deployments=kb_deployments,
             memory_deployments=memory_deployments,
@@ -378,10 +352,10 @@ async def run(
         )
 
         agent_run_input = {
-            "consumer_id": user["id"],
+            'consumer_id': user['id'],
             "inputs": parameters,
             "deployment": agent_deployment.model_dump(),
-            "signature": sign_consumer_id(user["id"], os.getenv("PRIVATE_KEY"))
+            "signature": sign_consumer_id(user['id'], os.getenv("PRIVATE_KEY"))
         }
         print(f"Agent run input: {agent_run_input}")
 
@@ -390,30 +364,22 @@ async def run(
     elif module_type == "tool":
         print("Running Tool...")
         tool_deployment = ToolDeployment(
-            module={
-                "id": module_name,
-                "name": module_name.split(":")[-1],
-                "module_type": module_type
-            },
-            node=url_to_node(os.getenv("NODE_URL"))
-        )
+            module={"id": module_name, "name": module_name.split(":")[-1], "module_type": module_type},
+            node=url_to_node(os.getenv("NODE_URL")))
 
         tool_run_input = ToolRunInput(
-            consumer_id=user["id"],
+            consumer_id=user['id'],
             inputs=parameters,
             deployment=tool_deployment,
-            signature=sign_consumer_id(user["id"], os.getenv("PRIVATE_KEY"))
+            signature=sign_consumer_id(user['id'], os.getenv("PRIVATE_KEY"))
         )
         tool_run = await naptha.node.run_tool_and_poll(tool_run_input)
 
     elif module_type == "orchestrator":
         print("Running Orchestrator...")
+
         orchestrator_deployment = OrchestratorDeployment(
-            module={
-                "id": module_name,
-                "name": module_name.split(":")[-1],
-                "module_type": module_type
-            }, 
+            module={"id": module_name, "name": module_name.split(":")[-1], "module_type": module_type}, 
             node=url_to_node(os.getenv("NODE_URL")),
             agent_deployments=agent_deployments,
             environment_deployments=environment_deployments,
@@ -431,12 +397,9 @@ async def run(
 
     elif module_type == "environment":
         print("Running Environment...")
+
         environment_deployment = EnvironmentDeployment(
-            module={
-                "id": module_name,
-                "name": module_name.split(":")[-1],
-                "module_type": module_type
-            },
+            module={"id": module_name, "name": module_name.split(":")[-1], "module_type": module_type}, 
             node=url_to_node(os.getenv("NODE_URL"))
         )
 
@@ -450,12 +413,9 @@ async def run(
 
     elif module_type == "kb":
         print("Running Knowledge Base...")
+
         kb_deployment = KBDeployment(
-            module={
-                "id": module_name,
-                "name": module_name.split(":")[-1],
-                "module_type": module_type
-            },
+            module={"id": module_name, "name": module_name.split(":")[-1], "module_type": module_type}, 
             node=url_to_node(os.getenv("NODE_URL"))
         )
 
@@ -466,51 +426,37 @@ async def run(
             signature=sign_consumer_id(user['id'], os.getenv("PRIVATE_KEY"))
         )
         kb_run = await naptha.node.run_kb_and_poll(kb_run_input)
-
     elif module_type == "memory":
         print("Running Memory Module...")
+
         memory_deployment = MemoryDeployment(
-            module={
-                "id": module_name,
-                "name": module_name.split(":")[-1],
-                "module_type": module_type
-            },
+            module={"id": module_name, "name": module_name.split(":")[-1], "module_type": module_type}, 
             node=url_to_node(os.getenv("NODE_URL"))
         )
 
         memory_run_input = MemoryRunInput(
-            consumer_id=user["id"],
+            consumer_id=user['id'],
             inputs=parameters,
             deployment=memory_deployment,
-            signature=sign_consumer_id(user["id"], os.getenv("PRIVATE_KEY"))
+            signature=sign_consumer_id(user['id'], os.getenv("PRIVATE_KEY"))
         )
-        memory_run = await naptha.node.run_memory_and_poll(memory_run_input)
+        memory_run = await naptha.node.run_memory_and_poll(memory_run_input)     
     else:
         print(f"Module type {module_type} not supported.")
 
-async def storage_interaction(
-    naptha,
-    storage_type,
-    operation,
-    path,
-    data=None,
-    schema=None,
-    options=None,
-    file=None
-):
+async def storage_interaction(naptha, storage_type, operation, path, data=None, schema=None, options=None, file=None):
+    """Handle storage interactions using StorageProvider"""
     storage_provider = StorageProvider(naptha.node.node)
-    print(
-        f"Storage interaction: {storage_type}, {operation}, {path}, {data}, {schema}, {options}, {file}"
-    )
+    print(f"Storage interaction: {storage_type}, {operation}, {path}, {data}, {schema}, {options}, {file}")
 
     try:
         # Convert string storage type to enum
         storage_type = StorageType(storage_type)
 
-        # filesystem/ipfs special logic
+        # Special handling for filesystem/IPFS file operations
         if storage_type in [StorageType.FILESYSTEM, StorageType.IPFS]:
             if operation == "create" and file:
-                with open(file, "rb") as f:
+                with open(file, 'rb') as f:
                     request = CreateStorageRequest(
                         storage_type=storage_type,
                         path=path,
@@ -518,7 +464,9 @@ async def storage_interaction(
                         options=json.loads(options) if options else {}
                     )
                     result = await storage_provider.execute(request)
+                    print(f"Create {storage_type} result: {result}")
                     return result
+                    
             elif operation == "read":
                 request = ReadStorageRequest(
                     storage_type=storage_type,
@@ -526,13 +474,13 @@ async def storage_interaction(
                     options=json.loads(options) if options else {}
                 )
                 result = await storage_provider.execute(request)
-                
+                print(f"Read {storage_type} result: {result}")
                 # Handle downloaded file
                 if isinstance(result.data, bytes):
                     output_dir = "./downloads"
                     os.makedirs(output_dir, exist_ok=True)
                     output_path = os.path.join(output_dir, os.path.basename(path))
-                    with open(output_path, "wb") as f:
+                    with open(output_path, 'wb') as f:
                         f.write(result.data)
                     print(f"File downloaded to: {output_path}")
                 return result
@@ -554,12 +502,14 @@ async def storage_interaction(
                     )
                 else:
                     raise ValueError("Either schema or data must be provided for create command")
+                    
             case "read":
                 request = ReadStorageRequest(
                     storage_type=storage_type,
                     path=path,
                     options=json.loads(options) if options else {}
                 )
+                
             case "update":
                 if not data:
                     raise ValueError("Data must be provided for update command")
@@ -569,18 +519,21 @@ async def storage_interaction(
                     data=json.loads(data),
                     options=json.loads(options) if options else {}
                 )
+                
             case "delete":
                 request = DeleteStorageRequest(
                     storage_type=storage_type,
                     path=path,
                     options=json.loads(options) if options else {}
                 )
+                
             case "list":
                 request = ListStorageRequest(
                     storage_type=storage_type,
                     path=path,
                     options=json.loads(options) if options else {}
                 )
+                
             case "search":
                 if not data:
                     raise ValueError("Query data must be provided for search command")
@@ -592,7 +545,7 @@ async def storage_interaction(
                 )
 
         result = await storage_provider.execute(request)
-        print(result)
+        print(f"{operation} {storage_type} result: {result}")
         return result
 
     except Exception as e:
@@ -810,8 +763,11 @@ async def main():
     # Publish command
     publish_parser = subparsers.add_parser("publish", help="Publish agents.")
     publish_parser.add_argument("-d", "--decorator", help="Publish module via decorator", action="store_true")
-    publish_parser.add_argument("-r", "--register", nargs='?', const=True, metavar="URL",
-                                help="Register modules with hub. Optionally provide a GitHub URL to skip IPFS storage")
+    publish_parser.add_argument("-r", "--register", 
+                              help="Register modules with hub. Optionally provide a GitHub URL to skip IPFS storage", 
+                              nargs='?', 
+                              const=True,
+                              metavar="URL")
     publish_parser.add_argument("-s", "--subdeployments", help="Publish subdeployments", action="store_true")
         
     async with naptha as naptha:
@@ -827,16 +783,17 @@ async def main():
         ]:
             if not naptha.hub.is_authenticated:
                 if not hub_username or not hub_password:
-                    print("Please set HUB_USERNAME and HUB_PASSWORD or run `naptha signup`.")
+                    print(
+                        "Please set HUB_USERNAME and HUB_PASSWORD environment variables or sign up first (run naptha signup).")
                     return
                 success, _, _ = await naptha.hub.signin(hub_username, hub_password)
                 if not success:
-                    print("Authentication failed. Check your username/password.")
+                    print("Authentication failed. Please check your username and password.")
                     return
 
             if args.command == "nodes":
                 if not args.list_servers:
-                    await list_nodes(naptha)
+                    await list_nodes(naptha)   
                 else:
                     await list_servers(naptha)
             elif args.command == "agents":
@@ -945,32 +902,9 @@ async def main():
                 else:
                     await list_modules(naptha, module_type='kb')
             elif args.command == "create":
-                await create(
-                    naptha,
-                    args.module,
-                    args.agent_modules,
-                    args.agent_nodes,
-                    args.tool_modules,
-                    args.tool_nodes,
-                    args.kb_modules,
-                    args.kb_nodes,
-                    args.memory_modules,
-                    args.memory_nodes,
-                    args.environment_modules,
-                    args.environment_nodes
-                )
-            elif args.command == "run":
-                await run(
-                    naptha,
-                    args.agent,
-                    args.parameters,
-                    args.agent_nodes,
-                    args.tool_nodes,
-                    args.environment_nodes,
-                    args.kb_nodes,
-                    args.memory_nodes,
-                    args.persona_modules
-                )
+                await create(naptha, args.module, args.agent_modules, args.agent_nodes, args.tool_modules, args.tool_nodes, args.kb_modules, args.kb_nodes, args.memory_modules, args.memory_nodes, args.environment_modules, args.environment_nodes)
+            elif args.command == "run":                    
+                await run(naptha, args.agent, args.parameters, args.agent_nodes, args.tool_nodes, args.environment_nodes, args.kb_nodes, args.memory_nodes, args.persona_modules)
             elif args.command == "inference":
                 request = ChatCompletionRequest(
                     messages=[{"role": "user", "content": args.prompt}],
@@ -979,13 +913,13 @@ async def main():
                 await naptha.inference_client.run_inference(request)
             elif args.command == "storage":
                 await storage_interaction(
-                    naptha,
-                    args.storage_type,
-                    args.operation,
-                    args.path,
-                    data=args.data,
-                    schema=args.schema,
-                    options=args.options,
+                    naptha, 
+                    args.storage_type, 
+                    args.operation, 
+                    args.path, 
+                    data=args.data, 
+                    schema=args.schema, 
+                    options=args.options, 
                     file=args.file
                 )
             elif args.command == "publish":

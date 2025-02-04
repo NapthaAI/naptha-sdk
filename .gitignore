@@ -164,14 +164,3 @@ cython_debug/
 .DS_Store
 
 *.pem
-.vscode/settings.json
-six-1.17.0-py2.py3-none-any.whl
-poetry.lock
-poetry.lock
-examples/camel_examples/single_agent/pyproject.toml
-examples/camel_examples/single_agent/src/single_agent/main.py
-examples/camel_examples/single_agent/.python-version
-poetry.lock
-examples/camel_examples/single_agent/src/single_agent/pyproject.toml
-examples/camel_examples/single_agent/src/single_agent/single_agent.py
-examples/crewAI-examples
