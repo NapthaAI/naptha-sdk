@@ -70,17 +70,3 @@ def sign_consumer_id(consumer_id, private_key):
     consumer_id_bytes = consumer_id.encode('utf-8')
     signature = private_key.sign(consumer_id_bytes)
     return signature.hex()
-
-def get_private_key(private_key):
-    if private_key and is_hex(private_key):
-        private_key_hex = private_key
-    elif private_key and os.path.isfile(private_key):
-        with open(private_key) as file:
-            content = file.read().strip()
-            if content:
-                private_key_hex = content
-            else:
-                return None
-    else:
-        return None
-    return private_key_hex
