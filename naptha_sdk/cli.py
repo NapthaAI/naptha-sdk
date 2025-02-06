@@ -50,18 +50,18 @@ async def list_nodes(naptha):
 
 
     # Define columns with specific formatting
-    table.add_column("ID", justify="left")
-    table.add_column("IP", justify="left")
-    table.add_column("Owner", justify="left")
+    table.add_column("Node ID", justify="left")
+    table.add_column("Node IP", justify="left")
+    table.add_column("Node Owner", justify="left")
     table.add_column("OS", justify="left")
     table.add_column("Arch", justify="left")
-    table.add_column("User Comm Protocol", justify="left")
-    table.add_column("User Comm Port", justify="left")
-    table.add_column("Num Node Comm Servers", justify="left")
-    table.add_column("Node Comm Protocol", justify="left")
-    table.add_column("Models", justify="left", no_wrap=True)
-    table.add_column("Num GPUs", justify="left")
-    table.add_column("Provider Types", justify="left")
+    table.add_column("User \nComm \nProtocol", justify="left")
+    table.add_column("User \nComm \nPort", justify="left")
+    table.add_column("# Node\nComm \nServers", justify="left")
+    table.add_column("Node \nComm \nProtocol", justify="left")
+    table.add_column("Available \nModels", justify="left", no_wrap=True)
+    table.add_column("# \nGPUs", justify="left")
+    table.add_column("Provider \nTypes", justify="left")
 
     # Add rows
     for node in nodes:
