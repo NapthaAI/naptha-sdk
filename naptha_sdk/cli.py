@@ -43,19 +43,25 @@ async def list_nodes(naptha):
     # Get dynamic headers from first node
     headers = list(nodes[0].keys())
 
+    def format_models(models):
+        if isinstance(models, str):
+            models = eval(models)  # Safely convert string representation to list
+        return '\n'.join(models)  # One model per line
+
+
     # Define columns with specific formatting
-    table.add_column("ID", justify="left")
-    table.add_column("IP", justify="left")
-    table.add_column("Owner", justify="left")
+    table.add_column("Node ID", justify="left")
+    table.add_column("Node IP", justify="left")
+    table.add_column("Node Owner", justify="left")
     table.add_column("OS", justify="left")
     table.add_column("Arch", justify="left")
-    table.add_column("User Comm Protocol", justify="left")
-    table.add_column("User Comm Port", justify="left")
-    table.add_column("Num Node Comm Servers", justify="left")
-    table.add_column("Node Comm Protocol", justify="left")
-    table.add_column("Models", justify="left")
-    table.add_column("Num GPUs", justify="left")
-    table.add_column("Provider Types", justify="left")
+    table.add_column("User \nComm \nProtocol", justify="left")
+    table.add_column("User \nComm \nPort", justify="left")
+    table.add_column("# Node\nComm \nServers", justify="left")
+    table.add_column("Node \nComm \nProtocol", justify="left")
+    table.add_column("Available \nModels", justify="left", no_wrap=True)
+    table.add_column("# \nGPUs", justify="left")
+    table.add_column("Provider \nTypes", justify="left")
 
     # Add rows
     for node in nodes:
@@ -69,7 +75,7 @@ async def list_nodes(naptha):
             str(node['user_communication_port']),
             str(node['num_node_communication_servers']),
             node['node_communication_protocol'],
-            str(node['models']), 
+            format_models(node['models']), 
             str(node['num_gpus']),
             str(node['provider_types']) 
         )
