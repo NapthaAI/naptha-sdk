@@ -19,7 +19,7 @@ from naptha_sdk.storage.schemas import (
 )
 from naptha_sdk.user import get_public_key, sign_consumer_id
 from naptha_sdk.utils import url_to_node, get_env_data, get_logger
-from naptha_sdk.secrets import create_secret
+from naptha_sdk.secrets import create_secret, verify_and_reconstruct_rsa_key
 from httpx import HTTPStatusError
 
 load_dotenv(override=True)
@@ -619,8 +619,10 @@ def _parse_str_args(args):
     return args
 
 async def get_server_public_key(naptha: Naptha) -> str:
-    endpoint = f"{os.getenv('NODE_URL')}/public_key"
-    return await naptha.node._send_request("GET", endpoint)
+    endpoint = f"{os.getenv('NODE_URL')}/.well-known/jwks.json"
+    response =  await naptha.node._send_request("GET", endpoint)
+
+    return verify_and_reconstruct_rsa_key(response)
 
 def _parse_metadata_args(args, module_type):
     """Parse metadata arguments and return a module configuration dictionary.
@@ -971,7 +973,7 @@ async def main():
             elif args.command == "publish":
                 await naptha.publish_modules(args.decorator, args.register, args.subdeployments)
             elif args.command == "deploy-secrets":
-                response = await get_server_public_key(naptha)
+                public_key = await get_server_public_key(naptha)
                 
                 if args.env:
                     data_dict = get_env_data()
@@ -985,7 +987,7 @@ async def main():
                     
                     data_dict = {key_name: key_value}
 
-                encrypted_data = create_secret(data_dict, naptha.hub.user_id, response["public_key"])
+                encrypted_data = create_secret(data_dict, naptha.hub.user_id, public_key)
                 result = await naptha.node._send_request(
                     "POST",
                     f"{os.getenv('NODE_URL')}/user/secret/create",

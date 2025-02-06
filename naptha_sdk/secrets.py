@@ -1,20 +1,10 @@
 import base64
-from cryptography.hazmat.primitives import padding, serialization
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.backends import default_backend
 
-def load_public_key(public_key_str):
-    public_key = serialization.load_pem_public_key(
-        public_key_str.encode('utf-8'),
-        backend=default_backend()
-    )
-
-    return public_key
-
-def create_secret(payload, user_id, public_key_str):
+def create_secret(payload, user_id, public_key):
     records = []
-    public_key = load_public_key(public_key_str)
 
     for key_name, value in payload.items():
         # Encrypt the value using server's public_key
@@ -41,3 +31,24 @@ def encrypt_with_server_public_key(data, public_key):
     base64_encrypted_data = base64.b64encode(encrypted_data).decode('utf-8')
 
     return base64_encrypted_data
+
+def verify_and_reconstruct_rsa_key(data):
+    # Check if the 'kty' is RSA and 'use' is enc
+    if 'keys' not in data or len(data['keys']) == 0:
+        raise ValueError("No keys found in the provided data.")
+    
+    key = data['keys'][0]
+    
+    if key.get('kty') != 'RSA' or key.get('use') != 'enc':
+        raise ValueError("The key is not an RSA encryption key.")
+
+    try:
+        n = int.from_bytes(base64.urlsafe_b64decode(key['n'] + '=='), byteorder='big')
+        e = int.from_bytes(base64.urlsafe_b64decode(key['e'] + '=='), byteorder='big')
+    except Exception as e:
+        raise ValueError(f"Error decoding base64 values: {e}")
+    
+    # Reconstruct the RSA public key
+    public_key = rsa.RSAPublicNumbers(e, n).public_key(default_backend())
+    
+    return public_key
