@@ -131,17 +131,7 @@ class NodeClient:
                 'public_key': response.public_key,
             }
 
-    async def register_user_http(self, user_input: Dict[str, str]):
-        endpoint = f"{self.node_url}/user/register"
-        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-            resp = await client.post(endpoint, json=user_input)
-            resp.raise_for_status()
-            return resp.json()
-
     async def run_module(self, module_type: str, run_input: Union[AgentRunInput, KBRunInput, ToolRunInput, MemoryRunInput, EnvironmentRunInput]):
-        """
-        Dispatch run to either ws, grpc, or http based on node_communication_protocol
-        """
         if self.node.node_communication_protocol == 'ws':
             return await self.run_module_ws(module_type, run_input)
         elif self.node.node_communication_protocol == 'grpc':
@@ -276,33 +266,6 @@ class NodeClient:
                 completed_time=final_response.completed_time,
                 duration=final_response.duration
             )
-
-    async def run_module_http(self, module_type: str, run_input):
-        endpoint = f"{self.node_url}/{module_type}/run"
-        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-            headers = {
-                'Content-Type': 'application/json',
-                'Authorization': f'Bearer {self.access_token}' if self.access_token else '',
-            }
-            payload = run_input.model_dict()
-            resp = await client.post(endpoint, json=payload, headers=headers)
-
-            if resp.status_code >= 400:
-                error_detail = resp.json() if resp.text else str(resp)
-                logger.error(f"Server error response: {error_detail}")
-                raise Exception(f"Server returned error response: {error_detail}")
-
-            data = resp.json()
-
-        # Convert JSON -> appropriate Pydantic type
-        return_types = {
-            "agent": AgentRun,
-            "kb": KBRun,
-            "tool": ToolRun,
-            "environment": EnvironmentRun,
-        }
-        RT = return_types.get(module_type, AgentRun)
-        return RT(**data)
 
     async def connect_ws(self, action: str):
         client_id = str(uuid.uuid4())
@@ -489,7 +452,11 @@ class UserClient:
 
     async def _run_module(self, run_input: Union[AgentRunInput, OrchestratorRunInput, EnvironmentRunInput, ToolRunInput], module_type: str) -> Union[AgentRun, OrchestratorRun, EnvironmentRun, ToolRun]:
         """
-        For direct HTTP runs. If your node is an HTTP node, it hits <node_url>/<module_type>/run
+        Generic method to run either an agent, orchestrator, environment, or tool on a node
+        
+        Args:
+            run_input: Either AgentRunInput, OrchestratorRunInput, EnvironmentRunInput, or ToolRunInput
+            module_type: Either 'agent', 'orchestrator', 'environment', or 'tool'
         """
         print(f"Running {module_type}...")
         print(f"Run input: {run_input}")
