@@ -343,7 +343,7 @@ async def load_persona(persona_module):
         if not success:
             raise ConnectionError(f"Failed to authenticate with Hub.")            
 
-        personas = await hub.list_personas(persona_module['name'])
+        personas = await hub.list_modules("persona", persona_module['name'])
     persona = personas[0]
     persona_url = persona['module_url']
 
