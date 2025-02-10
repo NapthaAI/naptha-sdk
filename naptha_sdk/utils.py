@@ -3,6 +3,8 @@ import os
 import yaml
 from naptha_sdk.schemas import NodeConfigUser
 
+logger = logging.getLogger(__name__)
+
 def get_logger(name):
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
@@ -108,6 +110,7 @@ class AsyncMixin:
         return self.__initobj().__await__()
     
 def node_to_url(node_schema: NodeConfigUser):
+   logger.info(f"Node schema: {node_schema}")
    if node_schema.user_communication_port is None or node_schema.user_communication_port == "https":
        return f"{node_schema.user_communication_protocol}://{node_schema.ip}"
    return f"{node_schema.user_communication_protocol}://{node_schema.ip}:{node_schema.user_communication_port}"
