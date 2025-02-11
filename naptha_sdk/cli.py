@@ -12,10 +12,10 @@ from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.schemas import AgentDeployment, ChatCompletionRequest, EnvironmentDeployment, \
     OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, KBDeployment, KBRunInput, MemoryDeployment, MemoryRunInput, ToolDeployment, ToolRunInput, NodeConfigUser
-from naptha_sdk.storage.storage_provider import StorageProvider
+from naptha_sdk.storage.storage_client import StorageClient
 from naptha_sdk.storage.schemas import (
     CreateStorageRequest, DeleteStorageRequest, ListStorageRequest, 
-    ReadStorageRequest, UpdateStorageRequest, SearchStorageRequest,StorageType, 
+    ReadStorageRequest, UpdateStorageRequest, SearchStorageRequest, StorageType
 )
 from naptha_sdk.user import get_public_key, sign_consumer_id
 from naptha_sdk.utils import url_to_node
@@ -451,8 +451,8 @@ async def run(
         print(f"Module type {module_type} not supported.")
 
 async def storage_interaction(naptha, storage_type, operation, path, data=None, schema=None, options=None, file=None):
-    """Handle storage interactions using StorageProvider"""
-    storage_provider = StorageProvider(naptha.node.node)
+    """Handle storage interactions using StorageClient"""
+    storage_client = StorageClient(naptha.node.node)
     print(f"Storage interaction: {storage_type}, {operation}, {path}, {data}, {schema}, {options}, {file}")
 
     try:
@@ -469,7 +469,7 @@ async def storage_interaction(naptha, storage_type, operation, path, data=None, 
                         file=f,
                         options=json.loads(options) if options else {}
                     )
-                    result = await storage_provider.execute(request)
+                    result = await storage_client.execute(request)
                     print(f"Create {storage_type} result: {result}")
                     return result
                     
@@ -479,7 +479,7 @@ async def storage_interaction(naptha, storage_type, operation, path, data=None, 
                     path=path,
                     options=json.loads(options) if options else {}
                 )
-                result = await storage_provider.execute(request)
+                result = await storage_client.execute(request)
                 print(f"Read {storage_type} result: {result}")
                 # Handle downloaded file
                 if isinstance(result.data, bytes):
@@ -550,7 +550,7 @@ async def storage_interaction(naptha, storage_type, operation, path, data=None, 
                     options=json.loads(options) if options else {}
                 )
 
-        result = await storage_provider.execute(request)
+        result = await storage_client.execute(request)
         print(f"{operation} {storage_type} result: {result}")
         return result
 

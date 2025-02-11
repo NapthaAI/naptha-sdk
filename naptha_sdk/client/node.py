@@ -1,27 +1,21 @@
 from copy import deepcopy
-import json
-import os
-import shutil
-import tempfile
-import time
-import traceback
-import uuid
-import zipfile
-import random
-from pathlib import Path
-from typing import Dict, Optional, Any, List, Tuple, Union
-
+from google.protobuf.json_format import MessageToDict
 import grpc
 import httpx
+from httpx import HTTPStatusError, RemoteProtocolError
+import json
+import random
+import time
+import traceback
+from typing import Dict, Any, Union
+import uuid
 import websockets
 from google.protobuf import struct_pb2
-from google.protobuf.json_format import MessageToDict
-from httpx import HTTPStatusError, RemoteProtocolError
 
 from naptha_sdk.client import grpc_server_pb2
 from naptha_sdk.client import grpc_server_pb2_grpc
-from naptha_sdk.schemas import AgentRun, AgentRunInput, ChatCompletionRequest, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, \
-    OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, KBDeployment, KBRunInput, KBRun, MemoryDeployment, MemoryRunInput, MemoryRun, ToolRunInput, ToolRun, NodeConfig, NodeConfigUser, ModelResponse, ToolDeployment
+from naptha_sdk.schemas import AgentRun, AgentRunInput, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, \
+    OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, KBDeployment, KBRunInput, KBRun, MemoryDeployment, MemoryRunInput, MemoryRun, ToolRunInput, ToolRun, NodeConfig, NodeConfigUser, ToolDeployment
 from naptha_sdk.utils import get_logger, node_to_url
 
 logger = get_logger(__name__)
@@ -485,43 +479,6 @@ class UserClient:
             print(f"An unexpected error occurred: {e}")
             raise
 
-    async def run_inference(self, inference_input: Union[ChatCompletionRequest, Dict]) -> ModelResponse:
-        """
-        Run inference on a node
-        
-        Args:
-            inference_input: The inference input to run inference on
-        """
-        if isinstance(inference_input, dict):
-            inference_input = ChatCompletionRequest(**inference_input)
-
-        endpoint = f"{self.node_url}/inference/chat"
-
-        try:
-            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-                headers = {
-                    'Content-Type': 'application/json',
-                    'Authorization': f'Bearer {self.access_token}',
-                }
-                response = await client.post(
-                    endpoint,
-                    json=inference_input.model_dump(),
-                    headers=headers
-                )
-                print("Response: ", response.text)
-                response.raise_for_status()
-                return ModelResponse(**json.loads(response.text))
-        except HTTPStatusError as e:
-            logger.info(f"HTTP error occurred: {e}")
-            raise
-        except RemoteProtocolError as e:
-            error_msg = f"Inference failed to connect to the server at {self.node_url}. Please check if the server URL is correct and the server is running. Error details: {str(e)}"
-            logger.error(error_msg)
-            raise
-        except Exception as e:
-            print(f"An unexpected error occurred: {e}")
-            raise
-
     async def run_agent(self, agent_run_input: AgentRunInput) -> AgentRun:
         """Run an agent module on a node"""
         return await self._run_module(agent_run_input, 'agent')
@@ -598,229 +555,3 @@ class UserClient:
 
     async def check_memory_run(self, memory_run: MemoryRun) -> MemoryRun:
         return await self.check_run(memory_run, 'memory')
-
-    async def create_agent_run(self, agent_run_input: AgentRunInput) -> AgentRun:
-        try:
-            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-                response = await client.post(
-                    f"{self.node_url}/monitor/create_agent_run", json=agent_run_input.model_dump()
-                )
-                response.raise_for_status()
-            return AgentRun(**json.loads(response.text))
-        except HTTPStatusError as e:
-            logger.info(f"HTTP error occurred: {e}")
-            raise  
-        except Exception as e:
-            logger.info(f"An unexpected error occurred: {e}")
-            logger.info(f"Full traceback: {traceback.format_exc()}")
-
-    async def update_agent_run(self, agent_run: AgentRun):
-        try:
-            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-                response = await client.post(
-                    f"{self.node_url}/monitor/update_agent_run", json=agent_run.model_dump()
-                )
-                response.raise_for_status()
-            return AgentRun(**json.loads(response.text))
-        except HTTPStatusError as e:
-            logger.info(f"HTTP error occurred: {e}")
-            raise  
-        except Exception as e:
-            print(f"An unexpected error occurred: {e}")
-            error_details = traceback.format_exc()
-            print(f"Full traceback: {error_details}")
-
-    async def read_storage(self, agent_run_id: str, output_dir: str, ipfs: bool = False) -> str:
-        print("Reading from storage...")
-        try:
-            endpoint = f"{self.node_url}/{'storage/read_ipfs' if ipfs else 'storage/read'}/{agent_run_id}"
-
-            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-                response = await client.get(endpoint)
-                response.raise_for_status()
-                storage = response.content  
-                print("Retrieved storage.")
-            
-                # Temporary file handling
-                temp_file_name = None
-                with tempfile.NamedTemporaryFile(delete=False, mode='wb') as tmp_file:
-                    tmp_file.write(storage)  # storage is a bytes-like object
-                    temp_file_name = tmp_file.name
-        
-                # Ensure output directory exists
-                output_path = Path(output_dir)
-                output_path.mkdir(parents=True, exist_ok=True)
-        
-                # Check if the file is a zip file and extract if true
-                if zipfile.is_zipfile(temp_file_name):
-                    with zipfile.ZipFile(temp_file_name, 'r') as zip_ref:
-                        zip_ref.extractall(output_path)
-                    print(f"Extracted storage to {output_dir}.")
-                else:
-                    shutil.copy(temp_file_name, output_path)
-                    print(f"Copied storage to {output_dir}.")
-
-                # Cleanup temporary file
-                Path(temp_file_name).unlink(missing_ok=True)
-        
-                return output_dir         
-        except HTTPStatusError as e:
-            logger.info(f"HTTP error occurred: {e}")
-            raise  
-        except Exception as e:
-            logger.info(f"An unexpected error occurred: {e}")
-            logger.info(f"Full traceback: {traceback.format_exc()}")
-
-    async def write_storage(self, storage_input: str, ipfs: bool = False, publish_to_ipns: bool = False, update_ipns_name: str = None) -> Dict[str, Any]:
-        """Write storage to the node."""
-        print("Writing storage")
-        try:
-            file = prepare_files(storage_input)
-            endpoint = f"{self.node_url}/storage/write_ipfs" if ipfs else f"{self.node_url}/storage/write"
-            
-            if update_ipns_name:
-                publish_to_ipns = True
-
-            data = {
-                "publish_to_ipns": publish_to_ipns,
-                "update_ipns_name": update_ipns_name
-            }
-            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-                response = await client.post(
-                    endpoint, 
-                    files=file,
-                    data=data,
-                    timeout=600
-                )
-                response.raise_for_status()
-                return response.json()
-        except HTTPStatusError as e:
-            logger.info(f"HTTP error occurred: {e}")
-            raise  
-        except Exception as e:
-            logger.info(f"An unexpected error occurred: {e}")
-            logger.info(f"Full traceback: {traceback.format_exc()}")
-            return {}
-
-    async def create_table(self, table_name: str, schema: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
-        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-            response = await client.post(
-                f"{self.node_url}/local-db/create-table",
-                json={"table_name": table_name, "schema": schema}
-            )
-            response.raise_for_status()
-            return response.json()
-
-    async def add_row(self, table_name: str, data: Dict[str, Any], schema: Optional[Dict[str, Dict[str, Any]]] = None) -> Dict[str, Any]:
-        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-            response = await client.post(
-                f"{self.node_url}/local-db/add-row",
-                json={"table_name": table_name, "data": data, "schema": schema}
-            )
-            response.raise_for_status()
-            return response.json()
-
-    async def update_row(self, table_name: str, data: Dict[str, Any], condition: Dict[str, Any], schema: Optional[Dict[str, Dict[str, Any]]] = None) -> Dict[str, Any]:
-        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-            response = await client.post(
-                f"{self.node_url}/local-db/update-row",
-                json={
-                    "table_name": table_name,
-                    "data": data,
-                    "condition": condition,
-                    "schema": schema
-                }
-            )
-            response.raise_for_status()
-            return response.json()
-
-    async def delete_row(self, table_name: str, condition: Dict[str, Any]) -> Dict[str, Any]:
-        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-            response = await client.post(
-                f"{self.node_url}/local-db/delete-row",
-                json={"table_name": table_name, "condition": condition}
-            )
-            response.raise_for_status()
-            return response.json()
-
-    async def list_tables(self) -> Dict[str, Any]:
-        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-            response = await client.get(f"{self.node_url}/local-db/tables")
-            response.raise_for_status()
-            return response.json()
-
-    async def get_table_schema(self, table_name: str) -> Dict[str, Any]:
-        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-            response = await client.get(f"{self.node_url}/local-db/table/{table_name}")
-            response.raise_for_status()
-            return response.json()
-
-    async def query_table(self, table_name: str, columns: Optional[str] = None, condition: Optional[Union[str, Dict]] = None, order_by: Optional[str] = None, limit: Optional[int] = None) -> Dict[str, Any]:
-        params = {"table_name": table_name}
-        if columns:
-            params["columns"] = columns
-        if condition:
-            params["condition"] = json.dumps(condition) if isinstance(condition, dict) else condition
-        if order_by:
-            params["order_by"] = order_by
-        if limit:
-            params["limit"] = limit
-
-        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-            response = await client.get(
-                f"{self.node_url}/local-db/table/{table_name}/rows",
-                params=params
-            )
-            response.raise_for_status()
-            return response.json()
-
-    async def vector_search(
-        self,
-        table_name: str,
-        vector_column: str,
-        query_vector: List[float],
-        columns: Optional[List[str]] = None,
-        top_k: int = 5,
-        include_similarity: bool = True
-    ) -> Dict[str, Any]:
-        """
-        Perform a pgvector-based similarity search on a table's vector column.
-        """
-        payload = {
-            "table_name": table_name,
-            "vector_column": vector_column,
-            "query_vector": query_vector,
-            "columns": columns or ["text"],
-            "top_k": top_k,
-            "include_similarity": include_similarity,
-        }
-        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-            response = await client.post(
-                f"{self.node_url}/local-db/vector_search",
-                json=payload
-            )
-            response.raise_for_status()
-            return response.json()
-
-
-def zip_directory(file_path, zip_path):
-    """Utility function to zip the content of a directory while preserving the folder structure."""
-    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        for root, dirs, files in os.walk(file_path):
-            for file in files:
-                file_path = os.path.join(root, file)
-                arcname = os.path.relpath(file_path, start=os.path.abspath(file_path).split(os.sep)[0])
-                zipf.write(file_path, arcname)
-
-def prepare_files(file_path: str) -> List[Tuple[str, str]]:
-    """Prepare files for upload."""
-    if os.path.isdir(file_path):
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.zip') as tmpfile:
-            zip_directory(file_path, tmpfile.name)
-            tmpfile.close()  
-            file = {'file': open(tmpfile.name, 'rb')}
-    else:
-        file = {'file': open(file_path, 'rb')}
-    
-    return file
-
