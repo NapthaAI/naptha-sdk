@@ -16,35 +16,71 @@
  
 # Naptha Python SDK
 
-Naptha is a framework and infrastructure for developing and running multi-agent systems across many devices. The Naptha SDK is made up of:
+Naptha is a framework and infrastructure for developing and running multi-agent systems at scale with heterogeneous models, architectures and data. 
 
-1. A client for interacting with the Naptha Hub (like the huggingface_hub library but for multi-agent apps)
-2. Abstractions for the composable building blocks of multi-agent apps like Agent, Orchestrator, Tool, Environment, Persona, Knowledge Base, and Memory (i.e. Naptha Modules). With Naptha, communication between these modules happens via API.
-3. Decorators for easily onboarding modules from agent frameworks like CrewAI.
-3. A CLI for interacting with the Naptha Hub and Node
+Naptha Modules are the building blocks of multi-agent systems. They are designed to be framework-agnostic, allowing developers to implement modules using different agent frameworks. There are currently seven types of modules: Agents, Tools, Knowledge Bases, Memories, Orchestrators, Environments, and Personas. As shown in the diagram below, modules can also run on separate devices, while still interacting with each other the network.
+
+The Naptha SDK is used within Naptha Modules to facilitate interactions with other modules, and to access model inference and storage (e.g. of knowledge, memories, etc.). The Naptha SDK also acts as a client for interacting with the Naptha Hub (like HuggingFace but for multi-agent apps), and Naptha Nodes (the infrastructure that runs modules).
+
+You can find more information on Naptha Modules, the Naptha SDK and Naptha Nodes in the [docs](https://docs.naptha.ai).
 
 If you find this repo useful, please don't forget to star ⭐!
 
-<img src="images/multi-node-flow.png" width="100%">
+<img src="images/modules.png" width="100%">
 
-## Pre-requisites
 
-Install Python [Poetry](https://python-poetry.org/docs/):
+## 1. Getting Started
 
-```bash
-pipx install poetry
-```
+### Set up a Virtual Environment
 
-## Install
+It is good practice to install the SDK in a dedicated virtual environment. We recommend using Poetry to manage your dependencies.
 
-From source:
+Create a new poetry virtual environment:
 
 ```bash
-git clone https://github.com/NapthaAI/naptha-sdk.git
-cd naptha-sdk
-poetry install
+poetry new test-env
 source .venv/bin/activate
+pip install naptha-sdk
 ```
+
+You can also use in-built Python virtual environments:
+
+```bash
+python -m venv test-env
+source test-env/bin/activate
+```
+
+### Install the SDK
+
+You can install the Naptha SDK using:
+
+```bash
+pip install naptha-sdk
+```
+
+## 2. Creating Your Naptha Identity
+
+Your Naptha account is your identity on the Naptha platform. It allows you to:
+
+- Deploy and run agents, tools, environments and other modules on Naptha Nodes (via a public/private keypair)
+- Access and interact with the Naptha Hub's features and services (via a username and password)
+
+The simplest way to create a new account is through the interactive CLI. Run the following command:
+
+```bash
+naptha signup
+```
+
+Or if you have already have set up an identity, edit your `.env` file with your desired credentials:
+
+```bash
+# .env file
+HUB_USERNAME=your_username
+HUB_PASSWORD=your_password
+PRIVATE_KEY=your_private_key  # Optional - will be generated if not provided
+```
+
+## 3. Configure an .env file
 
 Create a copy of the .env file:
 
@@ -52,21 +88,9 @@ Create a copy of the .env file:
 cp .env.example .env
 ```
 
-Choose whether you want to interact with a local Naptha node or a hosted Naptha node. For a local node, set ```NODE_URL=http://localhost:7001``` in the .env file. To use a hosted node, set ```NODE_URL=http://node.naptha.ai:7001``` or ```NODE_URL=http://node1.naptha.ai:7001```.
+Choose whether you want to interact with a *local* or *hosted* Naptha node. For a local node, set ```NODE_URL=http://localhost:7001``` in the .env file. To use a hosted node, set e.g. ```NODE_URL=https://node.naptha.ai``` or ```NODE_URL=https://node2.naptha.ai``` in the .env file.
 
-## Get Started
-
-## Sign In or Sign Up
-
-If you have already created an account on the Naptha Hub, you can add the details to HUB_USERNAME, HUB_PASSWORD and
-PRIVATE_KEY in the .env file. If you don't have an account, you can either (a) add values for HUB_USERNAME, HUB_PASSWORD
-and PRIVATE_KEY in the .env file and run `naptha signup`, or (b) run `naptha signup` without values in the .env file and
-follow the instructions to create a username and password (in this case, the public/private keypair is randomly
-generated, and all details will be saved in the .env file).
-
-## Nodes
-
-### Explore Nodes on the Network
+## 4. Interact with the Naptha Hub
 
 You can use the CLI to see a list of available nodes:
 
@@ -74,189 +98,199 @@ You can use the CLI to see a list of available nodes:
 naptha nodes
 ```
 
-Make note of a Node ID for running a workflow below.
-
-## Agents
-
-### Interact with the Agent Hub
-
-You can also use the CLI to explore available agents that you can run on a node:
+To see a list of existing agents on the hub you can run:
 
 ```bash
 naptha agents
 ```
 
-For each agent, you will see a url where you can check out the code.
+or  `naptha tools`, `naptha kbs`, `naptha memories`, `naptha orchestrators`, `naptha environments`, and `naptha personas` for other types of modules. For each agent, you will see a module url where you can check out the code.
 
-### Create a New Agent
+For instructions on registering a new module on the hub, or updating and deleting modules see the [docs](https://docs.naptha.ai/GettingStarted/NapthaCLI).
 
-```bash
-naptha agents agent_name -c "description='Agent description' parameters='{tool_name: str, tool_input_data: str}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
-```
+## 5. Running Modules
 
-### Update an Agent
-
-```bash
-naptha agents agent_name -u "module_version='v0.2'" 
-```
-
-### Delete an Agent
-
-```bash
-naptha agents -d agent_name
-```
+Now you've found a module you want to run, and you've configured where you want to run the modules (either on a hosted node or locally). You can now use the CLI and run the module. 
 
 ### Run an Agent
 
-Now you've found a node and a agent you'd like to run, so let's run it locally! You can use the commandline tool to connect with the node and run the workflow. 
+The [Hello World Agent](https://github.com/NapthaAI/hello_world_agent) is the simplest example of an agent that prints hello:
 
 ```bash
 # usage: naptha run <agent_name> <agent args>
 naptha run agent:hello_world_agent -p "firstname=sam surname=altman"
 ```
 
-Try an agent that uses the local LLM running on your node:
+Try running the [Simple Chat Agent](https://github.com/NapthaAI/simple_chat_agent) that uses the local LLM running on your node:
 
 ```bash
 naptha run agent:simple_chat_agent -p "tool_name='chat' tool_input_data='what is an ai agent?'"
 ```
 
-## Tools
+You can check out the module code to see how to access model inference, via the Inference API of the Naptha Node. The `llm_configs.json` file in the `configs` folder of the module contains the model configurations:
 
-### Interact with the Tool Hub
-
-You can also use the CLI to explore available tools that you can use:
-
-```bash
-naptha tools
+```json
+[
+    {
+        "config_name": "open",
+        "client": "ollama",
+        "model": "hermes3:8b",
+        "temperature": 0.7,
+        "max_tokens": 1000,
+        "api_base": "http://localhost:11434"
+    },
+    {
+        "config_name": "closed",
+        "client": "openai",
+        "model": "gpt-4o-mini",
+        "temperature": 0.7,
+        "max_tokens": 1000,
+        "api_base": "https://api.openai.com/v1"
+    }
+]
 ```
 
-For each tool, you will see a url where you can check out the code.
+The main code for the agent is contained in the `run.py` file, which imports the `InferenceClient` class and calls the `run_inference` method:
 
-### Create a New Tool
+```
+from naptha_sdk.inference import InferenceClient
 
-```bash
-naptha tools tool_name -c "description='Tool description' parameters='{tool_input_1: str, tool_input_2: str}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
+class SimpleChatAgent:
+    def __init__(self, deployment: AgentDeployment):
+        ...
+        # the arg is loaded from configs/deployment.json
+        self.node = InferenceClient(self.deployment.node) 
+        ...
+
+    async def chat(self, inputs: InputSchema):
+        ...
+        response = await self.node.run_inference({"model": self.deployment.config.llm_config.model,
+                                                    "messages": messages,
+                                                    "temperature": self.deployment.config.llm_config.temperature,
+                                                    "max_tokens": self.deployment.config.llm_config.max_tokens})
 ```
 
-### Update a Tool
+### Run an Agent with a Persona
+
+Below are examples of running the Simple Chat Agent with a [twitter/X persona](https://huggingface.co/datasets/NapthaAI/twitter_personas/blob/main/interstellarninja.json), generated from exported X data:
 
 ```bash
-naptha tools tool_name -u "module_version='v0.2'" 
+naptha run agent:simple_chat_agent -p "tool_name='chat' tool_input_data='who are you?'" --persona_modules "interstellarninja_twitter"
 ```
 
-### Delete a Tool
+and from a synthetically generated [market persona](https://huggingface.co/datasets/NapthaAI/market_agents_personas/blob/main/market_agents_personas/data/Aileen_May.yaml) based on census data:
 
 ```bash
-naptha tools -d tool_name
+naptha run agent:simple_chat_agent -p "tool_name='chat' tool_input_data='who are you?'" --persona_modules "marketagents_aileenmay"
 ```
 
-### Run a Tool
+### Run a Tool and an Agent that uses it
 
-Now you've found a node and a tool you'd like to run, so let's run it locally! You can use the commandline tool to connect with the node and run the workflow. 
+The [Generate Image Tool](https://github.com/NapthaAI/generate_image_tool) is a simple example of a Tool module. It is intended to demonstrate how agents can interact with a Tool module that allows them to generate images. You can run the tool module using:
 
 ```bash
 # usage: naptha run <tool_name> -p "<tool args>"
 naptha run tool:generate_image_tool -p "tool_name='generate_image_tool' prompt='A beautiful image of a cat'"
 ```
 
-### Run an Agent that interacts with the Tool
+The [Generate Image Agent](https://github.com/NapthaAI/generate_image_agent) is an example of an Agent module that interacts with the [Generate Image Tool](https://github.com/NapthaAI/generate_image_tool). You can run the agent module using:
 
 ```bash
 naptha run agent:generate_image_agent -p "tool_name='generate_image_tool' prompt='A beautiful image of a cat'" --tool_nodes "node.naptha.ai"
 ```
 
-## Agent Orchestrators
+The name of the tool subdeployment that the agent uses is specified in the `configs/deployment.json`, and the full details of that tool subdeployment are loaded from the deployment with the same name in the `configs/tool_deployments.json` file.
 
-### Interact with the Agent Orchestrator Hub
+```json
+# AgentDeployment in deployment.json file 
+[
+    {
+        "node": {"name": "node.naptha.ai"},
+        "module": {"name": "generate_image_agent"},
+        "config": ...,
+        "tool_deployments": [{"name": "tool_deployment_1"}],
+        ...
+    }
+]
 
-You can also use the CLI to explore available agent orchestrators that you can run on a network of nodes:
-
-```bash
-naptha orchestrators
+# ToolDeployment in tool_deployments.json file
+[
+    {
+        "name": "tool_deployment_1",
+        "module": {"name": "generate_image_tool"},
+        "node": {"ip": "node.naptha.ai"},
+        "config": {
+            "config_name": "tool_config_1",
+            "llm_config": {"config_name": "model_1"}
+        },
+    }
+]
 ```
 
-For each orchestrator, you will see a url where you can check out the code.
+There is a `GenerateImageAgent` class in the `run.py` [file](https://github.com/NapthaAI/generate_image_agent/blob/main/generate_image_agent/run.py#L16), which imports the `Tool` class and calls the `Tool.run` method:
 
-### Create a New Agent Orchestrator
+```
+from naptha_sdk.schemas import AgentDeployment, AgentRunInput, ToolRunInput
+from naptha_sdk.modules.tool import Tool
+from naptha_sdk.user import sign_consumer_id
 
-```bash
-naptha orchestrators orchestrator_name -c "description='Orchestrator description' parameters='{input_parameter_1: str, input_parameter_2: int}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
+class GenerateImageAgent:
+    def __init__(self, deployment: AgentDeployment):
+        ...
+        # the arg below is loaded from configs/tool_deployments.json
+        self.tool = Tool(tool_deployment=self.deployment.tool_deployments[0])
+        ...
+
+    async def call_tool(self, module_run: AgentRunInput):
+        tool_run_input = ToolRunInput(
+            consumer_id=module_run.consumer_id,
+            inputs=module_run.inputs,
+            deployment=self.deployment.tool_deployments[0],
+            signature=sign_consumer_id(module_run.consumer_id, os.getenv("PRIVATE_KEY"))
+        )
+
+        tool_response = await self.tool.run(tool_run_input)
 ```
 
-### Update an Agent Orchestrator
+### Run a Knowledge Base and an Agent that uses it
 
-```bash
-naptha orchestrators orchestrator_name -u "module_version='v0.2'" 
+The [Wikipedia Knowledge Base Module](https://github.com/NapthaAI/wikipedia_kb/tree/main) is a simple example of a Knowledge Base module. It is intended to demonstrate how agents can interact with a Knowledge Base that looks like Wikipedia. 
+
+The configuration of a knowledge base module is specified in the `deployment.json` file in the `configs` folder of the module.
+
+```json
+# KnowledgeBaseConfig in deployment.json file 
+[
+    {
+        ...
+        "config": {
+            "llm_config": {"config_name": "model_1"},
+            "storage_config": {
+                "storage_type": "db",
+                "path": "wikipedia_kb",
+                "options": {
+                    "query_col": "title",
+                    "answer_col": "text"
+                },
+                "storage_schema": {
+                    "id": {"type": "INTEGER", "primary_key": true},
+                    "url": {"type": "TEXT"},
+                    "title": {"type": "TEXT"},
+                    "text": {"type": "TEXT"}
+                }
+            }
+        }
+    }
+]
 ```
 
-### Delete an Agent Orchestrator
-
-```bash
-naptha orchestrators -d orchestrator_name
-```
-
-### Run an Agent Orchestrator across a network of nodes:
-
-You can download and install the modules for an orchestrator without running first using:
-
-```bash
-naptha create orchestrator:multiagent_chat --agent_modules "agent:simple_chat_agent,agent:simple_chat_agent" --agent_nodes "node.naptha.ai,node1.naptha.ai" --kb_modules "kb:groupchat_kb" --kb_nodes "node.naptha.ai"
-```
-
-You can run the orchestrator module on hosted nodes using:
-
-```bash
-naptha run orchestrator:multiagent_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --agent_nodes "node.naptha.ai,node1.naptha.ai" --kb_nodes "node.naptha.ai"
-```
-
-Or on local nodes:
-
-```bash
-naptha run orchestrator:multiagent_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --agent_nodes "localhost,localhost" --kb_nodes "localhost"
-```
-
-## Knowledge Base Modules
-
-### Interact with the Knowledge Base Hub
-
-You can also use the CLI to explore available knowledge bases that you can use with agents:
-
-```bash
-naptha kbs
-```
-
-### Register a New Knowledge Base Module on the Hub
-
-```bash
-naptha kbs kb_name -c "description='Knowledge Base description' parameters='{input_parameter_1: str, input_parameter_2: int}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
-```
-
-### Update a Knowledge Base Module
-
-```bash
-naptha kbs kb_name -u "module_version='v0.2'" 
-```
-
-### Delete a Knowledge Base Module
-
-```bash
-naptha kbs -d kb_name
-```
-
-### Create a New Knowledge Base on a Node
-
-```bash
-naptha create kb:wikipedia_kb 
-```
-
-### Initialize the content in the Knowledge Base
+There is a WikipediaKB class in the `run.py` file that has a number of methods. You can think of these methods as [endpoints of the Knowledge Base](https://github.com/NapthaAI/wikipedia_kb/blob/main/wikipedia_kb/run.py#L59), which will be called using the `run` command below. For example, you can initialize the content in the Knowledge Base using:
 
 ```bash
 naptha run kb:wikipedia_kb -p "func_name='init'"
 ```
 
-### List content in the Knowledge Base
+You can list content in the Knowledge Base using:
 
 ```bash
 naptha run kb:wikipedia_kb -p '{
@@ -267,7 +301,7 @@ naptha run kb:wikipedia_kb -p '{
 }'
 ```
 
-### Add to the Knowledge Base
+You can add to the Knowledge Base using:
 
 ```bash
 naptha run kb:wikipedia_kb -p '{
@@ -280,7 +314,7 @@ naptha run kb:wikipedia_kb -p '{
 }'
 ```
 
-### Query the Knowledge Base Module
+You can query the Knowledge Base using:
 
 ```bash
 naptha run kb:wikipedia_kb -p '{
@@ -291,7 +325,7 @@ naptha run kb:wikipedia_kb -p '{
 }'
 ```
 
-## Delete a row from the Knowledge Base
+You can delete a row from the Knowledge Base using:
 
 ```bash
 naptha run kb:wikipedia_kb -p '{
@@ -304,7 +338,7 @@ naptha run kb:wikipedia_kb -p '{
 }'
 ```
 
-## Delete the entire Knowledge Base
+You can delete the entire Knowledge Base using:
 
 ```bash
 naptha run kb:wikipedia_kb -p '{
@@ -315,47 +349,129 @@ naptha run kb:wikipedia_kb -p '{
 }'
 ```
 
-### Run an Agent that interacts with the Knowledge Base
+The Wikipedia KB also instantiates the `StorageClient` class and calls the `execute` method with `CreateStorageRequest`, `ReadStorageRequest`, `DeleteStorageRequest`, `ListStorageRequest` and `UpdateStorageRequest` objects:
 
-```bash
-naptha run agent:wikipedia_agent -p "func_name='run_query' query='Elon Musk' question='Who is Elon Musk?'" --kb_nodes "node.naptha.ai"
+```
+from naptha_sdk.schemas import KBDeployment
+from naptha_sdk.storage.schemas import ReadStorageRequest
+from naptha_sdk.storage.storage_client import StorageClient
+
+class WikipediaKB:
+    def __init__(self, deployment: KBDeployment):
+        ...
+        # the arg is loaded from configs/deployment.json
+        self.storage_client = StorageClient(self.deployment.node)
+        self.storage_type = self.config.storage_config.storage_type
+        self.table_name = self.config.storage_config.path
+        self.schema = self.config.storage_config.storage_schema
+
+    async def run_query(self, input_data: Dict[str, Any], *args, **kwargs):
+        read_storage_request = ReadStorageRequest(
+            storage_type=self.storage_type,
+            path=self.table_name,
+            options={"condition": {"title": input_data["query"]}}
+        )
+
+        read_result = await self.storage_client.execute(read_storage_request)
 ```
 
-## Memory Modules
-
-### Interact with the Memory Hub
-
-You can also use the CLI to explore available memory modules that you can use with agents:
+You can run an Agent that interacts with the Knowledge Base using:
 
 ```bash
-naptha memories   
+naptha run agent:wikipedia_agent -p "func_name='run_query' query='Elon Musk' question='Who is Elon Musk?'" --kb_nodes "node3.naptha.ai"
 ```
 
-### Register a New Memory Module on the Hub
+The name of the KB subdeployment that the agent uses is specified in the `configs/deployment.json`, and the full details of that KB subdeployment are loaded from the deployment with the same name in the `configs/kb_deployments.json` file.
 
-```bash
-naptha memories memory_name -c "description='Memory description' parameters='{input_parameter_1: str, input_parameter_2: int}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
+```json
+# AgentDeployment in configs/deployment.json file 
+[
+    {
+        "node": {"name": "node.naptha.ai"},
+        "module": {"name": "wikipedia_agent"},
+        "config": ...,
+        "kb_deployments": [{"name": "kb_deployment_1"}],
+        ...
+    }
+]
+
+# KBDeployment in configs/kb_deployments.json file
+[
+    {
+        "name": "kb_deployment_1",
+        "module": {"name": "wikipedia_kb"},
+        "node": {"ip": "node.naptha.ai"},
+        "config": {
+            "llm_config": {"config_name": "model_1"},
+            "storage_config": ...
+        },
+    }
+]
 ```
 
-### Update a Memory Module
+There is a `WikipediaAgent` class in the `run.py` [file](https://github.com/NapthaAI/wikipedia_agent/blob/main/wikipedia_agent/run.py#L15), which imports the `KnowledgeBase` class and calls the `KnowledgeBase.run` method:
 
-```bash
-naptha memories memory_name -u "module_version='v0.2'" 
+```
+from naptha_sdk.modules.kb import KnowledgeBase
+from naptha_sdk.schemas import AgentDeployment, AgentRunInput, KBRunInput
+from naptha_sdk.user import sign_consumer_id
+
+class WikipediaAgent:
+    def __init__(self, deployment: AgentDeployment):
+        ...
+        # the arg below is loaded from configs/kb_deployments.json
+        self.wikipedia_kb = KnowledgeBase(kb_deployment=self.deployment.kb_deployments[0])
+        ...
+
+        kb_run_input = KBRunInput(
+            consumer_id=module_run.consumer_id,
+            inputs={"func_name": "run_query", "func_input_data": {"query": module_run.inputs.query}},
+            deployment=self.deployment.kb_deployments[0],
+            signature=sign_consumer_id(module_run.consumer_id, os.getenv("PRIVATE_KEY"))
+        )
+
+        page = await self.wikipedia_kb.run(kb_run_input)
 ```
 
-### Delete a Memory Module
+### Run a Memory Module
 
-```bash
-naptha memories -d memory_name
+The [Cognitive Memory module](https://github.com/NapthaAI/cognitive_memory) is a simple example of a Memory module. It is intended to demonstrate how agents can interact with a Memory module that allows them to store and retrieve cognitive steps such as reflections. You can create a memory table using:
+
+The configuration of a memory module is specified in the `deployment.json` file in the `configs` folder of the module.
+
+```json
+# MemoryConfig in configs/deployment.json file 
+[
+    {
+        ...
+        "config": {
+            "storage_config": {
+                "storage_type": "db",
+                "path": "cognitive_memory",
+                "storage_schema": {
+                    "memory_id": {"type": "INTEGER", "primary_key": true},
+                    "cognitive_step": {"type": "TEXT"},
+                    "content": {"type": "TEXT"},
+                    "created_at": {"type": "TEXT"},
+                    "metadata": {"type": "jsonb"}
+                },
+                "options": {
+                    "query_col": "title",
+                    "answer_col": "text"
+                }
+            }
+        }
+    }
+]
 ```
 
-### Create the Memory Table
+There is a CognitiveMemory class in the `run.py` file that has a number of methods. You can think of these methods as [endpoints of the Memory](https://github.com/NapthaAI/cognitive_memory/blob/main/cognitive_memory/run.py#L34), which will be called using the `run` command below. For example, you can initialize the table in Memory using:
 
 ```bash
 naptha run memory:cognitive_memory -p "func_name='init'"
 ```
 
-### Add to Memory
+You can add to the memory table using:
 
 ```bash
 naptha run memory:cognitive_memory -p '{
@@ -367,7 +483,7 @@ naptha run memory:cognitive_memory -p '{
 }'
 ```
 
-### Query Memory
+You can query the memory table using:
 
 ```bash
 naptha run memory:cognitive_memory -p '{
@@ -378,7 +494,7 @@ naptha run memory:cognitive_memory -p '{
 }'
 ```
 
-## Delete a row in Memory
+You can delete a row in the memory table using:
 
 ```bash
 naptha run memory:cognitive_memory -p '{
@@ -389,161 +505,111 @@ naptha run memory:cognitive_memory -p '{
 }'
 ```
 
-## Environment Modules
+### Run an Agent Orchestrator 
 
-Environment modules in Naptha provide shared state and communication infrastructure for multi-agent workflows. They act as a common space where agents can interact, share information, and maintain persistent state across workflow executions. Think of them as the "world" or "environment" in which agents operate and communicate.
+The [Multiagent Chat Orchestrator](https://github.com/NapthaAI/multiagent_chat) is an example of an Orchestrator module that interacts with simple chat [Agent modules](https://github.com/NapthaAI/simple_chat_agent) and a groupchat [Knowledge Base module](https://github.com/NapthaAI/groupchat_kb). The orchestrator, agents and knowledge base can all run on different nodes. You can run the orchestrator module on hosted nodes using:
 
-For example, an environment module might:
-- Maintain a shared conversation history for a group chat
-- Store and manage a knowledge base that multiple agents can read from and write to
-- Provide a shared task queue for coordinating work between agents
-- Manage game state for multi-agent simulations
+The names of the Agent and KB subdeployments that the orchestrator uses are specified in the `configs/deployment.json`, and the full details of those subdeployments are loaded from the deployments with the same name in the `configs/agent_deployments.json` and `configs/kb_deployments.json` files.
 
-### Interact with the Environment Hub
-
-You can also use the CLI to explore available environment modules that you can use with agents:
-
-```bash
-naptha environments   
-```
-
-### Register a New Environment Module on the Hub
-
-```bash
-naptha environments environment_name -c "description='Environment description' parameters='{input_parameter_1: str, input_parameter_2: int}' module_url='ipfs://QmNer9SRKmJPv4Ae3vdVYo6eFjPcyJ8uZ2rRSYd3koT6jg'" 
-```
-
-### Update an Environment Module
-
-```bash
-naptha environments environment_name -u "module_version='v0.2'" 
-```
-
-### Delete an Environment Module
-
-```bash
-naptha environments -d environment_name
-```
-
-## Personas
-
-### Interact with the Persona Hub
-
-You can also use the CLI to explore available personas that you can use with agents:
-
-```bash
-naptha personas
-```
-
-For each persona, you will see a url where you can check out the data.
-
-### Create a New Persona
-
-```bash
-naptha personas sam_altman_twitter -c "description='Persona for Sam Altman' parameters='{name: str, bio: str, openness: int}' module_url='https://huggingface.co/datasets/OpenAI/twitter_personas' module_entrypoint='data/sam.json'" 
-```
-
-Make sure that the `module_url` is the url of the main repo (e.g the huggingface dataset, github repo, or repo stored on ipfs) and the `module_entrypoint` is the path to the file in the dataset (currently can be json or yaml).
-
-### Update a Persona
-
-```bash
-naptha personas sam_altman_twitter -u "module_version='v0.2'" 
-```
-
-
-### Delete a Persona
-
-```bash
-naptha personas -d sam_altman_twitter
-```
-
-### Run an Agent with a Persona
-
-```bash
-naptha run agent:simple_chat_agent -p "tool_name='chat' tool_input_data='who are you?'" --persona_modules "interstellarninja_twitter"
-```
-
-```bash
-naptha run agent:simple_chat_agent -p "tool_name='chat' tool_input_data='who are you?'" --persona_modules "marketagents_aileenmay"
-```
-
-## Local Model Inference 
-
-One of the main functions of a Naptha Module is to access model inference. Naptha Nodes can run inference locally , and do so via the Naptha Inference API. Naptha Modules can import the `InferenceClient` class to interact with the inference provider.
-
-```
-import asyncio
-from naptha_sdk.schemas import NodeConfigUser
-from naptha_sdk.inference import InferenceClient
-
-node = NodeConfigUser(ip="node.naptha.ai", user_communication_port=7001, user_communication_protocol="http")
-inference_client = InferenceClient(node)
-
-messages = [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "What is the capital of France?"}]
-
-response = asyncio.run(inference_client.run_inference({"model": "phi3:mini",
-                                             "messages": messages,
-                                             "temperature": 0.5,
-                                             "max_tokens": 1000}))
-                                          
-content = response['choices'][0]['message']['content']
-```
-
-You can also run inference on a node using the `naptha inference` command:
-
-```bash
-naptha inference "How can we create scaling laws for multi-agent systems?" -m "NousResearch/Hermes-3-Llama-3.1-8B"
-```
-
-## Local Node Storage
-
-Naptha Modules often need to store and retreive data locally with the Naptha Nodes that they are running on, and do so via the Naptha Storage API. The Naptha Nodes support several types of storage, including filesystem storage, database storage, and IPFS storage. When building a module, you can import the `StorageClient` class to interact with storage providers. For example, to create a table in a database of a storage provider, you can use the following code:
-
-```
-import asyncio
-from naptha_sdk.schemas import NodeConfigUser
-from naptha_sdk.storage.storage_client import StorageClient
-from naptha_sdk.storage.schemas import CreateStorageRequest, StorageType
-
-node = NodeConfigUser(ip="node.naptha.ai", user_communication_port=None, user_communication_protocol="https")
-storage_client = StorageClient(node)
-
-schema = {
-    "schema": {
-        "id": {"type": "TEXT", "primary_key": True},
-        "text": {"type": "TEXT", "required": True},
-        "embedding": {"type": "vector", "dimension": 384}
+```json
+# OrchestratorDeployment in configs/deployment.json file 
+[
+    {
+        "node": {"name": "node.naptha.ai"},
+        "module": {"name": "multiagent_chat"},
+        "config": ...,
+        "agent_deployments": [
+            {"name": "agent_deployment_1"},
+            {"name": "agent_deployment_2"}
+        ],
+        "kb_deployments": [{"name": "groupchat_kb_deployment_1"}]
+        ...
     }
-}
+]
 
-create_table_request = CreateStorageRequest(
-    storage_type=StorageType.DATABASE,
-    path="test_embeddings",
-    data=schema
-)
+# AgentDeployments in configs/agent_deployments.json file
+[
+    {
+        "name": "agent_deployment_1",
+        "module": {"name": "simple_chat_agent"},
+        "node": {"ip": "node.naptha.ai"},
+        "config": {
+            "config_name": "agent_config_1",
+            "llm_config": {"config_name": "model_1"},
+            "system_prompt": ...
+        }
+    },
+    {
+        "name": "agent_deployment_2",
+        "module": {"name": "simple_chat_agent"},
+        "node": {"ip": "node.naptha.ai"},
+        "config": {
+            "config_name": "agent_config_2",
+            "llm_config": {"config_name": "model_2"},
+            "system_prompt": ...
+        }
+    }
+]
 
-create_table_result = asyncio.run(storage_client.execute(create_table_request))
-print("Create Table Result:", create_table_result)
+# KBDeployment in configs/kb_deployments.json file
+[
+    {
+        "name": "groupchat_kb_deployment_1",
+        "module": {"name": "groupchat_kb"},
+        "node": {"ip": "node.naptha.ai"},
+        "config": {
+            "storage_config": ...
+        },
+    }
+]
 ```
 
-You can also interact with storage directly via the CLI using the `naptha storage` series of commands, followed by the storage type (e.g. `db` `fs`, `ipfs`). For example, to upload a file to node storage, list the files in a directory in node storage, and download a file from node storage, you can use:
+There is a `MultiAgentChat` class in the `run.py` [file](https://github.com/NapthaAI/multiagent_chat/blob/main/multiagent_chat/run.py#L24C7-L24C21), which imports the `Agent` and `KnowledgeBase` classes and calls the `Agent.run` and `KnowledgeBase.run` methods:
 
 ```
-naptha storage fs create test_upload -f README.md
-naptha storage fs list test_upload
-naptha storage fs read test_upload
+from naptha_sdk.modules.agent import Agent
+from naptha_sdk.modules.kb import KnowledgeBase
+from naptha_sdk.schemas import OrchestratorRunInput, OrchestratorDeployment, KBRunInput, AgentRunInput
+from naptha_sdk.user import sign_consumer_id
+
+class MultiAgentChat:
+    def __init__(self, deployment: OrchestratorDeployment):
+        self.orchestrator_deployment = orchestrator_deployment
+        self.agent_deployments = self.orchestrator_deployment.agent_deployments
+        self.agents = [
+            Agent(deployment=self.agent_deployments[0], *args, **kwargs),
+            Agent(deployment=self.agent_deployments[1], *args, **kwargs)
+        ]
+        self.groupchat_kb = KnowledgeBase(kb_deployment=self.orchestrator_deployment.kb_deployments[0])
+
+    async def run_multiagent_chat(self, module_run: OrchestratorRunInput):
+        ...
+        for round_num in range(self.orchestrator_deployment.config.max_rounds):
+            for agent_num, agent in enumerate(self.agents):
+                    agent_run_input = AgentRunInput(
+                        consumer_id=module_run.consumer_id,
+                        inputs={"tool_name": "chat", "tool_input_data": messages},
+                        deployment=self.agent_deployments[agent_num],
+                        signature=sign_consumer_id(module_run.consumer_id, os.getenv("PRIVATE_KEY"))
+                    )
+                    response = await agent.call_agent_func(agent_run_input)
 ```
 
-For more examples of using database, file system and IPFS storage via Naptha Nodes, see the [docs](https://docs.naptha.ai/NapthaStorage/overview).
+
+You can run the orchestrator module using (note that using the `--agent_nodes` and `--kb_nodes` flags overrides the values in the `deployment.json` file instead):
+
+```bash
+# usage: naptha run <orchestrator_name> -p "<orchestrator args>" --agent_nodes "<agent nodes>" --kb_nodes "<kb nodes>"
+naptha run orchestrator:multiagent_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --agent_nodes "node.naptha.ai,node1.naptha.ai" --kb_nodes "node.naptha.ai"
+```
 
 # Create your own Module
 
 Follow the guide in our [docs](https://docs.naptha.ai/Contributing/module-builder) for creating your first agent. This involves cloning the [base module template](https://github.com/NapthaAI/module_template). You can check out other examples of agents and other modules at https://github.com/NapthaAI.
 
-# Run a Node
+# Run Agents locally on your own Naptha Node
 
-You can run your own Naptha node, and earn rewards for running workflows. Follow the instructions at https://github.com/NapthaAI/node (still private, please reach out if you'd like access).
+You can run your own Naptha node, and earn rewards for running workflows. Follow the instructions at https://github.com/NapthaAI/naptha-node.
 
 # Community
 
