@@ -18,7 +18,7 @@
 
 Naptha is a framework and infrastructure for developing and running multi-agent systems across many devices. The Naptha SDK is made up of:
 
-1. A client for interacting with the Naptha Hub (like the huggingface_hug library but for multi-agent apps)
+1. A client for interacting with the Naptha Hub (like the huggingface_hub library but for multi-agent apps)
 2. Abstractions for the composable building blocks of multi-agent apps like Agent, Orchestrator, Tool, Environment, Persona, Knowledge Base, and Memory (i.e. Naptha Modules). With Naptha, communication between these modules happens via API.
 3. Decorators for easily onboarding modules from agent frameworks like CrewAI.
 3. A CLI for interacting with the Naptha Hub and Node
@@ -43,7 +43,7 @@ From source:
 git clone https://github.com/NapthaAI/naptha-sdk.git
 cd naptha-sdk
 poetry install
-poetry shell
+source .venv/bin/activate
 ```
 
 Create a copy of the .env file:
@@ -214,21 +214,6 @@ Or on local nodes:
 
 ```bash
 naptha run orchestrator:multiagent_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --agent_nodes "localhost,localhost" --kb_nodes "localhost"
-```
-
-```bash
-naptha run orchestrator:babyagi -p "objective='Research the history of football'" --agent_nodes "node.naptha.ai,node1.naptha.ai"
-```
-
-```bash
-naptha run orchestrator:multiagent_debate -p "initial_claim='Teslas price will exceed $250 in 2 weeks.' max_rounds=2 context='Teslas current price is $207, and recent innovations and strong Q2 results will drive the price up.
-
-News Summary 1:
-Tesla stock was lower to start a new week of trading, falling as investors worry about global growth. Shares of the electric-vehicle giant were down 7.3% in premarket trading Monday at $192.33. Stocks around the world were falling as investors fretted that weak economic data signal a recession ahead. Despite positive comments from CEO Elon Musk about Tesla’s sales, the stock has fallen about 16% this year and is struggling to overcome negative global investor sentiment.
-
-News Summary 2:
-Tesla faces growing competition and softening demand, impacting its stock price which is trading 43% below its all-time high. The company’s profitability is declining, with earnings per share shrinking 46% year-over-year in Q2 2024. Despite recent price cuts and a plan to produce a low-cost EV model, sales growth has decelerated. Tesla is also involved in autonomous self-driving software, humanoid robots, and solar energy, but these segments may take years to significantly impact revenue.
-'" --agent_nodes "node.naptha.ai,node1.naptha.ai"
 ```
 
 ## Knowledge Base Modules
@@ -458,13 +443,14 @@ For each persona, you will see a url where you can check out the data.
 naptha personas sam_altman_twitter -c "description='Persona for Sam Altman' parameters='{name: str, bio: str, openness: int}' module_url='https://huggingface.co/datasets/OpenAI/twitter_personas' module_entrypoint='data/sam.json'" 
 ```
 
+Make sure that the `module_url` is the url of the main repo (e.g the huggingface dataset, github repo, or repo stored on ipfs) and the `module_entrypoint` is the path to the file in the dataset (currently can be json or yaml).
+
 ### Update a Persona
 
 ```bash
 naptha personas sam_altman_twitter -u "module_version='v0.2'" 
 ```
 
-Make sure that the `module_url` is the url of the main repo (e.g the huggingface dataset, github repo, or repo stored on ipfs) and the `module_entrypoint` is the path to the file in the dataset (currently can be json or yaml).
 
 ### Delete a Persona
 
@@ -507,7 +493,7 @@ content = response['choices'][0]['message']['content']
 You can also run inference on a node using the `naptha inference` command:
 
 ```bash
-naptha inference "How can we create scaling laws for multi-agent systems?" -m "phi3:mini"
+naptha inference "How can we create scaling laws for multi-agent systems?" -m "NousResearch/Hermes-3-Llama-3.1-8B"
 ```
 
 ## Local Node Storage
@@ -549,27 +535,22 @@ naptha storage fs list test_upload
 naptha storage fs read test_upload
 ```
 
-For more examples of using database, file system and IPFS storage via Naptha Nodes, see the [docs](https://docs.naptha.ai).
+For more examples of using database, file system and IPFS storage via Naptha Nodes, see the [docs](https://docs.naptha.ai/NapthaStorage/overview).
 
+# Create your own Module
 
-
-
-# ***More examples and tutorials coming soon.***
-
-### Create your own Agent
-
-Clone the [base template](https://github.com/NapthaAI/module_template) for creating agent and flow agents, and follow the instructions in the readme for prototyping the agent. You can check out other examples of agents and networks at https://github.com/NapthaAI.
-
-Register your agent on the Naptha Hub (Coming Soon).
+Follow the guide in our [docs](https://docs.naptha.ai/Contributing/module-builder) for creating your first agent. This involves cloning the [base module template](https://github.com/NapthaAI/module_template). You can check out other examples of agents and other modules at https://github.com/NapthaAI.
 
 # Run a Node
 
 You can run your own Naptha node, and earn rewards for running workflows. Follow the instructions at https://github.com/NapthaAI/node (still private, please reach out if you'd like access).
+
 # Community
 
 ### Links
 
 * Check out our [Website](https://www.naptha.ai/)  
+* Read our [Docs](https://docs.naptha.ai/)
 * Contribute to our [GitHub](https://github.com/NapthaAI)
 * Request to join the Naptha community on [HuggingFace](https://huggingface.co/NapthaAI)
 * Follow us on [Twitter](https://twitter.com/NapthaAI) and [Farcaster](https://warpcast.com/naptha)  
