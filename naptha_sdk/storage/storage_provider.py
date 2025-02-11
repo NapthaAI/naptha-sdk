@@ -21,7 +21,7 @@ HTTP_TIMEOUT = 300
 
 logger = get_logger(__name__)
 
-class StorageProvider:
+class StorageClient:
     def __init__(self, node: NodeConfigUser):
         self.node = node
         self.node_url = node_to_url(node)

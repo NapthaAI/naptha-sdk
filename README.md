@@ -512,16 +512,16 @@ naptha inference "How can we create scaling laws for multi-agent systems?" -m "p
 
 ## Local Node Storage
 
-Naptha Modules often need to store and retreive data locally with the Naptha Nodes that they are running on, and do so via the Naptha Storage API. The Naptha Nodes support several types of storage, including filesystem storage, database storage, and IPFS storage. When building a module, you can import the `StorageProvider` class to interact with storage providers. For example, to create a table in a database storage provider, you can use the following code:
+Naptha Modules often need to store and retreive data locally with the Naptha Nodes that they are running on, and do so via the Naptha Storage API. The Naptha Nodes support several types of storage, including filesystem storage, database storage, and IPFS storage. When building a module, you can import the `StorageClient` class to interact with storage providers. For example, to create a table in a database of a storage provider, you can use the following code:
 
 ```
 import asyncio
 from naptha_sdk.schemas import NodeConfigUser
-from naptha_sdk.storage.storage_provider import StorageProvider
+from naptha_sdk.storage.storage_client import StorageClient
 from naptha_sdk.storage.schemas import CreateStorageRequest, StorageType
 
-node = NodeConfigUser(ip="node.naptha.ai", user_communication_port=7001, user_communication_protocol="http")
-storage_provider = StorageProvider(node)
+node = NodeConfigUser(ip="node.naptha.ai", user_communication_port=None, user_communication_protocol="https")
+storage_client = StorageClient(node)
 
 schema = {
     "schema": {
@@ -537,11 +537,11 @@ create_table_request = CreateStorageRequest(
     data=schema
 )
 
-create_table_result = asyncio.run(storage_provider.create_storage_object(create_table_request))
+create_table_result = asyncio.run(storage_client.execute(create_table_request))
 print("Create Table Result:", create_table_result)
 ```
 
-You can also interact with storage directly via the CLI using the `naptha storage` series of commands, followed by the storage provider type (e.g. `db` `fs`, `ipfs`). For example, to upload a file to node storage, list the files in a directory in node storage, and download a file from node storage, you can use:
+You can also interact with storage directly via the CLI using the `naptha storage` series of commands, followed by the storage type (e.g. `db` `fs`, `ipfs`). For example, to upload a file to node storage, list the files in a directory in node storage, and download a file from node storage, you can use:
 
 ```
 naptha storage fs create test_upload -f README.md
