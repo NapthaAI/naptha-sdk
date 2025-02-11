@@ -630,42 +630,6 @@ class UserClient:
             error_details = traceback.format_exc()
             print(f"Full traceback: {error_details}")
 
-    async def create(self, module_type: str, module_request: Any) -> Any:
-        """
-        Generic method to create a module on the node.
-        Supports creation of agents, orchestrators, environments, tools, KBs, or memory.
-        """
-        print(f"Creating {module_type}...")
-        endpoint = f"{self.node_url}/{module_type}/create"
-        try:
-            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-                headers = {
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {self.access_token}",
-                }
-                payload = (
-                    module_request.model_dump()
-                    if hasattr(module_request, "model_dump")
-                    else module_request
-                )
-                response = await client.post(endpoint, json=payload, headers=headers)
-                response.raise_for_status()
-                print(f"Response: {response.text}")
-                return response.json()
-        except HTTPStatusError as e:
-            logger.info(f"HTTP error occurred: {e}")
-            raise
-        except RemoteProtocolError as e:
-            error_msg = (
-                f"Create {module_type} failed to connect to the server at {self.node_url}. "
-                f"Please check if the server URL is correct and the server is running. Error details: {str(e)}"
-            )
-            logger.error(error_msg)
-            raise
-        except Exception as e:
-            print(f"An unexpected error occurred: {e}")
-            raise
-
     async def read_storage(self, agent_run_id: str, output_dir: str, ipfs: bool = False) -> str:
         print("Reading from storage...")
         try:
