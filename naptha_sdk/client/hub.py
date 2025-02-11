@@ -192,17 +192,15 @@ class Hub:
         if not module_config.get('id'):
             module = await self.surrealdb.update(module_type, module_config)
         else:
-            # For partial updates, use MERGE to only update specified fields
             module_id = module_config.pop('id')
-            query = "UPDATE $module_id MERGE $updates RETURN AFTER;"
-            result = await self.surrealdb.query(
-                query,
-                {
-                    "module_id": module_id,
-                    "updates": module_config
-                }
-            )
-            module = result[0]['result'][0] if result and result[0]['result'] else None
+            existing = await self.surrealdb.select(module_id)
+            if existing:
+                author = existing['author']
+                assert author == self.user_id, f"You are not authorized to update this module. Author: {author}, Current user: {self.user_id}"
+                updated_data = {**existing, **module_config}
+                module = await self.surrealdb.update(module_id, updated_data)
+            else:
+                raise Exception(f"No existing {module_type} found with id {module_id}")
             
         logger.info(f"Updated {module_type}: {module}")
         return module
@@ -224,7 +222,12 @@ class Hub:
 
         if ":" not in module_id:
             module_id = f"{module_type}:{module_id}".strip()
-            
+        
+        existing = await self.surrealdb.select(module_id)
+        if existing:
+            author = existing['author']
+            assert author == self.user_id, f"You are not authorized to delete this module. Author: {author}, Current user: {self.user_id}"
+
         logger.info(f"Deleting {module_type}: {module_id}")
         success = await self.surrealdb.delete(module_id)
         
