@@ -34,22 +34,22 @@ If you find this repo useful, please don't forget to star ⭐!
 - [🧩 Naptha Python SDK](#naptha-python-sdk)
   - [🏗 Installing the SDK](#-installing-the-sdk)
   - [🔥 Creating your Naptha Identity](#-creating-your-naptha-identity)
-  - [⚙️ Configuring your .env file](#-configuring-your-env-file)
-  - [🌐 Interacting with the Naptha Hub](#interacting-with-the-naptha-hub)
-  - [🚀 Running Modules](#running-modules)
-    - [🤖 Run an Agent](#run-an-agent)
-    - [🎭 Run an Agent with a Persona](#run-an-agent-with-a-persona)
-    - [🛠️ Run a Tool](#run-a-tool)
-    - [🔧 Run an Agent that uses a Tool](#run-an-agent-that-uses-a-tool)
-    - [📚 Run a Knowledge Base](#run-a-knowledge-base)
-    - [🧠 Run an Agent that uses a Knowledge Base](#run-an-agent-that-uses-a-knowledge-base)
-    - [💭 Run a Memory Module](#run-a-memory-module)
-    - [🎮 Run an Orchestrator](#run-an-orchestrator)
-  - [✨ Creating your own Module](#creating-your-own-module)
-  - [💻 Running Agents locally on your own Naptha Node](#running-agents-locally-on-your-own-naptha-node)
-  - [👥 Community](#community)
-    - [🔗 Links](#links)
-    - [💰 Bounties and Microgrants](#bounties-and-microgrants)
+  - [⚙️ Configuring your env file](#-configuring-your-env-file)
+  - [🌐 Interacting with the Naptha Hub](#-interacting-with-the-naptha-hub)
+  - [🚀 Running Modules](#-running-modules)
+    - [🤖 Run an Agent](#-run-an-agent)
+    - [🎭 Run an Agent with a Persona](#-run-an-agent-with-a-persona)
+    - [🛠️ Run a Tool](#-run-a-tool)
+    - [🔧 Run an Agent that uses a Tool](#-run-an-agent-that-uses-a-tool)
+    - [📚 Run a Knowledge Base](#-run-a-knowledge-base)
+    - [🧠 Run an Agent that uses a Knowledge Base](#-run-an-agent-that-uses-a-knowledge-base)
+    - [💭 Run a Memory Module](#-run-a-memory-module)
+    - [🎮 Run an Orchestrator](#-run-an-orchestrator)
+  - [✨ Creating your own Module](#-creating-your-own-module)
+  - [💻 Running Agents locally on your own Naptha Node](#-running-agents-locally-on-your-own-naptha-node)
+  - [👥 Community](#-community)
+    - [🔗 Links](#-links)
+    - [💰 Bounties and Microgrants](#-bounties-and-microgrants)
 
 ## 🧩 Installing the SDK
 
@@ -102,7 +102,7 @@ HUB_PASSWORD=your_password
 PRIVATE_KEY=your_private_key  # Optional - will be generated if not provided
 ```
 
-## ⚙️ Configuring your .env file
+## ⚙️ Configuring your env file
 
 Create a copy of the .env file:
 
