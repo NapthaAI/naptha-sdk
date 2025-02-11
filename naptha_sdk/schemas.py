@@ -63,10 +63,6 @@ class LLMConfig(BaseModel):
     api_base: Optional[str] = None
     options: Optional[EmbeddingModelOptions] = None
 
-class AgentModuleType(str, Enum):
-    package = "package"
-    docker = "docker"
-
 class AgentConfig(BaseModel):
     config_name: Optional[str] = "agent_config"
     llm_config: Optional[LLMConfig] = None
@@ -227,8 +223,6 @@ class AgentRun(BaseModel):
         for key, value in model_dict.items():
             if isinstance(value, datetime):
                 model_dict[key] = value.isoformat()
-            elif isinstance(value, AgentModuleType):
-                model_dict[key] = value.value
         for i, orchestrator_run in enumerate(model_dict['orchestrator_runs']):
             for key, value in orchestrator_run.items():
                 if isinstance(value, datetime):
