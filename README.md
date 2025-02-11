@@ -29,7 +29,27 @@ If you find this repo useful, please don't forget to star ⭐!
 <img src="images/modules.png" width="100%">
 
 
-## 1. Getting Started
+- [🧩 Naptha Python SDK](#naptha-python-sdk)
+  - [🏗 Installing the SDK](#-installing-the-sdk)
+  - [🔥 Creating your Naptha Identity](#-creating-your-naptha-identity)
+  - [⚙️ Configuring your .env file](#-configuring-your-env-file)
+  - [🌐 Interacting with the Naptha Hub](#interacting-with-the-naptha-hub)
+  - [🚀 Running Modules](#running-modules)
+    - [🤖 Run an Agent](#run-an-agent)
+    - [🎭 Run an Agent with a Persona](#run-an-agent-with-a-persona)
+    - [🛠️ Run a Tool](#run-a-tool)
+    - [🔧 Run an Agent that uses a Tool](#run-an-agent-that-uses-a-tool)
+    - [📚 Run a Knowledge Base](#run-a-knowledge-base)
+    - [🧠 Run an Agent that uses a Knowledge Base](#run-an-agent-that-uses-a-knowledge-base)
+    - [💭 Run a Memory Module](#run-a-memory-module)
+    - [🎮 Run an Orchestrator](#run-an-orchestrator)
+  - [✨ Creating your own Module](#creating-your-own-module)
+  - [💻 Running Agents locally on your own Naptha Node](#running-agents-locally-on-your-own-naptha-node)
+  - [👥 Community](#community)
+    - [🔗 Links](#links)
+    - [💰 Bounties and Microgrants](#bounties-and-microgrants)
+
+## 🧩 Installing the SDK
 
 ### Set up a Virtual Environment
 
@@ -50,7 +70,7 @@ python -m venv test-env
 source test-env/bin/activate
 ```
 
-### Install the SDK
+### Install using PyPI
 
 You can install the Naptha SDK using:
 
@@ -58,7 +78,7 @@ You can install the Naptha SDK using:
 pip install naptha-sdk
 ```
 
-## 2. Creating Your Naptha Identity
+## 🔥 Creating Your Naptha Identity
 
 Your Naptha account is your identity on the Naptha platform. It allows you to:
 
@@ -80,7 +100,7 @@ HUB_PASSWORD=your_password
 PRIVATE_KEY=your_private_key  # Optional - will be generated if not provided
 ```
 
-## 3. Configure an .env file
+## ⚙️ Configuring your .env file
 
 Create a copy of the .env file:
 
@@ -90,7 +110,7 @@ cp .env.example .env
 
 Choose whether you want to interact with a *local* or *hosted* Naptha node. For a local node, set ```NODE_URL=http://localhost:7001``` in the .env file. To use a hosted node, set e.g. ```NODE_URL=https://node.naptha.ai``` or ```NODE_URL=https://node2.naptha.ai``` in the .env file.
 
-## 4. Interact with the Naptha Hub
+## 🌐 Interacting with the Naptha Hub
 
 You can use the CLI to see a list of available nodes:
 
@@ -108,11 +128,11 @@ or  `naptha tools`, `naptha kbs`, `naptha memories`, `naptha orchestrators`, `na
 
 For instructions on registering a new module on the hub, or updating and deleting modules see the [docs](https://docs.naptha.ai/GettingStarted/NapthaCLI).
 
-## 5. Running Modules
+## 🚀 Running Modules
 
 Now you've found a module you want to run, and you've configured where you want to run the modules (either on a hosted node or locally). You can now use the CLI and run the module. 
 
-### Run an Agent
+### 🤖 Run an Agent
 
 The [Hello World Agent](https://github.com/NapthaAI/hello_world_agent) is the simplest example of an agent that prints hello:
 
@@ -170,7 +190,7 @@ class SimpleChatAgent:
                                                     "max_tokens": self.deployment.config.llm_config.max_tokens})
 ```
 
-### Run an Agent with a Persona
+### 🎭 Run an Agent with a Persona
 
 Below are examples of running the Simple Chat Agent with a [twitter/X persona](https://huggingface.co/datasets/NapthaAI/twitter_personas/blob/main/interstellarninja.json), generated from exported X data:
 
@@ -184,7 +204,7 @@ and from a synthetically generated [market persona](https://huggingface.co/datas
 naptha run agent:simple_chat_agent -p "tool_name='chat' tool_input_data='who are you?'" --persona_modules "marketagents_aileenmay"
 ```
 
-### Run a Tool and an Agent that uses it
+### 🛠️ Run a Tool
 
 The [Generate Image Tool](https://github.com/NapthaAI/generate_image_tool) is a simple example of a Tool module. It is intended to demonstrate how agents can interact with a Tool module that allows them to generate images. You can run the tool module using:
 
@@ -192,6 +212,8 @@ The [Generate Image Tool](https://github.com/NapthaAI/generate_image_tool) is a 
 # usage: naptha run <tool_name> -p "<tool args>"
 naptha run tool:generate_image_tool -p "tool_name='generate_image_tool' prompt='A beautiful image of a cat'"
 ```
+
+### 🔧 Run an Agent that uses a Tool
 
 The [Generate Image Agent](https://github.com/NapthaAI/generate_image_agent) is an example of an Agent module that interacts with the [Generate Image Tool](https://github.com/NapthaAI/generate_image_tool). You can run the agent module using:
 
@@ -202,7 +224,7 @@ naptha run agent:generate_image_agent -p "tool_name='generate_image_tool' prompt
 The name of the tool subdeployment that the agent uses is specified in the `configs/deployment.json`, and the full details of that tool subdeployment are loaded from the deployment with the same name in the `configs/tool_deployments.json` file.
 
 ```json
-# AgentDeployment in deployment.json file 
+// AgentDeployment in deployment.json file 
 [
     {
         "node": {"name": "node.naptha.ai"},
@@ -252,7 +274,7 @@ class GenerateImageAgent:
         tool_response = await self.tool.run(tool_run_input)
 ```
 
-### Run a Knowledge Base and an Agent that uses it
+### 📚 Run a Knowledge Base
 
 The [Wikipedia Knowledge Base Module](https://github.com/NapthaAI/wikipedia_kb/tree/main) is a simple example of a Knowledge Base module. It is intended to demonstrate how agents can interact with a Knowledge Base that looks like Wikipedia. 
 
@@ -375,6 +397,8 @@ class WikipediaKB:
         read_result = await self.storage_client.execute(read_storage_request)
 ```
 
+### 🧠 Run an Agent that uses a Knowledge Base
+
 You can run an Agent that interacts with the Knowledge Base using:
 
 ```bash
@@ -433,7 +457,7 @@ class WikipediaAgent:
         page = await self.wikipedia_kb.run(kb_run_input)
 ```
 
-### Run a Memory Module
+### 💭 Run a Memory Module
 
 The [Cognitive Memory module](https://github.com/NapthaAI/cognitive_memory) is a simple example of a Memory module. It is intended to demonstrate how agents can interact with a Memory module that allows them to store and retrieve cognitive steps such as reflections. You can create a memory table using:
 
@@ -505,7 +529,7 @@ naptha run memory:cognitive_memory -p '{
 }'
 ```
 
-### Run an Agent Orchestrator 
+### 🎮 Run an Orchestrator 
 
 The [Multiagent Chat Orchestrator](https://github.com/NapthaAI/multiagent_chat) is an example of an Orchestrator module that interacts with simple chat [Agent modules](https://github.com/NapthaAI/simple_chat_agent) and a groupchat [Knowledge Base module](https://github.com/NapthaAI/groupchat_kb). The orchestrator, agents and knowledge base can all run on different nodes. You can run the orchestrator module on hosted nodes using:
 
@@ -603,17 +627,17 @@ You can run the orchestrator module using (note that using the `--agent_nodes` a
 naptha run orchestrator:multiagent_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --agent_nodes "node.naptha.ai,node1.naptha.ai" --kb_nodes "node.naptha.ai"
 ```
 
-# Create your own Module
+## ✨ Creating your own Module
 
 Follow the guide in our [docs](https://docs.naptha.ai/Contributing/module-builder) for creating your first agent. This involves cloning the [base module template](https://github.com/NapthaAI/module_template). You can check out other examples of agents and other modules at https://github.com/NapthaAI.
 
-# Run Agents locally on your own Naptha Node
+# 💻 Running Agents locally on your own Naptha Node
 
 You can run your own Naptha node, and earn rewards for running workflows. Follow the instructions at https://github.com/NapthaAI/naptha-node.
 
-# Community
+## 👥 Community
 
-### Links
+### 🔗 Links
 
 * Check out our [Website](https://www.naptha.ai/)  
 * Read our [Docs](https://docs.naptha.ai/)
@@ -622,6 +646,6 @@ You can run your own Naptha node, and earn rewards for running workflows. Follow
 * Follow us on [Twitter](https://twitter.com/NapthaAI) and [Farcaster](https://warpcast.com/naptha)  
 * Subscribe to our [YouTube](https://www.youtube.com/channel/UCoDwQ3DZa1bRJPrIz_4_02w)
 
-### Bounties and Microgrants
+### 💰 Bounties and Microgrants
 
 Have an idea for a cool use case to build with our SDK? Get in touch at team@naptha.ai.
