@@ -1,3 +1,5 @@
+[![Visit naptha.ai](https://img.shields.io/badge/Visit-naptha.ai-FF4B45?style=flat-square&logo=safari&logoColor=white)](https://naptha.ai/?utm_source=github_sdk) [![Discord](https://img.shields.io/badge/Join-Discord-7289DA?style=flat-square&logo=discord&logoColor=white)](https://form.typeform.com/to/Cgiz63Yp?utm_source=github_sdk)
+
                  █▀█                  
               ▄▄▄▀█▀            
               █▄█ █    █▀█        
@@ -14,7 +16,7 @@
               ▀▀█ █ ██▀▀                                                    
 
  
-# Naptha Python SDK
+# Naptha Python SDK ![GitHub release (latest by date)](https://img.shields.io/github/v/release/NapthaAI/naptha-sdk?style=flat-square)
 
 Naptha is a framework and infrastructure for developing and running multi-agent systems at scale with heterogeneous models, architectures and data. 
 
