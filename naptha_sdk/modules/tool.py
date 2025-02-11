@@ -1,22 +1,19 @@
-from naptha_sdk.client.node import NodeClient
-from naptha_sdk.schemas import AgentRun, ToolRunInput
+from naptha_sdk.client.node import NodeClient, UserClient
+from naptha_sdk.schemas import AgentRun, ToolRunInput, ToolDeployment
 from naptha_sdk.utils import get_logger
 from typing import Union
-from dotenv import load_dotenv
-import os
 
 logger = get_logger(__name__)
-load_dotenv(override=True)
-class Tool:
-    def __init__(self, 
-        tool_deployment,
-        *args,
-        **kwargs
-    ):
-        self.tool_deployment = tool_deployment
-        self.tool_node = NodeClient(self.tool_deployment.node)
 
-    async def call_tool_func(self, module_run_input: Union[AgentRun, ToolRunInput]):
-        logger.info(f"Running tool on worker node {self.tool_node}")
-        tool_run = await self.tool_node.run_module(module_type="tool", run_input=module_run_input)
+class Tool:
+    async def create(self, deployment: ToolDeployment, *args, **kwargs):
+        logger.info(f"Creating tool on worker node {deployment.node}")
+        node = UserClient(deployment.node)
+        tool_run = await node.create(module_type="tool", module_request=deployment)
+        return tool_run
+
+    async def run(self, module_run_input: Union[AgentRun, ToolRunInput]):
+        logger.info(f"Running tool on worker node {module_run_input.deployment.node}")
+        node = NodeClient(module_run_input.deployment.node)
+        tool_run = await node.run_module(module_type="tool", run_input=module_run_input)
         return tool_run
