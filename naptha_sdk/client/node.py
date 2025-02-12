@@ -108,9 +108,11 @@ class NodeClient:
         
         output_types = {
             "agent": AgentRun,
-            "kb": KBRun,
             "tool": ToolRun,
-            "environment": EnvironmentRun
+            "kb": KBRun,
+            "memory": MemoryRun,
+            "orchestrator": OrchestratorRun,
+            "environment": EnvironmentRun,
         }
         
         if response['status'] == 'success':

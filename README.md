@@ -28,7 +28,7 @@ You can find more information on Naptha Modules, the Naptha SDK and Naptha Nodes
 
 If you find this repo useful, please don't forget to star ⭐!
 
-<img src="images/modules.png" width="100%">
+<img src="images/modules.png" width="90%">
 
 
 - [🧩 Naptha Python SDK](#naptha-python-sdk)
@@ -174,7 +174,7 @@ You can check out the module code to see how to access model inference, via the 
 
 The main code for the agent is contained in the `run.py` file, which imports the `InferenceClient` class and calls the `run_inference` method:
 
-```
+```python
 from naptha_sdk.inference import InferenceClient
 
 class SimpleChatAgent:
@@ -253,7 +253,7 @@ The name of the tool subdeployment that the agent uses is specified in the `conf
 
 There is a `GenerateImageAgent` class in the `run.py` [file](https://github.com/NapthaAI/generate_image_agent/blob/main/generate_image_agent/run.py#L16), which imports the `Tool` class and calls the `Tool.run` method:
 
-```
+```python
 from naptha_sdk.schemas import AgentDeployment, AgentRunInput, ToolRunInput
 from naptha_sdk.modules.tool import Tool
 from naptha_sdk.user import sign_consumer_id
@@ -375,7 +375,7 @@ naptha run kb:wikipedia_kb -p '{
 
 The Wikipedia KB also instantiates the `StorageClient` class and calls the `execute` method with `CreateStorageRequest`, `ReadStorageRequest`, `DeleteStorageRequest`, `ListStorageRequest` and `UpdateStorageRequest` objects:
 
-```
+```python
 from naptha_sdk.schemas import KBDeployment
 from naptha_sdk.storage.schemas import ReadStorageRequest
 from naptha_sdk.storage.storage_client import StorageClient
@@ -437,7 +437,7 @@ The name of the KB subdeployment that the agent uses is specified in the `config
 
 There is a `WikipediaAgent` class in the `run.py` [file](https://github.com/NapthaAI/wikipedia_agent/blob/main/wikipedia_agent/run.py#L15), which imports the `KnowledgeBase` class and calls the `KnowledgeBase.run` method:
 
-```
+```python
 from naptha_sdk.modules.kb import KnowledgeBase
 from naptha_sdk.schemas import AgentDeployment, AgentRunInput, KBRunInput
 from naptha_sdk.user import sign_consumer_id
@@ -592,7 +592,7 @@ The names of the Agent and KB subdeployments that the orchestrator uses are spec
 
 There is a `MultiAgentChat` class in the `run.py` [file](https://github.com/NapthaAI/multiagent_chat/blob/main/multiagent_chat/run.py#L24C7-L24C21), which imports the `Agent` and `KnowledgeBase` classes and calls the `Agent.run` and `KnowledgeBase.run` methods:
 
-```
+```python
 from naptha_sdk.modules.agent import Agent
 from naptha_sdk.modules.kb import KnowledgeBase
 from naptha_sdk.schemas import OrchestratorRunInput, OrchestratorDeployment, KBRunInput, AgentRunInput
