@@ -1,5 +1,9 @@
 from ecdsa import SigningKey, SECP256k1
 import os, re
+from pathlib import Path
+
+file_path = Path(__file__).resolve()
+root_path = file_path.parent.parent
 
 def generate_keypair(private_key_filename=None):
     pkfile = private_key_filename if private_key_filename else 'private_key.pem'
@@ -70,3 +74,12 @@ def sign_consumer_id(consumer_id, private_key):
     consumer_id_bytes = consumer_id.encode('utf-8')
     signature = private_key.sign(consumer_id_bytes)
     return signature.hex()
+
+def get_private_key_from_pem(private_key_path: str) -> str:
+    pem_path = root_path / private_key_path
+    print(f"Getting private key from {pem_path}")
+    if not pem_path.exists():
+        raise FileNotFoundError(f"User private key file not found at {pem_path}")
+    with open(pem_path, "r") as f:
+        private_key = f.read().strip()
+    return private_key
