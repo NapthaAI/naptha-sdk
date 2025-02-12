@@ -259,21 +259,22 @@ from naptha_sdk.modules.tool import Tool
 from naptha_sdk.user import sign_consumer_id
 
 class GenerateImageAgent:
-    def __init__(self, deployment: AgentDeployment):
-        ...
+    async def create(self, deployment: AgentDeployment, *args, **kwargs):
+        self.deployment = deployment
+        self.tool = Tool()
         # the arg below is loaded from configs/tool_deployments.json
-        self.tool = Tool(tool_deployment=self.deployment.tool_deployments[0])
-        ...
+        tool_deployment = await self.tool.create(deployment=deployment.tool_deployments[0])
+        self.system_prompt = SystemPromptSchema(role=self.deployment.config.system_prompt["role"])
 
-    async def call_tool(self, module_run: AgentRunInput):
+    async def run(self, module_run: AgentRunInput, *args, **kwargs):
         tool_run_input = ToolRunInput(
             consumer_id=module_run.consumer_id,
             inputs=module_run.inputs,
             deployment=self.deployment.tool_deployments[0],
             signature=sign_consumer_id(module_run.consumer_id, os.getenv("PRIVATE_KEY"))
         )
-
         tool_response = await self.tool.run(tool_run_input)
+        return tool_response.results
 ```
 
 ### 📚 Run a Knowledge Base
@@ -404,7 +405,7 @@ class WikipediaKB:
 You can run an Agent that interacts with the Knowledge Base using:
 
 ```bash
-naptha run agent:wikipedia_agent -p "func_name='run_query' query='Elon Musk' question='Who is Elon Musk?'" --kb_nodes "node3.naptha.ai"
+naptha run agent:wikipedia_agent -p "func_name='run_query' query='Elon Musk' question='Who is Elon Musk?'" --kb_nodes "node.naptha.ai"
 ```
 
 The name of the KB subdeployment that the agent uses is specified in the `configs/deployment.json`, and the full details of that KB subdeployment are loaded from the deployment with the same name in the `configs/kb_deployments.json` file.
@@ -443,20 +444,24 @@ from naptha_sdk.schemas import AgentDeployment, AgentRunInput, KBRunInput
 from naptha_sdk.user import sign_consumer_id
 
 class WikipediaAgent:
-    def __init__(self, deployment: AgentDeployment):
-        ...
+    async def create(self, deployment: AgentDeployment, *args, **kwargs):
+        self.deployment = deployment
+        self.wikipedia_kb = KnowledgeBase()
         # the arg below is loaded from configs/kb_deployments.json
-        self.wikipedia_kb = KnowledgeBase(kb_deployment=self.deployment.kb_deployments[0])
-        ...
+        kb_deployment = await self.wikipedia_kb.create(deployment=self.deployment.kb_deployments[0])
+        self.system_prompt = SystemPromptSchema(role=self.deployment.config.system_prompt["role"])
+        self.inference_client = InferenceClient(self.deployment.node)
 
+    async def run(self, module_run: AgentRunInput, *args, **kwargs):
+        ...
         kb_run_input = KBRunInput(
             consumer_id=module_run.consumer_id,
             inputs={"func_name": "run_query", "func_input_data": {"query": module_run.inputs.query}},
             deployment=self.deployment.kb_deployments[0],
             signature=sign_consumer_id(module_run.consumer_id, os.getenv("PRIVATE_KEY"))
         )
-
         page = await self.wikipedia_kb.run(kb_run_input)
+        ...
 ```
 
 ### 💭 Run a Memory Module
@@ -599,16 +604,17 @@ from naptha_sdk.schemas import OrchestratorRunInput, OrchestratorDeployment, KBR
 from naptha_sdk.user import sign_consumer_id
 
 class MultiAgentChat:
-    def __init__(self, deployment: OrchestratorDeployment):
-        self.orchestrator_deployment = orchestrator_deployment
-        self.agent_deployments = self.orchestrator_deployment.agent_deployments
-        self.agents = [
-            Agent(deployment=self.agent_deployments[0], *args, **kwargs),
-            Agent(deployment=self.agent_deployments[1], *args, **kwargs)
-        ]
-        self.groupchat_kb = KnowledgeBase(kb_deployment=self.orchestrator_deployment.kb_deployments[0])
+    async def create(self, deployment: OrchestratorDeployment, *args, **kwargs):
+        self.deployment = deployment
+        self.agent_deployments = self.deployment.agent_deployments
+        self.agents = [Agent(), Agent()]
+        # the arg below is loaded from configs/agent_deployments.json
+        agent_deployments = [await agent.create(deployment=self.agent_deployments[i], *args, **kwargs) for i, agent in enumerate(self.agents)]
+        self.groupchat_kb = KnowledgeBase()
+        # the arg below is loaded from configs/kb_deployments.json
+        kb_deployment = await self.groupchat_kb.create(deployment=self.deployment.kb_deployments[0], *args, **kwargs)
 
-    async def run_multiagent_chat(self, module_run: OrchestratorRunInput):
+    async def run(self, module_run: OrchestratorRunInput, *args, **kwargs):
         ...
         for round_num in range(self.orchestrator_deployment.config.max_rounds):
             for agent_num, agent in enumerate(self.agents):
@@ -618,7 +624,7 @@ class MultiAgentChat:
                         deployment=self.agent_deployments[agent_num],
                         signature=sign_consumer_id(module_run.consumer_id, os.getenv("PRIVATE_KEY"))
                     )
-                    response = await agent.call_agent_func(agent_run_input)
+                    response = await agent.run(agent_run_input)
 ```
 
 
