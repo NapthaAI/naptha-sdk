@@ -641,7 +641,9 @@ Follow the guide in our [docs](https://docs.naptha.ai/Contributing/module-builde
 
 # 💻 Running Agents locally on your own Naptha Node
 
-You can run your own Naptha node, and earn rewards for running workflows. Follow the instructions at https://github.com/NapthaAI/naptha-node.
+You can run your own Naptha node, and earn rewards for running agents and other modules. Follow the instructions at https://github.com/NapthaAI/naptha-node.
+
+<img src="images/naptha-nodes.png" width="100%">
 
 ## 👥 Community
 
