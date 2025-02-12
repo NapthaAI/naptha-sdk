@@ -8,8 +8,8 @@ class Environment:
     async def create(self, deployment: EnvironmentDeployment, *args, **kwargs):
         logger.info(f"Creating environment on worker node {deployment.node}")
         node = UserClient(deployment.node)
-        environment_run = await node.create(module_type="environment", module_request=deployment)
-        return environment_run
+        environment_deployment = await node.create(module_type="environment", module_request=deployment)
+        return environment_deployment
 
     async def run(self, module_run_input: EnvironmentRunInput):
         logger.info(f"Running environment on environment node {module_run_input.deployment.node}")

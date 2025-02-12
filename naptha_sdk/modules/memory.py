@@ -9,8 +9,8 @@ class Memory:
     async def create(self, deployment: MemoryDeployment, *args, **kwargs):
         logger.info(f"Creating memory on worker node {deployment.node}")
         node = UserClient(deployment.node)
-        memory_run = await node.create(module_type="memory", module_request=deployment)
-        return memory_run
+        memory_deployment = await node.create(module_type="memory", module_request=deployment)
+        return memory_deployment
 
     async def run(self, module_run_input: Union[AgentRun, MemoryRunInput]):
         logger.info(f"Running memory module on worker node {module_run_input.deployment.node}")

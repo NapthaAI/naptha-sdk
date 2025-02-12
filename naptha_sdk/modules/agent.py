@@ -8,8 +8,8 @@ class Agent:
     async def create(self, deployment: AgentDeployment, *args, **kwargs):
         logger.info(f"Creating agent on worker node {deployment.node}")
         node = UserClient(deployment.node)
-        agent_run = await node.create(module_type="agent", module_request=deployment)
-        return agent_run
+        agent_deployment = await node.create(module_type="agent", module_request=deployment)
+        return agent_deployment
 
     async def run(self, module_run_input: AgentRunInput, *args, **kwargs):
         logger.info(f"Running agent on worker node {module_run_input.deployment.node}")
