@@ -19,7 +19,7 @@ async def load_node_metadata(deployment, node_url, is_subdeployment):
             raise Exception("Node URL is required. Please make sure you've added NODE_URL=<node_url> to your .env file.")
 
     print(f"Loading node metadata for {deployment['node']['ip']}")
-    if not is_subdeployment:
+    if not is_subdeployment or deployment["node"]["ip"] == "localhost":
         deployment["node"] = url_to_node(node_url)
     else:
         deployment["node"] = await list_nodes(deployment["node"]["ip"])
