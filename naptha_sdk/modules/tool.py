@@ -9,8 +9,8 @@ class Tool:
     async def create(self, deployment: ToolDeployment, *args, **kwargs):
         logger.info(f"Creating tool on worker node {deployment.node}")
         node = UserClient(deployment.node)
-        tool_run = await node.create(module_type="tool", module_request=deployment)
-        return tool_run
+        tool_deployment = await node.create(module_type="tool", module_request=deployment)
+        return tool_deployment
 
     async def run(self, module_run_input: Union[AgentRun, ToolRunInput]):
         logger.info(f"Running tool on worker node {module_run_input.deployment.node}")

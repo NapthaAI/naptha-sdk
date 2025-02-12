@@ -8,8 +8,8 @@ class Orchestrator:
     async def create(self, deployment: OrchestratorDeployment, *args, **kwargs):
         logger.info(f"Creating orchestrator on worker node {deployment.node}")
         node = UserClient(deployment.node)
-        orchestrator_run = await node.create(module_type="orchestrator", module_request=deployment)
-        return orchestrator_run
+        orchestrator_deployment = await node.create(module_type="orchestrator", module_request=deployment)
+        return orchestrator_deployment
 
     async def run(self, module_run_input: OrchestratorRunInput, *args, **kwargs):
         logger.info(f"Running orchestrator on worker node {module_run_input.deployment.node}")

@@ -8,8 +8,8 @@ class KnowledgeBase:
     async def create(self, deployment: KBDeployment, *args, **kwargs):
         logger.info(f"Creating knowledge base on worker node {deployment.node}")
         node = UserClient(deployment.node)
-        kb_run = await node.create(module_type="kb", module_request=deployment)
-        return kb_run
+        kb_deployment = await node.create(module_type="kb", module_request=deployment)
+        return kb_deployment
 
     async def run(self, module_run_input: KBRunInput, *args, **kwargs):
         logger.info(f"Running knowledge base on worker node {module_run_input.deployment.node}")
