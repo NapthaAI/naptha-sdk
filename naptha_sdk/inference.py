@@ -27,7 +27,7 @@ class InferenceClient:
         if isinstance(inference_input, dict):
             inference_input = ChatCompletionRequest(**inference_input)
 
-        endpoint = f"{self.node_url}/inference/chat"
+        endpoint = f"{self.node_url}/inference/chat/completions"
 
         try:
             async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
