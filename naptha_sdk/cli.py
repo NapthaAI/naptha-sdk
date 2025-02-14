@@ -748,9 +748,16 @@ async def main():
 
     # Inference parser
     inference_parser = subparsers.add_parser("inference", help="Run model inference.")
-    inference_parser.add_argument("prompt", help="Input prompt for the model")
+    inference_parser.add_argument("input", nargs="?", help="Input prompt for completion")
     inference_parser.add_argument("-m", "--model", help="Model to use for inference", default="phi3:mini")
     inference_parser.add_argument("-p", "--parameters", type=str, help='Additional model parameters in "key=value" format')
+
+    # Inference subcommands
+    inference_subparser = inference_parser.add_subparsers(dest="inference_command", help="Additional inference operations")
+    
+    # Models command
+    models_parser = inference_subparser.add_parser("models", help="List available models")
+    models_parser.add_argument("-d", "--details", action="store_true", help="Show detailed model information")
 
     # Storage parser
     storage_parser = subparsers.add_parser("storage", help="Interact with Node storage.")
@@ -912,11 +919,15 @@ async def main():
             elif args.command == "run":                    
                 await run(naptha, args.agent, args.parameters, args.agent_nodes, args.tool_nodes, args.environment_nodes, args.kb_nodes, args.memory_nodes, args.persona_modules)
             elif args.command == "inference":
-                request = ChatCompletionRequest(
-                    messages=[{"role": "user", "content": args.prompt}],
-                    model=args.model,
-                )
-                await naptha.inference_client.run_inference(request)
+                if args.inference_command == "models":
+                    response = await naptha.inference_client.list_models()
+                    print("Response: ", response)
+                else:
+                    request = ChatCompletionRequest(
+                        messages=[{"role": "user", "content": args.prompt}],
+                        model=args.model,
+                    )
+                    await naptha.inference_client.run_inference(request)
             elif args.command == "storage":
                 await storage_interaction(
                     naptha, 
