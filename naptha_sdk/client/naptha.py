@@ -59,10 +59,12 @@ class Naptha:
                 "module_url": "None",
                 "module_type": "agent",
                 "module_version": "v0.1",
-                "execution_type": "agent"
+                "execution_type": "package",
+                "module_entrypoint": "run.py",
+                "parameters": "",
             }
             logger.info(f"Registering Agent {agent_config}")
-            agent = await self.hub.create_or_update_agent(agent_config)
+            agent = await self.hub.create_or_update_module("agent", agent_config)
             if agent:
                 logger.info(f"Agent {name} created successfully")
             else:
@@ -74,10 +76,12 @@ class Naptha:
 
         if not decorator:
             module_path = Path.cwd()
-            deployment_path = module_path / module_path.name / 'configs/deployment.json'
-            with open(deployment_path, 'r') as f:
+            deployment_path = module_path / module_path.name / "configs" / "deployment.json"
+            with open(deployment_path, "r", encoding="utf-8") as f:
                 deployment = json.load(f)
-            module = deployment[0]['module']
+            module = deployment[0]["module"]
+            if "module_type" not in module:
+                module["module_type"] = "agent"
             modules = [module]
             if subdeployments:
                 deployment = await setup_module_deployment(module['module_type'], deployment_path)
@@ -88,19 +92,22 @@ class Naptha:
                             modules.append(submodule.module)
         else:
             path = Path.cwd() / AGENT_DIR
-            modules = [item.name for item in path.iterdir() if item.is_dir()]
-            for module in modules:
-                git_add_commit(module)
-                module = {
-                    "name": module,
-                    "description": module,
-                    "parameters": "None",
+            dir_items = [item.name for item in path.iterdir() if item.is_dir()]
+            modules = []
+            for mod_item in dir_items:
+                git_add_commit(mod_item)
+                mod_data = {
+                    "name": mod_item,
+                    "description": mod_item,
+                    "parameters": "",
                     "module_type": "agent",
                     "module_url": "None",
                     "module_version": "v0.1",
                     "module_entrypoint": "run.py",
                     "execution_type": "package"
                 }
+                modules.append(mod_data)
+
         for module in modules:
             if "module_url" in module and module['module_url'] != "None":
                 module_url = module['module_url']
@@ -112,26 +119,31 @@ class Naptha:
                     logger.info(f"Using provided URL for {module['module_type']} {module['name']}: {module_url}")
                 # Otherwise, publish to IPFS
                 else:
-                    _, response = await publish_ipfs_package(module['name'], decorator)
-                    module_url = f'ipfs://{response["ipfs_hash"]}'
-                    logger.info(f"Storing {module['module_type']} {module['name']} on IPFS")
-                    logger.info(f"IPFS Hash: {response['ipfs_hash']}. You can download it from http://provider.akash.pro:30584/ipfs/{response['ipfs_hash']}")
-
+                    _, response = await publish_ipfs_package(module["name"], decorator)
+                    module_url = f"ipfs://{response['ipfs_hash']}"
+                    logger.info("Storing %s on IPFS", module["name"])
+                    logger.info("Module URL: %s", module_url)
+                    logger.info(
+                        "IPFS Hash: %s. You can download it from "
+                        "http://ipfs-gateway.naptha.work/ipfs/%s",
+                        response["ipfs_hash"],
+                        response["ipfs_hash"]
+                    )
             if register:
                 # Register module with hub
                 async with self.hub:
                     _, _, user_id = await self.hub.signin(self.hub_username, os.getenv("HUB_PASSWORD"))
                     module_config = {
                         "id": f"{module['module_type']}:{module['name']}",
-                        "name": module['name'],
-                        "description": module['description'],
-                        "parameters": module['parameters'],
+                        "name": module["name"],
+                        "description": module.get("description", "No description provided"),
+                        "parameters": module.get("parameters", ""),
                         "author": self.hub.user_id,
                         "module_url": module_url,
-                        "module_type": module['module_type'],
-                        "module_version": module['module_version'],
-                        "module_entrypoint": module['module_entrypoint'],
-                        "execution_type": module['execution_type'],
+                        "module_type": module["module_type"],
+                        "module_version": module.get("module_version", "v0.1"),
+                        "module_entrypoint": module.get("module_entrypoint", "run.py"),
+                        "execution_type": module.get("execution_type", "package"),
                     }
                     logger.info(f"Registering {module['module_type']} {module['name']} on Naptha Hub {module_config}")
                     module = await self.hub.create_or_update_module(module['module_type'], module_config)
