@@ -748,16 +748,16 @@ async def main():
 
     # Inference parser
     inference_parser = subparsers.add_parser("inference", help="Run model inference.")
-    inference_parser.add_argument("input", nargs="?", help="Input prompt for completion")
-    inference_parser.add_argument("-m", "--model", help="Model to use for inference", default="phi3:mini")
-    inference_parser.add_argument("-p", "--parameters", type=str, help='Additional model parameters in "key=value" format')
-
-    # Inference subcommands
-    inference_subparser = inference_parser.add_subparsers(dest="inference_command", help="Additional inference operations")
+    inference_subparser = inference_parser.add_subparsers(dest="inference_command", help="Inference operations")
     
+    # Completions command
+    completions_parser = inference_subparser.add_parser("completions", help="Generate completions")
+    completions_parser.add_argument("prompt", help="Input prompt for the model")
+    completions_parser.add_argument("-m", "--model", help="Model to use for inference", default="phi3:mini")
+    completions_parser.add_argument("-p", "--parameters", type=str, help='Additional model parameters in "key=value" format')
+
     # Models command
     models_parser = inference_subparser.add_parser("models", help="List available models")
-    models_parser.add_argument("-d", "--details", action="store_true", help="Show detailed model information")
 
     # Storage parser
     storage_parser = subparsers.add_parser("storage", help="Interact with Node storage.")
