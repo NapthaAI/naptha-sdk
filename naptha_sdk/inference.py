@@ -27,7 +27,7 @@ class InferenceClient:
         if isinstance(inference_input, dict):
             inference_input = ChatCompletionRequest(**inference_input)
 
-        endpoint = f"{self.node_url}/inference/chat"
+        endpoint = f"{self.node_url}/inference/chat/completions"
 
         try:
             async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
@@ -52,4 +52,38 @@ class InferenceClient:
             raise
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
+            raise
+
+    async def list_models(self, return_wildcard_routes: bool = False) -> Dict:
+        """
+        Get list of available models from the node
+        
+        Args:
+            return_wildcard_routes: Whether to return wildcard routes
+        """
+        endpoint = f"{self.node_url}/inference/models"
+        
+        try:
+            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+                headers = {
+                    'Authorization': f'Bearer {self.access_token}',
+                }
+                params = {"return_wildcard_routes": return_wildcard_routes}
+                
+                response = await client.get(
+                    endpoint,
+                    params=params,
+                    headers=headers
+                )
+                response.raise_for_status()
+                return json.loads(response.text)
+        except HTTPStatusError as e:
+            logger.info(f"HTTP error occurred: {e}")
+            raise
+        except RemoteProtocolError as e:
+            error_msg = f"Failed to connect to the server at {self.node_url}. Please check if the server URL is correct and the server is running. Error details: {str(e)}"
+            logger.error(error_msg)
+            raise
+        except Exception as e:
+            logger.error(f"An unexpected error occurred: {e}")
             raise
