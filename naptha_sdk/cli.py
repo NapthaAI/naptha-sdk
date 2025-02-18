@@ -307,7 +307,6 @@ async def run(
     environment_nodes=None,
     kb_nodes=None,
     memory_nodes=None,
-    persona_modules=None,
     config=None
 ):   
 
@@ -605,7 +604,6 @@ def _parse_str_args(args):
     args.kb_modules = _parse_list_arg(args, 'kb_modules', default=None)
     args.memory_modules = _parse_list_arg(args, 'memory_modules', default=None)
     args.environment_modules = _parse_list_arg(args, 'environment_modules', default=None)
-    args.persona_modules = _parse_list_arg(args, 'persona_modules', default=None)
     
     # Parse parameters and config using the same function
     args.parameters = _parse_json_or_str_arg(args.parameters)
@@ -760,7 +758,6 @@ async def main():
     run_parser.add_argument("-e", "--environment_nodes", help="Environment nodes to store data during module runs.")
     run_parser.add_argument('-k', '--kb_nodes', type=str, help='Knowledge base nodes to take part in module runs.')
     run_parser.add_argument('-m', '--memory_nodes', type=str, help='Memory nodes')
-    run_parser.add_argument("-pm", "--persona_modules", help="Personas URLs to install before running the agent")
     run_parser.add_argument("-c", "--config", type=str, help='Config in "key=value" format')
 
     # Inference parser
@@ -934,7 +931,7 @@ async def main():
             elif args.command == "create":
                 await create(naptha, args.module, args.agent_modules, args.agent_nodes, args.tool_modules, args.tool_nodes, args.kb_modules, args.kb_nodes, args.memory_modules, args.memory_nodes, args.environment_modules, args.environment_nodes)
             elif args.command == "run":                    
-                await run(naptha, args.agent, args.parameters, args.agent_nodes, args.tool_nodes, args.environment_nodes, args.kb_nodes, args.memory_nodes, args.persona_modules, args.config)
+                await run(naptha, args.agent, args.parameters, args.agent_nodes, args.tool_nodes, args.environment_nodes, args.kb_nodes, args.memory_nodes, args.config)
             elif args.command == "inference":
                 if args.inference_command == "models":
                     response = await naptha.inference_client.list_models()

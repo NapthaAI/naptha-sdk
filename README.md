@@ -197,13 +197,13 @@ class SimpleChatAgent:
 Below are examples of running the Simple Chat Agent with a [twitter/X persona](https://huggingface.co/datasets/NapthaAI/twitter_personas/blob/main/interstellarninja.json), generated from exported X data:
 
 ```bash
-naptha run agent:simple_chat_agent -p "tool_name='chat' tool_input_data='who are you?'" --persona_modules "interstellarninja_twitter"
+naptha run agent:simple_chat_agent -p "tool_name='chat' tool_input_data='who are you?'" --config '{"persona_module": {"name": "interstellarninja_twitter"}}'
 ```
 
 and from a synthetically generated [market persona](https://huggingface.co/datasets/NapthaAI/market_agents_personas/blob/main/market_agents_personas/data/Aileen_May.yaml) based on census data:
 
 ```bash
-naptha run agent:simple_chat_agent -p "tool_name='chat' tool_input_data='who are you?'" --persona_modules "marketagents_aileenmay"
+naptha run agent:simple_chat_agent -p "tool_name='chat' tool_input_data='who are you?'" --config '{"persona_module": {"name": "marketagents_aileenmay"}}'
 ```
 
 ### 🛠️ Run a Tool
@@ -632,7 +632,7 @@ You can run the orchestrator module using (note that using the `--agent_nodes` a
 
 ```bash
 # usage: naptha run <orchestrator_name> -p "<orchestrator args>" --agent_nodes "<agent nodes>" --kb_nodes "<kb nodes>"
-naptha run orchestrator:multiagent_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --agent_nodes "localhost,localhost" --kb_nodes "localhost" --config '{"max_rounds": 10}'
+naptha run orchestrator:multiagent_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --agent_nodes "localhost,localhost" --kb_nodes "localhost" --config '{"max_rounds": 5}'
 ```
 
 ## ✨ Creating your own Module
