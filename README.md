@@ -18,11 +18,11 @@
  
 # Naptha Python SDK ![GitHub release (latest by date)](https://img.shields.io/github/v/release/NapthaAI/naptha-sdk?style=flat-square) [![PyPI version](https://img.shields.io/pypi/v/naptha-sdk?color=blue&style=flat-square&logo=pypi&logoColor=white)](https://pypi.org/project/naptha-sdk/) [![Documentation](https://img.shields.io/badge/Read-docs-blue?style=flat-square&logo=readthedocs&logoColor=white)](https://docs.naptha.ai/?utm_source=github_sdk)
 
-Naptha is a framework and infrastructure for developing and running multi-agent systems at scale with heterogeneous models, architectures and data. 
+Naptha is a framework and infrastructure for developing and running multi-agent systems at scale, with heterogeneous models, architectures and data. 
 
 Naptha Modules are the building blocks of multi-agent systems. They are designed to be framework-agnostic, allowing developers to implement modules using different agent frameworks. There are currently seven types of modules: Agents, Tools, Knowledge Bases, Memories, Orchestrators, Environments, and Personas. As shown in the diagram below, modules can also run on separate devices, while still interacting with each other the network.
 
-The Naptha SDK is used within Naptha Modules to facilitate interactions with other modules, and to access model inference and storage (e.g. of knowledge, memories, etc.). The Naptha SDK also acts as a client for interacting with the Naptha Hub (like HuggingFace but for multi-agent apps), and Naptha Nodes (the infrastructure that runs modules).
+The Naptha SDK is used within Naptha Modules to facilitate interactions with other modules and to access model inference and storage (e.g. of knowledge, memories, etc.). The Naptha SDK also acts as a client for interacting with the Naptha Hub (like HuggingFace but for multi-agent apps), and Naptha Nodes (the infrastructure that runs modules).
 
 You can find more information on Naptha Modules, the Naptha SDK and Naptha Nodes in the [docs](https://docs.naptha.ai).
 
