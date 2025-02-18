@@ -307,7 +307,8 @@ async def run(
     environment_nodes=None,
     kb_nodes=None,
     memory_nodes=None,
-    persona_modules=None
+    persona_modules=None,
+    config=None
 ):   
 
     module_type = module_name.split(":")[0] if ":" in module_name else "agent" # Default to agent for backwards compatibility
@@ -350,7 +351,7 @@ async def run(
         agent_deployment = AgentDeployment(
             module={"id": module_name, "name": module_name.split(":")[-1], "module_type": module_type}, 
             node=url_to_node(os.getenv("NODE_URL")), 
-            config={"persona_module": {"name": persona_modules[0]}} if persona_modules else None,
+            config=config,
             tool_deployments=tool_deployments,
             kb_deployments=kb_deployments,
             memory_deployments=memory_deployments,
@@ -371,7 +372,9 @@ async def run(
         print("Running Tool...")
         tool_deployment = ToolDeployment(
             module={"id": module_name, "name": module_name.split(":")[-1], "module_type": module_type},
-            node=url_to_node(os.getenv("NODE_URL")))
+            node=url_to_node(os.getenv("NODE_URL")),
+            config=config
+        )
 
         tool_run_input = ToolRunInput(
             consumer_id=user['id'],
@@ -391,6 +394,7 @@ async def run(
             environment_deployments=environment_deployments,
             kb_deployments=kb_deployments,
             memory_deployments=memory_deployments,
+            config=config
         )
 
         orchestrator_run_input = OrchestratorRunInput(
@@ -406,7 +410,8 @@ async def run(
 
         environment_deployment = EnvironmentDeployment(
             module={"id": module_name, "name": module_name.split(":")[-1], "module_type": module_type}, 
-            node=url_to_node(os.getenv("NODE_URL"))
+            node=url_to_node(os.getenv("NODE_URL")),
+            config=config
         )
 
         environment_run_input = EnvironmentRunInput(
@@ -422,7 +427,8 @@ async def run(
 
         kb_deployment = KBDeployment(
             module={"id": module_name, "name": module_name.split(":")[-1], "module_type": module_type}, 
-            node=url_to_node(os.getenv("NODE_URL"))
+            node=url_to_node(os.getenv("NODE_URL")),
+            config=config
         )
 
         kb_run_input = KBRunInput(
@@ -437,7 +443,8 @@ async def run(
 
         memory_deployment = MemoryDeployment(
             module={"id": module_name, "name": module_name.split(":")[-1], "module_type": module_type}, 
-            node=url_to_node(os.getenv("NODE_URL"))
+            node=url_to_node(os.getenv("NODE_URL")),
+            config=config
         )
 
         memory_run_input = MemoryRunInput(
@@ -565,26 +572,26 @@ def _parse_list_arg(args, arg_name, default=None, split_char=','):
         return value.split(split_char) if split_char in value else [value]
     return default
 
-def _parse_parameters(args):
-    if hasattr(args, 'parameters') and args.parameters is not None:
-        try:
-            parsed_params = json.loads(args.parameters)
-        except json.JSONDecodeError:
-            params = shlex.split(args.parameters)
-            parsed_params = {}
-            for param in params:
-                key, value = param.split('=')
-                # Try to parse value as JSON if it looks like a dict
-                try:
-                    if value.startswith('{') and value.endswith('}'):
-                        value = json.loads(value)
-                except json.JSONDecodeError:
-                    pass
-                parsed_params[key] = value
-        print("Parsed parameters:", parsed_params)
-    else:
-        parsed_params = None
-    return parsed_params
+def _parse_json_or_str_arg(arg_value):
+    """Helper function to parse a string that could be JSON or key=value format."""
+    if arg_value is None:
+        return None
+        
+    try:
+        return json.loads(arg_value)
+    except json.JSONDecodeError:
+        params = shlex.split(arg_value)
+        parsed_params = {}
+        for param in params:
+            key, value = param.split('=')
+            # Try to parse value as JSON if it looks like a dict
+            try:
+                if value.startswith('{') and value.endswith('}'):
+                    value = json.loads(value)
+            except json.JSONDecodeError:
+                pass
+            parsed_params[key] = value
+        return parsed_params
 
 def _parse_str_args(args):
     # Parse all list arguments
@@ -599,7 +606,16 @@ def _parse_str_args(args):
     args.memory_modules = _parse_list_arg(args, 'memory_modules', default=None)
     args.environment_modules = _parse_list_arg(args, 'environment_modules', default=None)
     args.persona_modules = _parse_list_arg(args, 'persona_modules', default=None)
-    args.parameters = _parse_parameters(args)
+    
+    # Parse parameters and config using the same function
+    args.parameters = _parse_json_or_str_arg(args.parameters)
+    args.config = _parse_json_or_str_arg(args.config)
+    
+    if args.parameters:
+        print("Parsed parameters:", args.parameters)
+    if args.config:
+        print("Parsed config:", args.config)
+        
     return args
 
 def _parse_metadata_args(args, module_type):
@@ -745,6 +761,7 @@ async def main():
     run_parser.add_argument('-k', '--kb_nodes', type=str, help='Knowledge base nodes to take part in module runs.')
     run_parser.add_argument('-m', '--memory_nodes', type=str, help='Memory nodes')
     run_parser.add_argument("-pm", "--persona_modules", help="Personas URLs to install before running the agent")
+    run_parser.add_argument("-c", "--config", type=str, help='Config in "key=value" format')
 
     # Inference parser
     inference_parser = subparsers.add_parser("inference", help="Run model inference.")
@@ -917,7 +934,7 @@ async def main():
             elif args.command == "create":
                 await create(naptha, args.module, args.agent_modules, args.agent_nodes, args.tool_modules, args.tool_nodes, args.kb_modules, args.kb_nodes, args.memory_modules, args.memory_nodes, args.environment_modules, args.environment_nodes)
             elif args.command == "run":                    
-                await run(naptha, args.agent, args.parameters, args.agent_nodes, args.tool_nodes, args.environment_nodes, args.kb_nodes, args.memory_nodes, args.persona_modules)
+                await run(naptha, args.agent, args.parameters, args.agent_nodes, args.tool_nodes, args.environment_nodes, args.kb_nodes, args.memory_nodes, args.persona_modules, args.config)
             elif args.command == "inference":
                 if args.inference_command == "models":
                     response = await naptha.inference_client.list_models()

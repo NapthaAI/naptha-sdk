@@ -632,7 +632,7 @@ You can run the orchestrator module using (note that using the `--agent_nodes` a
 
 ```bash
 # usage: naptha run <orchestrator_name> -p "<orchestrator args>" --agent_nodes "<agent nodes>" --kb_nodes "<kb nodes>"
-naptha run orchestrator:multiagent_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --agent_nodes "node.naptha.ai,node1.naptha.ai" --kb_nodes "node.naptha.ai"
+naptha run orchestrator:multiagent_chat -p "prompt='i would like to count up to ten, one number at a time. ill start. one.'" --agent_nodes "localhost,localhost" --kb_nodes "localhost" --config '{"max_rounds": 10}'
 ```
 
 ## ✨ Creating your own Module
