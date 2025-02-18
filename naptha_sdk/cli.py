@@ -606,12 +606,11 @@ def _parse_str_args(args):
     args.environment_modules = _parse_list_arg(args, 'environment_modules', default=None)
     
     # Parse parameters and config using the same function
-    args.parameters = _parse_json_or_str_arg(args.parameters)
-    args.config = _parse_json_or_str_arg(args.config)
-    
-    if args.parameters:
+    if hasattr(args, 'parameters') and args.parameters:
+        args.parameters = _parse_json_or_str_arg(args.parameters)
         print("Parsed parameters:", args.parameters)
-    if args.config:
+    if hasattr(args, 'config') and args.config:
+        args.config = _parse_json_or_str_arg(args.config)
         print("Parsed config:", args.config)
         
     return args
