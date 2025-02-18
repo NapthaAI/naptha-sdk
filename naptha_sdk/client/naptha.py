@@ -121,14 +121,10 @@ class Naptha:
                 else:
                     _, response = await publish_ipfs_package(module["name"], decorator)
                     module_url = f"ipfs://{response['ipfs_hash']}"
-                    logger.info("Storing %s on IPFS", module["name"])
-                    logger.info("Module URL: %s", module_url)
-                    logger.info(
-                        "IPFS Hash: %s. You can download it from "
-                        "http://ipfs-gateway.naptha.work/ipfs/%s",
-                        response["ipfs_hash"],
-                        response["ipfs_hash"]
-                    )
+                    logger.info(f"Storing {module['name']} on IPFS")
+                    logger.info(f"Module URL: {module_url}")
+                    logger.info(f"IPFS Hash: {response['ipfs_hash']}. You can download it from http://ipfs-gateway.naptha.work/ipfs/{response['ipfs_hash']}")
+
             if register:
                 # Register module with hub
                 async with self.hub:
