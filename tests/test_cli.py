@@ -168,7 +168,7 @@ class TestNapthaCLI:
             }
         }'""", id="write_db_data"),
         pytest.param("naptha storage db read test_table", id="read_db_data"),
-        pytest.param("""naptha inference "What is artificial intelligence?" -m "hermes3:8b\"""", id="run_inference_ai"),
+        pytest.param("""naptha inference completions "What is artificial intelligence?" -m "hermes3:8b\"""", id="run_inference_ai"),
     ])
     def test_storage_and_inference_command(self, command):
         assert run_command(command) is not None, f"Command failed: {command}"
