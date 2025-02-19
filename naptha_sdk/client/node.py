@@ -191,7 +191,7 @@ class NodeClient:
             request = grpc_server_pb2.ModuleRunRequest(**request_args)
 
             final_response = None
-            async for response in stub.RunModule(request):
+            async for response in stub.RunModule(request, timeout=1800):
                 final_response = response
                 logger.info(f"Got response: {response}")
 
