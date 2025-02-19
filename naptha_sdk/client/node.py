@@ -219,7 +219,12 @@ class NodeClient:
         client_id = str(uuid.uuid4())
         full_url = f"{self.node_url}/ws/{action}/{client_id}"
         logger.info(f"Connecting to WebSocket: {full_url}")
-        ws = await websockets.connect(full_url)
+        ws = await websockets.connect(
+            full_url,
+            ping_interval=20,
+            ping_timeout=30,
+            close_timeout=10
+        )
         self.connections[client_id] = ws
         self.current_client_id = client_id
         return client_id
