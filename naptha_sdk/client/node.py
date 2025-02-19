@@ -134,7 +134,7 @@ class NodeClient:
                 )
                 input_struct.update(input_data)
 
-            # Use the correct proto: NodeConfigInput (instead of the non-existent NodeConfigUser)
+            # Use NodeConfigInput from the proto
             node_config = grpc_server_pb2.NodeConfigInput(
                 ip=run_input.deployment.node.ip,
                 user_communication_port=run_input.deployment.node.user_communication_port,
@@ -179,12 +179,13 @@ class NodeClient:
                 initialized=False,
             )
 
-            # Build the request with the correct deployment field
+            # Build the request with the new signature field included
             request_args = {
                 "module_type": module_type,
                 "consumer_id": run_input.consumer_id,
                 "inputs": input_struct,
                 f"{module_type}_deployment": deployment,
+                "signature": run_input.signature,  # new field from the updated proto
             }
             request = grpc_server_pb2.ModuleRunRequest(**request_args)
 
@@ -213,6 +214,7 @@ class NodeClient:
                 start_processing_time=final_response.start_processing_time,
                 completed_time=final_response.completed_time,
                 duration=final_response.duration,
+                signature=final_response.signature,  # map the signature from response
             )
     
     async def connect_ws(self, action: str):
