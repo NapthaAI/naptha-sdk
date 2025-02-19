@@ -122,7 +122,8 @@ def add_dependencies_to_pyproject(package_name, packages):
     
     # # Add naptha-sdk dependency
     dependencies["naptha-sdk"] = {
-        "path": "/Users/vedantpadwal/Naptha/newsdk/naptha-sdk"
+        "git": "https://github.dev/NapthaAI/naptha-sdk.git",
+        "branch": "crewai"
     }
     # Add other dependencies
     for package in packages:
