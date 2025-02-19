@@ -151,6 +151,7 @@ class NodeClient:
                 module_type=module_type,
                 module_version=run_input.deployment.module.get("module_version", ""),
                 module_entrypoint=run_input.deployment.module.get("module_entrypoint", ""),
+                execution_type=run_input.deployment.module.get("execution_type", ""),
             )
 
             # Create config struct for deployment
