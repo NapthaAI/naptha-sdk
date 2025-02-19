@@ -126,65 +126,66 @@ class NodeClient:
         async with grpc.aio.insecure_channel(self.node_url) as channel:
             stub = grpc_server_pb2_grpc.GrpcServerStub(channel)
 
-            # Convert inputs to Struct
+            # Convert inputs to a Struct
             input_struct = struct_pb2.Struct()
             if run_input.inputs:
-                if isinstance(run_input.inputs, dict):
-                    input_data = run_input.inputs.dict() if hasattr(run_input.inputs, 'dict') else run_input.inputs
-                    input_struct.update(input_data)
+                input_data = (
+                    run_input.inputs.dict() if hasattr(run_input.inputs, "dict") else run_input.inputs
+                )
+                input_struct.update(input_data)
 
-            # Create node config
-            node_config = grpc_server_pb2.NodeConfigUser(
+            # Use the correct proto: NodeConfigInput (instead of the non-existent NodeConfigUser)
+            node_config = grpc_server_pb2.NodeConfigInput(
                 ip=run_input.deployment.node.ip,
                 user_communication_port=run_input.deployment.node.user_communication_port,
-                user_communication_protocol=run_input.deployment.node.user_communication_protocol
+                user_communication_protocol=run_input.deployment.node.user_communication_protocol,
             )
 
-            # Create module
+            # Create the module proto message
             module = grpc_server_pb2.Module(
-                id=run_input.deployment.module.get('id', ''),
-                name=run_input.deployment.module.get('name', ''),
-                description=run_input.deployment.module.get('description', ''),
-                author=run_input.deployment.module.get('author', ''),
-                module_url=run_input.deployment.module.get('module_url', ''),
+                id=run_input.deployment.module.get("id", ""),
+                name=run_input.deployment.module.get("name", ""),
+                description=run_input.deployment.module.get("description", ""),
+                author=run_input.deployment.module.get("author", ""),
+                module_url=run_input.deployment.module.get("module_url", ""),
                 module_type=module_type,
-                module_version=run_input.deployment.module.get('module_version', ''),
-                module_entrypoint=run_input.deployment.module.get('module_entrypoint', '')
+                module_version=run_input.deployment.module.get("module_version", ""),
+                module_entrypoint=run_input.deployment.module.get("module_entrypoint", ""),
             )
 
-            # Create config struct
+            # Create config struct for deployment
             config_struct = struct_pb2.Struct()
             if run_input.deployment.config:
-                if isinstance(run_input.deployment.config, dict):
-                    config_struct.update(run_input.deployment.config)
-                else:
-                    config_struct.update(run_input.deployment.config.dict())
+                config_data = (
+                    run_input.deployment.config.dict()
+                    if hasattr(run_input.deployment.config, "dict")
+                    else run_input.deployment.config
+                )
+                config_struct.update(config_data)
 
-            # Create deployment based on module type
+            # Map module types to the appropriate deployment proto message
             deployment_classes = {
                 "agent": grpc_server_pb2.AgentDeployment,
                 "kb": grpc_server_pb2.BaseDeployment,
                 "tool": grpc_server_pb2.ToolDeployment,
-                "environment": grpc_server_pb2.BaseDeployment
+                "environment": grpc_server_pb2.BaseDeployment,
             }
-            
             DeploymentClass = deployment_classes[module_type]
             deployment = DeploymentClass(
                 node_input=node_config,
                 name=run_input.deployment.name,
                 module=module,
                 config=config_struct,
-                initialized=False
+                initialized=False,
             )
 
-            # Create request with appropriate deployment field
+            # Build the request with the correct deployment field
             request_args = {
                 "module_type": module_type,
                 "consumer_id": run_input.consumer_id,
                 "inputs": input_struct,
-                f"{module_type}_deployment": deployment
+                f"{module_type}_deployment": deployment,
             }
-            
             request = grpc_server_pb2.ModuleRunRequest(**request_args)
 
             final_response = None
@@ -196,9 +197,8 @@ class NodeClient:
                 "agent": AgentRun,
                 "kb": KBRun,
                 "tool": ToolRun,
-                "environment": EnvironmentRun
+                "environment": EnvironmentRun,
             }
-
             return output_types[module_type](
                 consumer_id=run_input.consumer_id,
                 inputs=run_input.inputs,
@@ -212,7 +212,7 @@ class NodeClient:
                 created_time=final_response.created_time,
                 start_processing_time=final_response.start_processing_time,
                 completed_time=final_response.completed_time,
-                duration=final_response.duration
+                duration=final_response.duration,
             )
     
     async def connect_ws(self, action: str):
