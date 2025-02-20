@@ -22,8 +22,10 @@ async def load_node_metadata(deployment, node_url, is_subdeployment):
     if not is_subdeployment or deployment["node"]["ip"] == "localhost":
         deployment["node"] = url_to_node(node_url)
     else:
-        deployment["node"] = await list_nodes(deployment["node"]["ip"])
-        deployment["node"] = NodeConfig(**deployment["node"])
+        node_list = await list_nodes(deployment["node"]["ip"])
+        if not node_list:
+            raise Exception("No nodes found.")
+        deployment["node"] = NodeConfig(**node_list[0])
     print(f"Node metadata loaded {deployment['node']}")
     return deployment
 
@@ -51,10 +53,14 @@ async def load_module_config_data(module_type, deployment, load_persona_data=Fal
 
     if "llm_config" in deployment["config"] and deployment["config"]["llm_config"] is not None:
         config_name = deployment["config"]["llm_config"]["config_name"]
-        config_path = f"{Path.cwd().name}/configs/llm_configs.json"
+        # CORRECTED PATH: Changed from deployment.json to config.json
+        config_path = f"{Path.cwd().name}/configs/config.json"
         llm_configs = load_llm_configs(config_path)
-        llm_config = next(config for config in llm_configs if config.config_name == config_name)
+        llm_config = next((config for config in llm_configs if config.config_name == config_name), None)
+        if llm_config is None:
+            raise ValueError(f"No LLM config found with name {config_name}")
         deployment["config"]["llm_config"] = llm_config
+
     if load_persona_data:
         persona_data = await load_persona(deployment["config"]["persona_module"])
         deployment["config"]["system_prompt"]["persona"] = persona_data
