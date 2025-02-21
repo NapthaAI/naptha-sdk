@@ -423,3 +423,12 @@ class ModelResponse(BaseModel):
     created: int
     model: str
     object: str
+
+class SecretInput(BaseModel):
+    user_id: str
+    secret_value: str
+    key_name: str
+
+    def model_dict(self):
+        model_dict = self.model_dump()
+        return model_dict
