@@ -7,7 +7,7 @@ import json
 import random
 import time
 import traceback
-from typing import Dict, Any, Union
+from typing import Dict, Any, Union, List
 import uuid
 import websockets
 from google.protobuf import struct_pb2
@@ -15,7 +15,7 @@ from google.protobuf import struct_pb2
 from naptha_sdk.client import grpc_server_pb2
 from naptha_sdk.client import grpc_server_pb2_grpc
 from naptha_sdk.schemas import AgentRun, AgentRunInput, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, \
-    OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, KBDeployment, KBRunInput, KBRun, MemoryDeployment, MemoryRunInput, MemoryRun, ToolRunInput, ToolRun, NodeConfig, NodeConfigUser, ToolDeployment
+    OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, KBDeployment, KBRunInput, KBRun, MemoryDeployment, MemoryRunInput, MemoryRun, ToolRunInput, ToolRun, NodeConfig, NodeConfigUser, ToolDeployment, SecretInput
 from naptha_sdk.utils import get_logger, node_to_url
 
 logger = get_logger(__name__)
@@ -293,7 +293,7 @@ class UserClient:
             print(f"An unexpected error occurred: {e}")
             raise
 
-    async def _run_and_poll(self, run_input: Union[AgentRunInput, EnvironmentRunInput, OrchestratorRunInput, KBRunInput, ToolRunInput, Dict], module_type: str) -> Union[AgentRun, EnvironmentRun, OrchestratorRun, KBRun, ToolRun, Dict]:
+    async def _run_and_poll(self, run_input: Union[AgentRunInput, EnvironmentRunInput, OrchestratorRunInput, KBRunInput, ToolRunInput, Dict], module_type: str, secrets: List[SecretInput] = []) -> Union[AgentRun, EnvironmentRun, OrchestratorRun, KBRun, ToolRun, Dict]:
         """Generic method to run and poll either an agent, orchestrator, environment, tool or KB.
         
         Args:
@@ -303,7 +303,7 @@ class UserClient:
         print(f"Run input: {run_input}")
         print(f"Module type: {module_type}")
         # Start the run
-        run = await getattr(self, f'run_{module_type}')(run_input)
+        run = await getattr(self, f'run_{module_type}')(run_input, secrets)
         print(f"{module_type.title()} run started: {run}")
 
         current_results_len = 0
@@ -332,30 +332,29 @@ class UserClient:
             print(error_msg)
         return run
 
-    async def run_agent_and_poll(self, agent_run_input: AgentRunInput) -> AgentRun:
+    async def run_agent_and_poll(self, agent_run_input: AgentRunInput, secrets: List[SecretInput] = []) -> AgentRun:
         """Run an agent module and poll for results until completion."""
-        return await self._run_and_poll(agent_run_input, 'agent')
+        return await self._run_and_poll(agent_run_input, 'agent', secrets)
 
-    async def run_tool_and_poll(self, tool_run_input: ToolRunInput) -> ToolRun:
+    async def run_tool_and_poll(self, tool_run_input: ToolRunInput, secrets: List[SecretInput] = []) -> ToolRun:
         """Run a tool module and poll for results until completion."""
+        return await self._run_and_poll(tool_run_input, 'tool', secrets)
 
-        return await self._run_and_poll(tool_run_input, 'tool')
-
-    async def run_orchestrator_and_poll(self, orchestrator_run_input: OrchestratorRunInput) -> OrchestratorRun:
+    async def run_orchestrator_and_poll(self, orchestrator_run_input: OrchestratorRunInput, secrets: List[SecretInput] = []) -> OrchestratorRun:
         """Run an orchestrator module and poll for results until completion."""
-        return await self._run_and_poll(orchestrator_run_input, 'orchestrator')
+        return await self._run_and_poll(orchestrator_run_input, 'orchestrator', secrets)
 
-    async def run_environment_and_poll(self, environment_input: EnvironmentRunInput) -> EnvironmentRun:
+    async def run_environment_and_poll(self, environment_input: EnvironmentRunInput, secrets: List[SecretInput] = []) -> EnvironmentRun:
         """Run an environment module and poll for results until completion."""
-        return await self._run_and_poll(environment_input, 'environment')
+        return await self._run_and_poll(environment_input, 'environment', secrets)
     
-    async def run_kb_and_poll(self, kb_input: KBDeployment) -> KBDeployment:
+    async def run_kb_and_poll(self, kb_input: KBDeployment, secrets: List[SecretInput] = []) -> KBDeployment:
         """Run a knowledge base module and poll for results until completion."""
-        return await self._run_and_poll(kb_input, 'kb')
+        return await self._run_and_poll(kb_input, 'kb', secrets)
 
-    async def run_memory_and_poll(self, memory_input: MemoryDeployment) -> MemoryDeployment:
+    async def run_memory_and_poll(self, memory_input: MemoryDeployment, secrets: List[SecretInput] = []) -> MemoryDeployment:
         """Run a memory module and poll for results until completion."""
-        return await self._run_and_poll(memory_input, 'memory')
+        return await self._run_and_poll(memory_input, 'memory', secrets)
 
     async def check_user(self, user_input: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -413,7 +412,7 @@ class UserClient:
             logger.info(f"An unexpected error occurred: {e}")
             raise
 
-    async def _run_module(self, run_input: Union[AgentRunInput, OrchestratorRunInput, EnvironmentRunInput, ToolRunInput], module_type: str) -> Union[AgentRun, OrchestratorRun, EnvironmentRun, ToolRun]:
+    async def _run_module(self, run_input: Union[AgentRunInput, OrchestratorRunInput, EnvironmentRunInput, ToolRunInput], module_type: str, secrets: List[SecretInput] = []) -> Union[AgentRun, OrchestratorRun, EnvironmentRun, ToolRun]:
         """
         Generic method to run either an agent, orchestrator, environment, or tool on a node
         
@@ -448,7 +447,10 @@ class UserClient:
                 }
                 response = await client.post(
                     endpoint,
-                    json=run_input.model_dict(),
+                    json={
+                        f"{module_type}_run_input": run_input.model_dict(),
+                        "secrets": [SecretInput(**secret).model_dict() for secret in secrets]
+                    },
                     headers=headers
                 )
 
@@ -481,29 +483,29 @@ class UserClient:
             print(f"An unexpected error occurred: {e}")
             raise
 
-    async def run_agent(self, agent_run_input: AgentRunInput) -> AgentRun:
+    async def run_agent(self, agent_run_input: AgentRunInput, secrets: List[SecretInput] = []) -> AgentRun:
         """Run an agent module on a node"""
-        return await self._run_module(agent_run_input, 'agent')
+        return await self._run_module(agent_run_input, 'agent', secrets)
 
-    async def run_tool(self, tool_run_input: ToolRunInput) -> ToolRun:
+    async def run_tool(self, tool_run_input: ToolRunInput, secrets: List[SecretInput] = []) -> ToolRun:
         """Run a tool module on a node"""
-        return await self._run_module(tool_run_input, 'tool')
+        return await self._run_module(tool_run_input, 'tool', secrets)
 
-    async def run_orchestrator(self, orchestrator_run_input: OrchestratorRunInput) -> OrchestratorRun:
+    async def run_orchestrator(self, orchestrator_run_input: OrchestratorRunInput, secrets: List[SecretInput] = []) -> OrchestratorRun:
         """Run an orchestrator module on a node"""
-        return await self._run_module(orchestrator_run_input, 'orchestrator')
+        return await self._run_module(orchestrator_run_input, 'orchestrator', secrets)
     
-    async def run_environment(self, environment_run_input: EnvironmentRunInput) -> EnvironmentRun:
+    async def run_environment(self, environment_run_input: EnvironmentRunInput, secrets: List[SecretInput] = []) -> EnvironmentRun:
         """Run an environment module on a node"""
-        return await self._run_module(environment_run_input, 'environment')
+        return await self._run_module(environment_run_input, 'environment', secrets)
 
-    async def run_kb(self, kb_run_input: KBRunInput) -> KBRun:
+    async def run_kb(self, kb_run_input: KBRunInput, secrets: List[SecretInput] = []) -> KBRun:
         """Run a knowledge base module on a node"""
-        return await self._run_module(kb_run_input, 'kb')
+        return await self._run_module(kb_run_input, 'kb', secrets)
 
-    async def run_memory(self, memory_run_input: MemoryRunInput) -> MemoryRun:
+    async def run_memory(self, memory_run_input: MemoryRunInput, secrets: List[SecretInput] = []) -> MemoryRun:
         """Run a memory module on a node"""
-        return await self._run_module(memory_run_input, 'memory')
+        return await self._run_module(memory_run_input, 'memory', secrets)
 
     async def check_run(
         self, 

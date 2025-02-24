@@ -637,9 +637,11 @@ naptha run orchestrator:multiagent_chat -p "prompt='i would like to count up to 
 
 ### 🔑 Deploy Secrets
 
-The `deploy-secrets` command allows you to securely store and manage API keys and tokens for use in your modules. These secrets are encrypted before being stored on the Naptha Node.
+The `deploy-secrets` command allows you to securely store and manage secrets such as API keys and tokens for use within your Naptha modules. These secrets are encrypted before being stored on the Naptha Hub.
 
 #### Using the CLI
+
+You can store secrets in the Naptha Hub by running the following command:
 
 ```bash
 naptha deploy-secrets
