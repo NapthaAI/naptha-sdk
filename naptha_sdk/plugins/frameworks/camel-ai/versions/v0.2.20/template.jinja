@@ -1,0 +1,63 @@
+def run(module_run: Dict, *args, **kwargs):
+    """
+    Modified run function that creates and executes the agent.
+    If 'func_name' is '{{ obj_name }}', return the result from the agent function.
+    """
+    agent_run_input = AgentRunInput(**module_run)
+    inputs_obj = InputSchema(**agent_run_input.inputs)
+    func_to_call = globals().get(inputs_obj.func_name)
+    
+    if not func_to_call:
+        raise ValueError(f"Function '{% raw %}{inputs_obj.func_name}{% endraw %}' not found.")
+    
+    if inputs_obj.func_name == "{{ obj_name }}":
+        return {{ obj_name }}()
+    else:
+        import inspect
+        sig = inspect.signature(func_to_call)
+        if len(sig.parameters) == 0:
+            return func_to_call()
+        else:
+            tool_input_class = (
+                globals().get(inputs_obj.input_type)
+                if inputs_obj.input_type else None
+            )
+            input_data = (
+                tool_input_class(**inputs_obj.func_input_data)
+                if tool_input_class else inputs_obj.func_input_data
+            )
+            return func_to_call(input_data)
+
+if __name__ == "__main__":
+    import asyncio
+    from naptha_sdk.client.naptha import Naptha
+    from naptha_sdk.configs import setup_module_deployment
+    import os
+
+    naptha = Naptha()
+    deployment = asyncio.run(
+        setup_module_deployment(
+            "agent",
+            "{{ agent_name }}/configs/deployment.json",
+            node_url=os.getenv("NODE_URL"),
+            user_id=None,
+            load_persona_data=False,
+            is_subdeployment=False
+        )
+    )
+    example_inputs = {
+        "description": "Evaluate the CAMEL-Powered Adaptive Learning Assistant project",
+        "expected_output": "A comprehensive evaluation of the project, including scores and feedback from multiple judges"
+    }
+    input_params = {
+        "func_name": "{{ obj_name }}",
+        "func_input_data": example_inputs
+    }
+    module_run = {
+        "inputs": input_params,
+        "deployment": deployment,
+        "consumer_id": naptha.user.id,
+        "signature": sign_consumer_id(naptha.user.id, os.getenv("PRIVATE_KEY"))
+    }
+    response = run(module_run)
+    print(response)
