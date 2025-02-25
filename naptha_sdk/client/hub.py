@@ -149,6 +149,10 @@ class Hub:
             ]
             node['ports'] = node_communication_ports
             return node
+        
+    async def list_secrets(self) -> List:
+        secrets = await self.surrealdb.query("SELECT * FROM api_secrets;")
+        return secrets[0]['result']
 
     async def create_module(self, module_type: str, module_config: Dict) -> Tuple[bool, Optional[Dict]]:
         """

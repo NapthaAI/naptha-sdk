@@ -11,16 +11,19 @@ import json
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.client.naptha import Naptha
 from naptha_sdk.schemas import AgentDeployment, ChatCompletionRequest, EnvironmentDeployment, \
-    OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, KBDeployment, KBRunInput, MemoryDeployment, MemoryRunInput, ToolDeployment, ToolRunInput, NodeConfigUser
+    OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, KBDeployment, KBRunInput, MemoryDeployment, MemoryRunInput, ToolDeployment, ToolRunInput, NodeConfigUser, SecretInput
 from naptha_sdk.storage.storage_client import StorageClient
 from naptha_sdk.storage.schemas import (
     CreateStorageRequest, DeleteStorageRequest, ListStorageRequest, 
     ReadStorageRequest, UpdateStorageRequest, SearchStorageRequest, StorageType
 )
 from naptha_sdk.user import get_public_key, sign_consumer_id
-from naptha_sdk.utils import url_to_node
+from naptha_sdk.utils import url_to_node, get_env_data, get_logger
+from naptha_sdk.secrets import create_secret, verify_and_reconstruct_rsa_key
+from httpx import HTTPStatusError
 
 load_dotenv(override=True)
+logger = get_logger(__name__)
 
 async def list_nodes(naptha):
     nodes = await naptha.hub.list_nodes()
@@ -189,6 +192,9 @@ async def list_servers(naptha):
     console.print(table)
     console.print(f"\n[green]Total servers:[/green] {len(servers)}")
 
+async def list_secrets(naptha):
+    return await naptha.hub.list_secrets()
+
 async def create(
         naptha,
         module_name,
@@ -307,7 +313,8 @@ async def run(
     environment_nodes=None,
     kb_nodes=None,
     memory_nodes=None,
-    config=None
+    config=None,
+    secrets=None
 ):   
 
     module_type = module_name.split(":")[0] if ":" in module_name else "agent" # Default to agent for backwards compatibility
@@ -365,7 +372,7 @@ async def run(
         }
         print(f"Agent run input: {agent_run_input}")
 
-        agent_run = await naptha.node.run_agent_and_poll(agent_run_input)
+        agent_run = await naptha.node.run_agent_and_poll(agent_run_input, secrets=secrets)
 
     elif module_type == "tool":
         print("Running Tool...")
@@ -381,7 +388,7 @@ async def run(
             deployment=tool_deployment,
             signature=sign_consumer_id(user['id'], os.getenv("PRIVATE_KEY"))
         )
-        tool_run = await naptha.node.run_tool_and_poll(tool_run_input)
+        tool_run = await naptha.node.run_tool_and_poll(tool_run_input, secrets=secrets)
 
     elif module_type == "orchestrator":
         print("Running Orchestrator...")
@@ -402,7 +409,7 @@ async def run(
             deployment=orchestrator_deployment,
             signature=sign_consumer_id(user['id'], os.getenv("PRIVATE_KEY"))
         )
-        orchestrator_run = await naptha.node.run_orchestrator_and_poll(orchestrator_run_input)
+        orchestrator_run = await naptha.node.run_orchestrator_and_poll(orchestrator_run_input, secrets=secrets)
 
     elif module_type == "environment":
         print("Running Environment...")
@@ -419,7 +426,7 @@ async def run(
             consumer_id=user['id'],
             signature=sign_consumer_id(user['id'], os.getenv("PRIVATE_KEY"))
         )
-        environment_run = await naptha.node.run_environment_and_poll(environment_run_input)
+        environment_run = await naptha.node.run_environment_and_poll(environment_run_input, secrets=secrets)
 
     elif module_type == "kb":
         print("Running Knowledge Base...")
@@ -436,7 +443,7 @@ async def run(
             deployment=kb_deployment,
             signature=sign_consumer_id(user['id'], os.getenv("PRIVATE_KEY"))
         )
-        kb_run = await naptha.node.run_kb_and_poll(kb_run_input)
+        kb_run = await naptha.node.run_kb_and_poll(kb_run_input, secrets=secrets)
     elif module_type == "memory":
         print("Running Memory Module...")
 
@@ -452,7 +459,7 @@ async def run(
             deployment=memory_deployment,
             signature=sign_consumer_id(user['id'], os.getenv("PRIVATE_KEY"))
         )
-        memory_run = await naptha.node.run_memory_and_poll(memory_run_input)     
+        memory_run = await naptha.node.run_memory_and_poll(memory_run_input, secrets=secrets)     
     else:
         print(f"Module type {module_type} not supported.")
 
@@ -614,6 +621,12 @@ def _parse_str_args(args):
         print("Parsed config:", args.config)
         
     return args
+
+async def get_server_public_key(naptha: Naptha) -> str:
+    endpoint = f"{os.getenv('NODE_URL')}/.well-known/jwks.json"
+    response =  await naptha.node._send_request("GET", endpoint)
+
+    return verify_and_reconstruct_rsa_key(response)
 
 def _parse_metadata_args(args, module_type):
     """Parse metadata arguments and return a module configuration dictionary.
@@ -795,6 +808,15 @@ async def main():
                               const=True,
                               metavar="URL")
     publish_parser.add_argument("-s", "--subdeployments", help="Publish subdeployments", action="store_true")
+
+    # Add API Key Command
+    deploy_secrets_parser = subparsers.add_parser("deploy-secrets", help="Add API keys or tokens.")
+    deploy_secrets_parser.add_argument("-e", "--env", help="Add API key from environment variable. Provide the key name.", action="store_true")
+    deploy_secrets_parser.add_argument("-o", "--override", help="Override API key in DB with env file values.", action="store_true")
+    
+    # TODO: Implement remove-key functionality
+    # deploy_secrets_parser.add_argument("-r", "--remove-key", help="Specify the key name to remove from DB.")
+
         
     async with naptha as naptha:
         args = parser.parse_args()
@@ -805,7 +827,7 @@ async def main():
         elif args.command in [
             "nodes", "agents", "orchestrators", "environments", 
             "personas", "kbs", "memories", "tools", "run", "inference", 
-            "publish", "create", "storage"
+            "publish", "create", "storage", "deploy-secrets"
         ]:
             if not naptha.hub.is_authenticated:
                 if not hub_username or not hub_password:
@@ -929,8 +951,16 @@ async def main():
                     await list_modules(naptha, module_type='kb')
             elif args.command == "create":
                 await create(naptha, args.module, args.agent_modules, args.agent_nodes, args.tool_modules, args.tool_nodes, args.kb_modules, args.kb_nodes, args.memory_modules, args.memory_nodes, args.environment_modules, args.environment_nodes)
-            elif args.command == "run":                    
-                await run(naptha, args.agent, args.parameters, args.agent_nodes, args.tool_nodes, args.environment_nodes, args.kb_nodes, args.memory_nodes, args.config)
+            elif args.command == "run":
+                secrets = await list_secrets(naptha)
+                secrets_input = []
+                for secret in secrets:
+                    secrets_input.append(SecretInput(
+                        user_id=secret['user_id'],
+                        secret_value=secret['secret_value'],
+                        key_name=secret['key_name']
+                    ))
+                await run(naptha, args.agent, args.parameters, args.agent_nodes, args.tool_nodes, args.environment_nodes, args.kb_nodes, args.memory_nodes, args.config, secrets)
             elif args.command == "inference":
                 if args.inference_command == "models":
                     response = await naptha.inference_client.list_models()
@@ -954,6 +984,37 @@ async def main():
                 )
             elif args.command == "publish":
                 await naptha.publish_modules(args.decorator, args.register, args.subdeployments)
+            elif args.command == "deploy-secrets":
+                public_key = await get_server_public_key(naptha)
+                existing_secrets = await list_secrets(naptha)
+                
+                if args.env:
+                    data_dict = get_env_data()
+                else:
+                    key_name = input("Enter the key name: ").strip()
+                    key_value = input(f"Enter the value for {key_name}: ").strip()
+                    
+                    if not key_name or not key_value:
+                        logger.error("Both key name and key value are required.")
+                        return
+                    
+                    data_dict = {key_name: key_value}
+
+                encrypted_data = create_secret(data_dict, naptha.hub.user_id, public_key)
+                result = await naptha.node._send_request(
+                    "POST",
+                    f"{os.getenv('NODE_URL')}/user/secret/create",
+                    {
+                        "existing_secrets": existing_secrets,
+                        "secrets": encrypted_data
+                    },
+                    { 
+                        "signature": sign_consumer_id(naptha.hub.user_id, os.getenv("PRIVATE_KEY")), 
+                        "is_update": args.override 
+                    }
+                )
+
+                logger.info(result)
         else:
             parser.print_help()
 

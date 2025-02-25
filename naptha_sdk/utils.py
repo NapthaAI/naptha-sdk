@@ -2,6 +2,7 @@ import logging
 import os
 import yaml
 from naptha_sdk.schemas import NodeConfigUser
+from dotenv import dotenv_values
 
 logger = logging.getLogger(__name__)
 
@@ -130,3 +131,18 @@ def url_to_node(url: str):
         user_communication_port = None
     
     return NodeConfigUser(ip=host, user_communication_port=user_communication_port, user_communication_protocol=user_communication_protocol)
+
+
+def get_env_data():
+    ignore_vars = [
+        "PRIVATE_KEY",
+        "HUB_URL",
+        "HUB_USERNAME",
+        "HUB_PASSWORD",
+        "NODE_URL",
+        "ROUTING_URL",
+        "INDIRECT_NODE_ID"
+    ]
+    env_varibles = dotenv_values(os.path.join(os.getcwd(), ".env"))
+
+    return {var: value for var, value in env_varibles.items() if var not in ignore_vars}
