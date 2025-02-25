@@ -1,0 +1,25 @@
+{
+    "plugin_type": "framework",
+    "name": "crewai",
+    "supported_decorators": ["agent", "chain", "tool"],
+    "tested_package_and_python_versions": [
+        {
+            "template": "versions/v0.100.0/template.jinja",
+            "packages": [
+                {
+                    "crewai": "^0.100.0",
+                    "crewai_tools": ">=0.5.0",
+                    "embedchain": ">=0.1.113,<0.2.0"
+                }
+            ],
+            "python_versions": ">=3.10,<3.13"
+        }
+    ],
+    "officially_supported_versions": {
+        "crewai":">=0.100,<0.103",
+        "crewai-tools":">=0.35,<0.37",  
+        "embedchain":">=0.1.90,<0.2"
+    },
+    "last_tested": "2025-02-18",
+    "packages_source_code": [{"package": "crewai", "url": "https://github.com/crewAIInc/crewAI"}, {"package": "crewai_tools", "url": "https://github.com/crewAIInc/crewAI-tools"},{"package": "embedchain", "url": "https://github.com/embedchain/embedchain"}]
+}

@@ -168,12 +168,35 @@ class Naptha:
 def agent(name):
     def decorator(func):
         frame = inspect.currentframe()
+        package_dependencies = {}
         caller_frame = frame.f_back
         instantiation_file = caller_frame.f_code.co_filename
         variables = scrape_init(instantiation_file)
+        
+        # Parse pyproject.toml to get package dependencies
+        pyproject_path = Path(os.path.join(Path.cwd() / AGENT_DIR, name, "pyproject.toml"))
+        if pyproject_path.exists():
+            with open(pyproject_path, "r", encoding="utf-8") as f:
+                toml_data = tomlkit.load(f)
+            if "tool" in toml_data and "poetry" in toml_data["tool"] and "dependencies" in toml_data["tool"]["poetry"]:
+                deps = toml_data["tool"]["poetry"]["dependencies"]
+                for pkg_name, version in deps.items():
+                    if pkg_name == "python":
+                        package_dependencies["python_version"] = str(version)
+                    else:
+                        package_dependencies[pkg_name] = str(version)
+        else:
+            logger.warning(f"pyproject.toml not found at {pyproject_path}")        
+        
         params = scrape_func_params(func)
         agent_code, obj_name, local_modules, selective_import_modules, standard_import_modules, variable_modules, union_modules = scrape_func(func, variables)
-        agent_code = render_agent_code(name, agent_code, obj_name, local_modules, selective_import_modules, standard_import_modules, variable_modules, union_modules, params)
+                
+        # Collect all imports for framework detection
+        all_imports = (
+            [mod["module"] for mod in selective_import_modules if "module" in mod]
+            + [mod["name"] for mod in standard_import_modules]
+        )
+        agent_code = render_agent_code(name, agent_code, obj_name, local_modules, selective_import_modules, standard_import_modules, variable_modules, union_modules, params,all_imports,package_dependencies,)
         init_agent_package(name)
         write_code_to_package(name, agent_code)
         add_dependencies_to_pyproject(name, selective_import_modules + standard_import_modules)
