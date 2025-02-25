@@ -25,9 +25,9 @@ AGENT_DIR = "naptha_modules"
 
 # Certain packages cause issues with dependencies and can be slow to resolve, better to specify ranges
 PACKAGE_VERSIONS = {
-    "crewai": "^0.100.0",
-    "crewai_tools": ">=0.5.0",
-    "embedchain": ">=0.1.113,<0.2.0",
+    "crewai": "^0.102.0",
+    "crewai_tools": "^0.36.0",
+    "embedchain": "^0.1.127",
 }
 
 def copy_env_file(source_dir, package_name):
