@@ -4,7 +4,6 @@ def run(module_run: Dict, *args, **kwargs):
     If 'func_name' is '{{ obj_name }}', we build the agent and run it
     with the 'description' provided in func_input_data.
     """
-    from crewai import Task
 
     # Parse the input schema
     module_run = AgentRunInput(**module_run)
