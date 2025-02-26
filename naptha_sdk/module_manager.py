@@ -26,21 +26,29 @@ AGENT_DIR = "naptha_modules"
 plugin_manager = PluginManager()
 plugin_manager.load_plugins()
 
-# Certain packages cause issues with dependencies and can be slow to resolve, better to specify ranges
-PACKAGE_VERSIONS = {"langchain": "^0.3.18", "langchain-openai": "^0.3.5"}
-
 def copy_env_file(source_dir, package_name):
-    """Copy .env file from source directory to package directory if it exists"""
+    """Copy .env and .pem files from source directory to package directory if they exist"""
+    import shutil
+
+    # Copy .env file
     source_env = os.path.join(source_dir, ".env")
     dest_env = os.path.join(AGENT_DIR, package_name, ".env")
 
     if os.path.exists(source_env):
-        import shutil
-
         shutil.copy2(source_env, dest_env)
         logger.info(f"Copied .env file from {source_env} to {dest_env}")
     else:
         logger.warning(f"No .env file found in {source_dir}")
+    
+    # Copy .pem file
+    source_pem = os.path.join(source_dir, ".pem")
+    dest_pem = os.path.join(AGENT_DIR, package_name, ".pem")
+    
+    if os.path.exists(source_pem):
+        shutil.copy2(source_pem, dest_pem)
+        logger.info(f"Copied .pem file from {source_pem} to {dest_pem}")
+    else:
+        logger.warning(f"No .pem file found in {source_dir}")
 
 def copy_configs_directory(source_dir, package_name):
     """Copy the configs directory from source to agent package if it exists."""
@@ -93,6 +101,24 @@ def is_std_lib(module_name):
     except ImportError:
         return False
 
+def get_parent_project_dependencies():
+    """Read dependencies from the parent project's pyproject.toml if it exists"""
+    parent_toml_path = os.path.join(os.getcwd(), "pyproject.toml")
+    if not os.path.exists(parent_toml_path):
+        logger.info("No parent pyproject.toml found")
+        return {}
+    
+    try:
+        with open(parent_toml_path, "r", encoding="utf-8") as file:
+            parent_data = tomlkit.parse(file.read())
+            
+        if "tool" in parent_data and "poetry" in parent_data["tool"] and "dependencies" in parent_data["tool"]["poetry"]:
+            return parent_data["tool"]["poetry"]["dependencies"]
+        return {}
+    except Exception as e:
+        logger.warning(f"Error reading parent pyproject.toml: {e}")
+        return {}
+
 def add_dependencies_to_pyproject(package_name, packages, framework_deps=None):
     """Add dependencies to pyproject.toml using plugin-provided versions"""
     with open(f"{AGENT_DIR}/{package_name}/pyproject.toml", "r", encoding="utf-8") as file:
@@ -120,17 +146,16 @@ def add_dependencies_to_pyproject(package_name, packages, framework_deps=None):
     }
     dependencies["python-dotenv"] = "*"
 
-    # Core pinned dependencies
-    pinned_deps = {
-        "Pillow": "^11.1.0",
-        "scikit-learn": "^1.6.1",
-        "requests-oauthlib": "^2.0.0",
-        "pandas": "^2.2.3",
-        "googlemaps": "^4.10.0",
-        "duckduckgo-search": "^7.3.2",
-    }
-
-    for pkg, version in pinned_deps.items():
+    # Copy dependencies from parent project
+    parent_deps = get_parent_project_dependencies()
+    for pkg, version in parent_deps.items():
+        # Skip dependencies we've already added
+        if pkg in dependencies:
+            continue
+        # Skip 'path' dependencies as they're likely local development paths
+        if isinstance(version, dict) and "path" in version:
+            continue
+        # Add the dependency
         dependencies[pkg] = version
 
     with open(f"{AGENT_DIR}/{package_name}/pyproject.toml", "w", encoding="utf-8") as file:
