@@ -2,6 +2,7 @@ from copy import deepcopy
 from google.protobuf.json_format import MessageToDict
 import grpc
 import httpx
+import asyncio
 from httpx import HTTPStatusError, RemoteProtocolError
 import json
 import random
@@ -97,10 +98,26 @@ class NodeClient:
         if self.node.node_communication_protocol in ['ws', 'wss']:
             return await self.run_module_ws(module_type, run_input)
         elif self.node.node_communication_protocol == 'grpc':
-            return await self.run_module_grpc(module_type, run_input)
+            NUM_RETRIES = 3
+            retries = 0  # Initialize retries variable
+            while retries < NUM_RETRIES:
+                try:
+                    return await self.run_module_grpc(module_type, run_input)
+                except grpc.aio.AioRpcError as e:
+                    if e.code() == grpc.StatusCode.CANCELLED and retries < NUM_RETRIES - 1:  # Use NUM_RETRIES consistently
+                        retries += 1
+                        # Add exponential backoff with jitter
+                        backoff_time = min(2 ** retries, 30)  # Cap at 30 seconds
+                        logger.info(f"gRPC call cancelled. Retrying in {backoff_time}s (attempt {retries}/{NUM_RETRIES})")
+                        await asyncio.sleep(backoff_time)
+                        continue
+                    # If we're here, either it's not a CANCELLED error or we're out of retries
+                    logger.error(f"gRPC error: {e.code()}: {e.details()}")
+                    raise
+            raise Exception(f"Failed to run module after {NUM_RETRIES} attempts")
         else:
             raise ValueError("Invalid node communication protocol. Node communication protocol must be either 'ws' or 'grpc'.")
-
+    
     async def run_module_ws(self, module_type: str, run_input: Union[AgentRunInput, KBRunInput, ToolRunInput, MemoryRunInput, EnvironmentRunInput]):
         run_input_dict = deepcopy(run_input)
         run_input_dict = run_input_dict.model_dict()
