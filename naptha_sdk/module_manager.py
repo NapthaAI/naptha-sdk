@@ -40,15 +40,16 @@ def copy_env_file(source_dir, package_name):
     else:
         logger.warning(f"No .env file found in {source_dir}")
     
-    # Copy .pem file
-    source_pem = os.path.join(source_dir, ".pem")
-    dest_pem = os.path.join(AGENT_DIR, package_name, ".pem")
-    
-    if os.path.exists(source_pem):
-        shutil.copy2(source_pem, dest_pem)
-        logger.info(f"Copied .pem file from {source_pem} to {dest_pem}")
+    # Check for any .pem files
+    pem_files = [f for f in os.listdir(source_dir) if f.endswith('.pem')]
+    if pem_files:
+        for pem_file in pem_files:
+            source_pem = os.path.join(source_dir, pem_file)
+            dest_pem = os.path.join(AGENT_DIR, package_name, pem_file)
+            shutil.copy2(source_pem, dest_pem)
+            logger.info(f"Copied PEM file from {source_pem} to {dest_pem}")
     else:
-        logger.warning(f"No .pem file found in {source_dir}")
+        logger.warning(f"No .pem files found in {source_dir}")
 
 def copy_configs_directory(source_dir, package_name):
     """Copy the configs directory from source to agent package if it exists."""
