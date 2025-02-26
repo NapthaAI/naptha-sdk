@@ -5,7 +5,6 @@ import httpx
 from httpx import HTTPStatusError, RemoteProtocolError
 import json
 import random
-import time
 import traceback
 from typing import Dict, Any, Union, List
 import uuid
@@ -17,7 +16,6 @@ from naptha_sdk.client import grpc_server_pb2_grpc
 from naptha_sdk.schemas import AgentRun, AgentRunInput, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, \
     OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, KBDeployment, KBRunInput, KBRun, MemoryDeployment, MemoryRunInput, MemoryRun, ToolRunInput, ToolRun, NodeConfig, NodeConfigUser, ToolDeployment, SecretInput
 from naptha_sdk.utils import get_logger, node_to_url
-
 logger = get_logger(__name__)
 HTTP_TIMEOUT = 300
 
@@ -93,17 +91,23 @@ class NodeClient:
                 'public_key': response.public_key,
             }
 
-    async def run_module(self, module_type: str, run_input: Union[AgentRunInput, KBRunInput, ToolRunInput, MemoryRunInput, EnvironmentRunInput]):
+    async def run_module(self, module_type: str, run_input: Union[AgentRunInput, KBRunInput, ToolRunInput, MemoryRunInput, EnvironmentRunInput], secrets: List[SecretInput] = []):
         if self.node.node_communication_protocol in ['ws', 'wss']:
-            return await self.run_module_ws(module_type, run_input)
+            return await self.run_module_ws(module_type, run_input, secrets)
         elif self.node.node_communication_protocol == 'grpc':
             return await self.run_module_grpc(module_type, run_input)
         else:
             raise ValueError("Invalid node communication protocol. Node communication protocol must be either 'ws' or 'grpc'.")
 
-    async def run_module_ws(self, module_type: str, run_input: Union[AgentRunInput, KBRunInput, ToolRunInput, MemoryRunInput, EnvironmentRunInput]):
+    async def run_module_ws(self, module_type: str, run_input: Union[AgentRunInput, KBRunInput, ToolRunInput, MemoryRunInput, EnvironmentRunInput], secrets: List[SecretInput] = []):
+        # Convert run_input to a dictionary
         run_input_dict = deepcopy(run_input)
-        run_input_dict = run_input_dict.model_dict()
+        run_input_dict = run_input_dict.model_dump()
+        
+        if len(secrets) > 0:
+            run_input_dict['secrets'] = [secret.model_dump() for secret in secrets]
+
+        # Send the request and receive the response
         response = await self.send_receive_ws(run_input_dict, f"{module_type}/run")
         
         output_types = {
@@ -239,9 +243,14 @@ class NodeClient:
         
         try:
             if isinstance(data, AgentRunInput) or isinstance(data, OrchestratorRunInput):
+                secrets = data.pop('secrets')
                 message = data.model_dump()
+
+                if secrets:
+                    message['secrets'] = secrets
             else:
                 message = data
+            
             await self.connections[client_id].send(json.dumps(message))
             
             response = await self.connections[client_id].recv()
@@ -444,16 +453,19 @@ class UserClient:
 
         try:
             async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+                payload = run_input.model_dump()
+                if secrets:
+                    payload = {
+                        f"{module_type}_run_input": run_input.model_dict(),
+                        "secrets": [secret.model_dump() for secret in secrets]
+                    }
                 headers = {
                     'Content-Type': 'application/json',
                     'Authorization': f'Bearer {self.access_token}',
                 }
                 response = await client.post(
                     endpoint,
-                    json={
-                        f"{module_type}_run_input": run_input.model_dict(),
-                        "secrets": [SecretInput(**secret).model_dict() for secret in secrets]
-                    },
+                    json=payload,
                     headers=headers
                 )
 

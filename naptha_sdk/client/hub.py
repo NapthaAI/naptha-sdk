@@ -1,18 +1,11 @@
 from dotenv import load_dotenv
 import os
 from naptha_sdk.utils import add_credentials_to_env, get_logger, write_private_key_to_file
-from naptha_sdk.user import generate_keypair
-from naptha_sdk.user import get_public_key, is_hex
+from naptha_sdk.user import generate_keypair, get_public_key, is_hex
+from naptha_sdk.schemas import SecretInput
 from surrealdb import Surreal
-import traceback
 from typing import Dict, List, Optional, Tuple
-
 import jwt
-from surrealdb import Surreal
-
-from naptha_sdk.user import generate_keypair
-from naptha_sdk.user import get_public_key
-from naptha_sdk.utils import add_credentials_to_env, get_logger
 
 logger = get_logger(__name__)
 
@@ -152,7 +145,10 @@ class Hub:
         
     async def list_secrets(self) -> List:
         secrets = await self.surrealdb.query("SELECT * FROM api_secrets;")
-        return secrets[0]['result']
+        if len(secrets) > 0:
+            return secrets[0].get('result', [])
+        else:
+            return []
 
     async def create_module(self, module_type: str, module_config: Dict) -> Tuple[bool, Optional[Dict]]:
         """
@@ -280,6 +276,109 @@ class Hub:
         else:
             logger.info(f"Module already exists. Updating existing module: {module_config.get('id')}")
             return await self.surrealdb.update(module_config.pop('id'), module_config)
+        
+    def prepare_batch_query(self, secret_config: List[SecretInput], existing_secrets: List[SecretInput], update:bool = False) -> str:
+        existing_secrets_dict = {secret.key_name for secret in existing_secrets}
+        records_to_insert = []
+        records_to_update = []
+        
+        for secret in secret_config:
+            user_id = secret.user_id.replace("<record>", "").strip()
+            key_name = secret.key_name
+            key_value = secret.secret_value
+
+            if not existing_secrets_dict or key_name not in existing_secrets_dict:
+                records_to_insert.append({
+                    "user_id": user_id,
+                    "key_name": key_name, 
+                    "secret_value": key_value
+                })
+            else:
+                if update:
+                    records_to_update.append({
+                        "secret_value": key_value,
+                        "user_id": user_id,
+                        "key_name": key_name
+                    })
+
+        insert_query = ""
+        if records_to_insert:
+            insert_query = "INSERT INTO api_secrets $records;"
+
+        update_query = ""
+        if records_to_update:
+            update_query = "UPDATE api_secrets SET secret_value = $secret_value WHERE user_id = $user_id AND key_name = $key_name;"
+
+        return {
+            "insert_query": insert_query,
+            "insert_params": {"records": records_to_insert},
+            "update_query": update_query,
+            "update_params": records_to_update
+        }
+    
+    async def create_secret(self, secret_config: List[SecretInput], update: bool = False, existing_secrets: List[SecretInput] = []) -> str:
+        try:
+            user_id = secret_config[0].user_id.replace("<record>", "").strip()
+            if not user_id:
+                return "Invalid user ID"
+
+            query_data = self.prepare_batch_query(secret_config, existing_secrets, update)
+
+            if not (query_data["insert_query"] or query_data["update_query"]):
+                return "Records already exist"
+
+            try:
+                transaction_query = "BEGIN TRANSACTION;"
+                
+                if query_data["insert_query"]:
+                    transaction_query += "\n" + query_data["insert_query"]
+                
+                if query_data["update_query"]:
+                    for i, _ in enumerate(query_data["update_params"]):
+                        parameterized_query = query_data["update_query"].replace(
+                            "$secret_value", f"$secret_value_{i}"
+                        ).replace(
+                            "$user_id", f"$user_id_{i}"
+                        ).replace(
+                            "$key_name", f"$key_name_{i}"
+                        )
+                        transaction_query += f"\n{parameterized_query}"
+                
+                transaction_query += "\nCOMMIT TRANSACTION;"
+
+                params = {}
+                if query_data["insert_params"]:
+                    params.update(query_data["insert_params"])
+                
+                for i, update_params in enumerate(query_data["update_params"]):
+                    params.update({
+                        f"secret_value_{i}": update_params["secret_value"],
+                        f"user_id_{i}": update_params["user_id"],
+                        f"key_name_{i}": update_params["key_name"]
+                    })
+
+                results = await self.surrealdb.query(transaction_query, params)
+
+                if all(result.get('status') == 'OK' for result in results) and any(result.get('result') for result in results):
+                    return "Records updated successfully"
+                else:
+                    return "Operation failed: Database error"
+
+            except Exception as e:
+                logger.error(f"Secret creation failed: {str(e)}")
+                return f"Operation failed: {type(e).__name__}"
+
+        except Exception as e:
+            logger.error(f"Secret creation failed: {str(e)}")
+            return "Operation failed: Invalid input"
+        
+    async def delete_secret(self, key_name: str) -> str:
+        try:
+            await self.surrealdb.query(f"DELETE FROM api_secrets WHERE key_name = $key_name;", {"key_name": key_name})
+            return "Secret deleted successfully"
+        except Exception as e:
+            logger.error(f"Secret deletion failed: {str(e)}")
+            return "Operation failed: Invalid input"
 
     async def close(self):
         """Close the database connection"""

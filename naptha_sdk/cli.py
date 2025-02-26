@@ -19,7 +19,7 @@ from naptha_sdk.storage.schemas import (
 )
 from naptha_sdk.user import get_public_key, sign_consumer_id
 from naptha_sdk.utils import url_to_node, get_env_data, get_logger
-from naptha_sdk.secrets import create_secret, verify_and_reconstruct_rsa_key
+from naptha_sdk.secrets import create_secret, verify_and_reconstruct_rsa_key, decrypt_with_aes, encrypt_with_server_public_key
 from httpx import HTTPStatusError
 
 load_dotenv(override=True)
@@ -193,7 +193,39 @@ async def list_servers(naptha):
     console.print(f"\n[green]Total servers:[/green] {len(servers)}")
 
 async def list_secrets(naptha):
-    return await naptha.hub.list_secrets()
+    secrets = await naptha.hub.list_secrets()
+
+    if not secrets:
+        console = Console()
+        console.print("[red]No secrets found.[/red]")
+        return
+
+    console = Console()
+    table = Table(
+        box=box.ROUNDED,
+        show_lines=True,
+        title="Available Secrets",
+        title_style="bold cyan",
+        header_style="bold blue"
+    )
+
+    # Add columns
+    table.add_column("Key Name", justify="left")
+    table.add_column("Secret Value", justify="left")
+
+    # Add rows
+    for secret in secrets:
+        table.add_row(
+            secret['key_name'],
+            decrypt_with_aes(secret['secret_value'], os.getenv("AES_SECRET"))
+        )
+
+    # Print table and summary
+    console.print()
+    console.print(table)
+    console.print(f"\n[green]Total secrets:[/green] {len(secrets)}")
+
+    return secrets
 
 async def create(
         naptha,
@@ -771,6 +803,7 @@ async def main():
     run_parser.add_argument('-k', '--kb_nodes', type=str, help='Knowledge base nodes to take part in module runs.')
     run_parser.add_argument('-m', '--memory_nodes', type=str, help='Memory nodes')
     run_parser.add_argument("-c", "--config", type=str, help='Config in "key=value" format')
+    run_parser.add_argument("-s", "--secrets", help='Send secrets for module run', action="store_true")
 
     # Inference parser
     inference_parser = subparsers.add_parser("inference", help="Run model inference.")
@@ -809,14 +842,14 @@ async def main():
                               metavar="URL")
     publish_parser.add_argument("-s", "--subdeployments", help="Publish subdeployments", action="store_true")
 
+
+    secrets_parser = subparsers.add_parser("secrets", help="List available secrets.")
+    secrets_parser.add_argument("-d", "--key_name", help="Key name to get secret for.")
+
     # Add API Key Command
     deploy_secrets_parser = subparsers.add_parser("deploy-secrets", help="Add API keys or tokens.")
     deploy_secrets_parser.add_argument("-e", "--env", help="Add API key from environment variable. Provide the key name.", action="store_true")
     deploy_secrets_parser.add_argument("-o", "--override", help="Override API key in DB with env file values.", action="store_true")
-    
-    # TODO: Implement remove-key functionality
-    # deploy_secrets_parser.add_argument("-r", "--remove-key", help="Specify the key name to remove from DB.")
-
         
     async with naptha as naptha:
         args = parser.parse_args()
@@ -827,7 +860,7 @@ async def main():
         elif args.command in [
             "nodes", "agents", "orchestrators", "environments", 
             "personas", "kbs", "memories", "tools", "run", "inference", 
-            "publish", "create", "storage", "deploy-secrets"
+            "publish", "create", "storage", "deploy-secrets", "secrets"
         ]:
             if not naptha.hub.is_authenticated:
                 if not hub_username or not hub_password:
@@ -952,15 +985,21 @@ async def main():
             elif args.command == "create":
                 await create(naptha, args.module, args.agent_modules, args.agent_nodes, args.tool_modules, args.tool_nodes, args.kb_modules, args.kb_nodes, args.memory_modules, args.memory_nodes, args.environment_modules, args.environment_nodes)
             elif args.command == "run":
-                secrets = await list_secrets(naptha)
+                secrets = await naptha.hub.list_secrets()
+                server_public_key = await get_server_public_key(naptha)
+                
+                for secret in secrets:
+                    secret['secret_value'] = decrypt_with_aes(secret['secret_value'], os.getenv("AES_SECRET"))
+
                 secrets_input = []
                 for secret in secrets:
                     secrets_input.append(SecretInput(
                         user_id=secret['user_id'],
-                        secret_value=secret['secret_value'],
+                        secret_value=encrypt_with_server_public_key(secret['secret_value'], server_public_key),
                         key_name=secret['key_name']
                     ))
-                await run(naptha, args.agent, args.parameters, args.agent_nodes, args.tool_nodes, args.environment_nodes, args.kb_nodes, args.memory_nodes, args.config, secrets)
+
+                await run(naptha, args.agent, args.parameters, args.agent_nodes, args.tool_nodes, args.environment_nodes, args.kb_nodes, args.memory_nodes, args.config, secrets_input if args.secrets else [])
             elif args.command == "inference":
                 if args.inference_command == "models":
                     response = await naptha.inference_client.list_models()
@@ -985,36 +1024,41 @@ async def main():
             elif args.command == "publish":
                 await naptha.publish_modules(args.decorator, args.register, args.subdeployments)
             elif args.command == "deploy-secrets":
-                public_key = await get_server_public_key(naptha)
-                existing_secrets = await list_secrets(naptha)
-                
-                if args.env:
-                    data_dict = get_env_data()
+                try:
+                    existing_secrets = await naptha.hub.list_secrets()
+                    
+                    if args.env:
+                        data_dict = get_env_data()
+                    else:
+                        key_name = input("Enter the key name: ").strip()
+                        key_value = input(f"Enter the value for {key_name}: ").strip()
+                        
+                        if not key_name or not key_value:
+                            logger.error("Both key name and key value are required.")
+                            return
+                        
+                        data_dict = {key_name: key_value}
+
+                    encrypted_data = create_secret(data_dict, naptha.hub.user_id)
+                    result = await naptha.hub.create_secret(
+                        [SecretInput(**secret) for secret in encrypted_data],
+                        args.override, 
+                        [SecretInput(**secret) for secret in existing_secrets]
+                    )
+
+                    logger.info(f"Secret deployment result: {result}")
+                except Exception as e:
+                    logger.error(f"Failed to deploy secrets: {str(e)}")
+                    if "AES_SECRET" not in os.environ:
+                        logger.error("AES_SECRET environment variable is not set. Please ensure it is set in your .env file.")
+                    raise
+
+            elif args.command == "secrets":
+                if args.key_name:
+                    secret = await naptha.hub.delete_secret(args.key_name)
+                    print(secret)
                 else:
-                    key_name = input("Enter the key name: ").strip()
-                    key_value = input(f"Enter the value for {key_name}: ").strip()
-                    
-                    if not key_name or not key_value:
-                        logger.error("Both key name and key value are required.")
-                        return
-                    
-                    data_dict = {key_name: key_value}
-
-                encrypted_data = create_secret(data_dict, naptha.hub.user_id, public_key)
-                result = await naptha.node._send_request(
-                    "POST",
-                    f"{os.getenv('NODE_URL')}/user/secret/create",
-                    {
-                        "existing_secrets": existing_secrets,
-                        "secrets": encrypted_data
-                    },
-                    { 
-                        "signature": sign_consumer_id(naptha.hub.user_id, os.getenv("PRIVATE_KEY")), 
-                        "is_update": args.override 
-                    }
-                )
-
-                logger.info(result)
+                    await list_secrets(naptha)
         else:
             parser.print_help()
 
