@@ -372,7 +372,7 @@ async def run(
         }
         print(f"Agent run input: {agent_run_input}")
 
-        agent_run = await naptha.node.run_agent_and_poll(agent_run_input, secrets=secrets)
+        agent_run = await naptha.node.run_agent_and_poll(agent_run_input)
 
     elif module_type == "tool":
         print("Running Tool...")
