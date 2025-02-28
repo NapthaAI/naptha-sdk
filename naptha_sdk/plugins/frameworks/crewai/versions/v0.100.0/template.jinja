@@ -1,3 +1,11 @@
+import yaml
+from pathlib import Path
+
+# Load agents_config from YAML file
+config_path = "{{ agent_name }}/config/agents.yaml"
+with open(config_path, 'r') as f:
+    agents_config = yaml.safe_load(f)
+
 def run(module_run: Dict, *args, **kwargs):
     """
     Modified run function that creates and executes the agent.

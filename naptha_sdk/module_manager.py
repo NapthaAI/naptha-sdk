@@ -62,6 +62,18 @@ def copy_configs_directory(source_dir, package_name):
         logger.info(f"Copied configs directory from {source_configs} to {dest_configs}")
     else:
         logger.warning(f"No configs directory found in {source_dir}")
+        
+    # Check and copy src/{package_name}/config directory if it exists
+    # Extract the package name from the source directory if needed
+    package_folder = os.path.basename(source_dir.rstrip('/'))
+    source_config = os.path.join(source_dir, "src", package_folder, "config")
+    dest_config = os.path.join(AGENT_DIR, package_name, "config")
+    logger.info(f"{dest_config}")
+    if os.path.exists(source_config) and os.path.isdir(source_config):
+        shutil.copytree(source_config, dest_config, dirs_exist_ok=True)
+        logger.info(f"Copied config directory from {source_config} to {dest_config}")
+    else:
+        logger.warning(f"No config directory found in {source_config}")
 
 def init_agent_package(package_name):
     """Initialize a new poetry package with proper TOML structure"""
