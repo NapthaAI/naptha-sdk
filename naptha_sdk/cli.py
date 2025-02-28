@@ -10,6 +10,7 @@ import json
 
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.client.naptha import Naptha
+from naptha_sdk.module_manager import create_env_file
 from naptha_sdk.schemas import AgentDeployment, ChatCompletionRequest, EnvironmentDeployment, \
     OrchestratorDeployment, OrchestratorRunInput, EnvironmentRunInput, KBDeployment, KBRunInput, MemoryDeployment, MemoryRunInput, ToolDeployment, ToolRunInput, NodeConfigUser, SecretInput
 from naptha_sdk.storage.storage_client import StorageClient
@@ -20,9 +21,7 @@ from naptha_sdk.storage.schemas import (
 from naptha_sdk.user import get_public_key, sign_consumer_id
 from naptha_sdk.utils import url_to_node, get_env_data, get_logger
 from naptha_sdk.secrets import create_secret, verify_and_reconstruct_rsa_key
-from httpx import HTTPStatusError
 
-load_dotenv(override=True)
 logger = get_logger(__name__)
 
 async def list_nodes(naptha):
@@ -682,6 +681,10 @@ def _parse_metadata_args(args, module_type):
     return module_config
 
 async def main():
+    if not os.path.exists(".env"):
+        create_env_file()
+    load_dotenv(override=True)
+
     public_key = get_public_key(os.getenv("PRIVATE_KEY")) if os.getenv("PRIVATE_KEY") else None
     hub_username = os.getenv("HUB_USERNAME")
     hub_password = os.getenv("HUB_PASSWORD")
