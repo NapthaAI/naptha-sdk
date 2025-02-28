@@ -16,8 +16,10 @@ from google.protobuf import struct_pb2
 from naptha_sdk.client import grpc_server_pb2
 from naptha_sdk.client import grpc_server_pb2_grpc
 from naptha_sdk.schemas import AgentRun, AgentRunInput, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, \
-    OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, KBDeployment, KBRunInput, KBRun, MemoryDeployment, MemoryRunInput, MemoryRun, ToolRunInput, ToolRun, NodeConfig, NodeConfigUser, ToolDeployment, SecretInput
+    OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, KBDeployment, KBRunInput, \
+    KBRun, MemoryDeployment, MemoryRunInput, MemoryRun, ToolRunInput, ToolRun, NodeConfig, NodeConfigUser, ToolDeployment, SecretInput
 from naptha_sdk.utils import get_logger, node_to_url
+from naptha_sdk.client.grpc_pool_manager import get_grpc_pool_instance
 
 logger = get_logger(__name__)
 HTTP_TIMEOUT = 300
@@ -28,9 +30,37 @@ class NodeClient:
         self.node_communication_protocol = node.node_communication_protocol
         self.node_url = self.node_to_url(node)
         self.connections = {}
-
         self.access_token = None
+        
+        # Initialize pool for gRPC clients
+        if self.node_communication_protocol == 'grpc':
+            self._init_grpc_pool()
+            
         logger.info(f"Node URL: {self.node_url}")
+        
+    def _init_grpc_pool(self):
+        """Initialize the connection pool with optimized settings"""
+        # These settings are optimized for high concurrency (10k agents)
+        self.pool = get_grpc_pool_instance(
+            max_channels=500,  # Increased for extreme concurrency
+            buffer_size=100,   # Larger buffer to reuse connections
+            channel_options=[
+                ("grpc.max_send_message_length", 10 * 1024 * 1024),        # 10MB
+                ("grpc.max_receive_message_length", 10 * 1024 * 1024),     # 10MB
+                ("grpc.keepalive_time_ms", 30000),                         # 30 seconds
+                ("grpc.keepalive_timeout_ms", 10000),                      # 10 seconds
+                ("grpc.keepalive_permit_without_calls", 1),                # Allow keepalives when idle
+                ("grpc.http2.max_pings_without_data", 5),                  # Allow pings without data
+                ("grpc.http2.min_time_between_pings_ms", 10000),           # 10 seconds minimum
+                ("grpc.max_connection_idle_ms", 300000),                   # 5 minutes idle timeout
+                ("grpc.max_connection_age_ms", 600000),                    # 10 minutes max age
+                ("grpc.max_connection_age_grace_ms", 5000),                # 5 seconds grace period
+                ("grpc.enable_retries", 1),                                # Enable retries
+                ("grpc.service_config", '{"methodConfig": [{"name":[{}], "retryPolicy":{"maxAttempts":5,"initialBackoff":"0.1s","maxBackoff":"10s","backoffMultiplier":2,"retryableStatusCodes":["UNAVAILABLE"]}}]}')
+            ]
+        )
+        # Start pool monitoring in background to track connection stats
+        asyncio.create_task(self.pool.monitor_pool(interval=60))
 
     def node_to_url(self, node: NodeConfig):
         ports = node.ports
@@ -98,25 +128,50 @@ class NodeClient:
         if self.node.node_communication_protocol in ['ws', 'wss']:
             return await self.run_module_ws(module_type, run_input)
         elif self.node.node_communication_protocol == 'grpc':
-            NUM_RETRIES = 3
-            retries = 0  # Initialize retries variable
-            while retries < NUM_RETRIES:
+            NUM_RETRIES = 5  # Increased from 3
+            backoff_base = 2
+            backoff_cap = 60  # Cap at 60 seconds
+            jitter_factor = 0.2  # Add 20% jitter
+            
+            for attempt in range(NUM_RETRIES):
                 try:
                     return await self.run_module_grpc(module_type, run_input)
+                    
                 except grpc.aio.AioRpcError as e:
-                    if e.code() == grpc.StatusCode.CANCELLED and retries < NUM_RETRIES - 1:  # Use NUM_RETRIES consistently
-                        retries += 1
-                        # Add exponential backoff with jitter
-                        backoff_time = min(2 ** retries, 30)  # Cap at 30 seconds
-                        logger.info(f"gRPC call cancelled. Retrying in {backoff_time}s (attempt {retries}/{NUM_RETRIES})")
-                        await asyncio.sleep(backoff_time)
+                    # Log every error to help with debugging
+                    logger.error(f"gRPC error on attempt {attempt+1}/{NUM_RETRIES}: {e.code()}: {e.details()}")
+                    
+                    # These status codes are potential candidates for retry
+                    retriable_status_codes = [
+                        grpc.StatusCode.CANCELLED,
+                        grpc.StatusCode.UNAVAILABLE,
+                        grpc.StatusCode.DEADLINE_EXCEEDED,
+                        grpc.StatusCode.RESOURCE_EXHAUSTED
+                    ]
+                    
+                    if e.code() in retriable_status_codes and attempt < NUM_RETRIES - 1:
+                        # Calculate backoff time with jitter
+                        backoff_time = min(backoff_base ** attempt, backoff_cap)
+                        jitter = backoff_time * jitter_factor * (random.random() * 2 - 1)
+                        final_backoff = max(1, backoff_time + jitter)
+                        
+                        logger.info(f"Retriable gRPC error. Retrying in {final_backoff:.2f}s (attempt {attempt+1}/{NUM_RETRIES})")
+                        await asyncio.sleep(final_backoff)
                         continue
-                    # If we're here, either it's not a CANCELLED error or we're out of retries
-                    logger.error(f"gRPC error: {e.code()}: {e.details()}")
+                    
+                    # Not retriable or out of retries
+                    logger.error(f"gRPC call failed permanently: {e}")
                     raise
+                    
+                except Exception as e:
+                    logger.error(f"Unexpected error during gRPC call: {str(e)}")
+                    logger.error(f"Traceback: {traceback.format_exc()}")
+                    raise
+                    
             raise Exception(f"Failed to run module after {NUM_RETRIES} attempts")
         else:
-            raise ValueError("Invalid node communication protocol. Node communication protocol must be either 'ws' or 'grpc'.")
+            raise ValueError("Invalid node communication protocol. Node communication protocol must be either 'ws', 'wss', or 'grpc'.")
+
     
     async def run_module_ws(self, module_type: str, run_input: Union[AgentRunInput, KBRunInput, ToolRunInput, MemoryRunInput, EnvironmentRunInput]):
         run_input_dict = deepcopy(run_input)
@@ -140,100 +195,139 @@ class NodeClient:
             raise Exception(response['message'])
 
     async def run_module_grpc(self, module_type: str, run_input):
-        async with grpc.aio.insecure_channel(self.node_url) as channel:
-            stub = grpc_server_pb2_grpc.GrpcServerStub(channel)
+        # Use the connection pool context manager
+        async with self.pool.channel_context(self.node_url) as channel:
+            try:
+                stub = grpc_server_pb2_grpc.GrpcServerStub(channel)
+                
+                # Convert inputs to a Struct
+                input_struct = struct_pb2.Struct()
+                if run_input.inputs:
+                    input_data = (
+                        run_input.inputs.dict() if hasattr(run_input.inputs, "dict") else run_input.inputs
+                    )
+                    input_struct.update(input_data)
 
-            # Convert inputs to a Struct
-            input_struct = struct_pb2.Struct()
-            if run_input.inputs:
-                input_data = (
-                    run_input.inputs.dict() if hasattr(run_input.inputs, "dict") else run_input.inputs
+                # Use NodeConfigInput from the proto
+                node_config = grpc_server_pb2.NodeConfigInput(
+                    ip=run_input.deployment.node.ip,
+                    user_communication_port=run_input.deployment.node.user_communication_port,
+                    user_communication_protocol=run_input.deployment.node.user_communication_protocol,
                 )
-                input_struct.update(input_data)
 
-            # Use NodeConfigInput from the proto
-            node_config = grpc_server_pb2.NodeConfigInput(
-                ip=run_input.deployment.node.ip,
-                user_communication_port=run_input.deployment.node.user_communication_port,
-                user_communication_protocol=run_input.deployment.node.user_communication_protocol,
-            )
-
-            # Create the module proto message
-            module = grpc_server_pb2.Module(
-                id=run_input.deployment.module.get("id", ""),
-                name=run_input.deployment.module.get("name", ""),
-                description=run_input.deployment.module.get("description", ""),
-                author=run_input.deployment.module.get("author", ""),
-                module_url=run_input.deployment.module.get("module_url", ""),
-                module_type=module_type,
-                module_version=run_input.deployment.module.get("module_version", ""),
-                module_entrypoint=run_input.deployment.module.get("module_entrypoint", ""),
-                execution_type=run_input.deployment.module.get("execution_type", ""),
-            )
-
-            # Create config struct for deployment
-            config_struct = struct_pb2.Struct()
-            if run_input.deployment.config:
-                config_data = (
-                    run_input.deployment.config.dict()
-                    if hasattr(run_input.deployment.config, "dict")
-                    else run_input.deployment.config
+                # Create the module proto message
+                module = grpc_server_pb2.Module(
+                    id=run_input.deployment.module.get("id", ""),
+                    name=run_input.deployment.module.get("name", ""),
+                    description=run_input.deployment.module.get("description", ""),
+                    author=run_input.deployment.module.get("author", ""),
+                    module_url=run_input.deployment.module.get("module_url", ""),
+                    module_type=module_type,
+                    module_version=run_input.deployment.module.get("module_version", ""),
+                    module_entrypoint=run_input.deployment.module.get("module_entrypoint", ""),
+                    execution_type=run_input.deployment.module.get("execution_type", ""),
                 )
-                config_struct.update(config_data)
 
-            # Map module types to the appropriate deployment proto message
-            deployment_classes = {
-                "agent": grpc_server_pb2.AgentDeployment,
-                "kb": grpc_server_pb2.BaseDeployment,
-                "tool": grpc_server_pb2.ToolDeployment,
-                "environment": grpc_server_pb2.BaseDeployment,
-            }
-            DeploymentClass = deployment_classes[module_type]
-            deployment = DeploymentClass(
-                node_input=node_config,
-                name=run_input.deployment.name,
-                module=module,
-                config=config_struct,
-                initialized=False,
-            )
+                # Create config struct for deployment
+                config_struct = struct_pb2.Struct()
+                if run_input.deployment.config:
+                    config_data = (
+                        run_input.deployment.config.dict()
+                        if hasattr(run_input.deployment.config, "dict")
+                        else run_input.deployment.config
+                    )
+                    config_struct.update(config_data)
 
-            # Build the request with the new signature field included
-            request_args = {
-                "module_type": module_type,
-                "consumer_id": run_input.consumer_id,
-                "inputs": input_struct,
-                f"{module_type}_deployment": deployment,
-                "signature": run_input.signature,  # new field from the updated proto
-            }
-            request = grpc_server_pb2.ModuleRunRequest(**request_args)
+                # Map module types to the appropriate deployment proto message
+                deployment_classes = {
+                    "agent": grpc_server_pb2.AgentDeployment,
+                    "kb": grpc_server_pb2.BaseDeployment,
+                    "tool": grpc_server_pb2.ToolDeployment,
+                    "environment": grpc_server_pb2.BaseDeployment,
+                    "memory": grpc_server_pb2.BaseDeployment,
+                }
+                DeploymentClass = deployment_classes.get(module_type)
+                if not DeploymentClass:
+                    raise ValueError(f"Unsupported module type: {module_type}")
+                    
+                deployment = DeploymentClass(
+                    node_input=node_config,
+                    name=run_input.deployment.name,
+                    module=module,
+                    config=config_struct,
+                    initialized=False,
+                )
 
-            final_response = None
-            async for response in stub.RunModule(request, timeout=1800):
-                final_response = response
-                logger.info(f"Got response: {response}")
+                # Build the request
+                request_args = {
+                    "module_type": module_type,
+                    "consumer_id": run_input.consumer_id,
+                    "inputs": input_struct,
+                    f"{module_type}_deployment": deployment,
+                }
+                
+                # Add signature if it exists in the input
+                if hasattr(run_input, "signature") and run_input.signature:
+                    request_args["signature"] = run_input.signature
+                    
+                request = grpc_server_pb2.ModuleRunRequest(**request_args)
 
-            output_types = {
-                "agent": AgentRun,
-                "kb": KBRun,
-                "tool": ToolRun,
-                "environment": EnvironmentRun,
-            }
-            return output_types[module_type](
-                consumer_id=run_input.consumer_id,
-                inputs=run_input.inputs,
-                deployment=run_input.deployment,
-                orchestrator_runs=[],
-                status=final_response.status,
-                error=final_response.error,
-                id=final_response.id,
-                results=list(final_response.results),
-                error_message=final_response.error_message,
-                created_time=final_response.created_time,
-                start_processing_time=final_response.start_processing_time,
-                completed_time=final_response.completed_time,
-                duration=final_response.duration,
-                signature=final_response.signature,  # map the signature from response
-            )
+                # Call the service with a timeout
+                timeout = 1800  # 30 minutes
+                
+                # Track progress
+                start_time = time.time()
+                response_count = 0
+                final_response = None
+                
+                try:
+                    async for response in stub.RunModule(request, timeout=timeout):
+                        response_count += 1
+                        final_response = response
+                        
+                        # Log progress for long-running operations
+                        if response_count % 5 == 0:
+                            elapsed = time.time() - start_time
+                            logger.info(f"Module run in progress: {elapsed:.2f}s elapsed, {response_count} updates received")
+                            
+                except asyncio.CancelledError:
+                    logger.warning(f"Module run was cancelled for {module_type}")
+                    raise
+                
+                # Return the appropriate output type
+                output_types = {
+                    "agent": AgentRun,
+                    "kb": KBRun,
+                    "tool": ToolRun,
+                    "environment": EnvironmentRun,
+                    "memory": MemoryRun,
+                }
+                
+                return output_types[module_type](
+                    consumer_id=run_input.consumer_id,
+                    inputs=run_input.inputs,
+                    deployment=run_input.deployment,
+                    orchestrator_runs=[],
+                    status=final_response.status,
+                    error=final_response.error,
+                    id=final_response.id,
+                    results=list(final_response.results),
+                    error_message=final_response.error_message if hasattr(final_response, "error_message") else None,
+                    created_time=final_response.created_time if hasattr(final_response, "created_time") else None,
+                    start_processing_time=final_response.start_processing_time if hasattr(final_response, "start_processing_time") else None,
+                    completed_time=final_response.completed_time if hasattr(final_response, "completed_time") else None,
+                    duration=final_response.duration if hasattr(final_response, "duration") else None,
+                    signature=getattr(final_response, "signature", None),
+                )
+                
+            except grpc.aio.AioRpcError:
+                # Let the run_module method handle retries
+                raise
+                
+            except Exception as e:
+                logger.error(f"Unexpected error in run_module_grpc: {str(e)}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                raise
     
     async def connect_ws(self, action: str):
         client_id = str(uuid.uuid4())
