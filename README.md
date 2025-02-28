@@ -57,28 +57,24 @@ If you find this repo useful, please don't forget to star ⭐!
 
 It is good practice to install the SDK in a dedicated virtual environment. We recommend using Poetry to manage your dependencies.
 
-Create a new poetry virtual environment:
+If you don't already have a poetry virtual environment, create a new one:
 
 ```bash
-git clone https://github.com/NapthaAI/naptha-sdk.git
-poetry new test-env
-cd test-env
+poetry init
+```
+
+Then install the SDK:
+
+```bash
 poetry add naptha-sdk
+source .venv/bin/activate
 ```
 
-You can also use in-built Python virtual environments:
+Alternatively, you can use in-built Python virtual environments:
 
 ```bash
-git clone https://github.com/NapthaAI/naptha-sdk.git
-python -m venv test-env
-source test-env/bin/activate
-```
-
-### Install using PyPI
-
-You can install the Naptha SDK using:
-
-```bash
+python -m venv .venv
+source .venv/bin/activate
 pip install naptha-sdk
 ```
 
