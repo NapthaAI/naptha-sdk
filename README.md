@@ -60,7 +60,7 @@ It is good practice to install the SDK in a dedicated virtual environment. We re
 If you don't already have a poetry virtual environment, create a new one:
 
 ```bash
-poetry init
+poetry init --python ">=3.10,<3.13"
 ```
 
 Then install the SDK:
@@ -88,8 +88,6 @@ Your Naptha account is your identity on the Naptha platform. It allows you to:
 The simplest way to create a new account is through the interactive CLI. Run the following command:
 
 ```bash
-cd naptha-sdk
-cp .env.example .env # update your user_name and password here
 naptha signup
 ```
 
@@ -103,12 +101,6 @@ PRIVATE_KEY=your_private_key  # Optional - will be generated if not provided
 ```
 
 ## ⚙️ Configuring your env file
-
-Create a copy of the .env file:
-
-```bash
-cp .env.example .env
-```
 
 Choose whether you want to interact with a *local* or *hosted* Naptha node. For a local node, set ```NODE_URL=http://localhost:7001``` in the .env file. To use a hosted node, set e.g. ```NODE_URL=https://node.naptha.ai``` or ```NODE_URL=https://node2.naptha.ai``` in the .env file.
 

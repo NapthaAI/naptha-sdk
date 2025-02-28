@@ -239,6 +239,20 @@ def add_files_to_package(agent_name, params, user_id):
     with open(env_example_path, 'w') as env_file:
         env_file.write('OPENAI_API_KEY=\n')
 
+def create_env_file():
+    env_path = ".env"
+    env_content = '''OPENAI_API_KEY=
+NODE_URL=http://localhost:7001
+# NODE_URL=https://node.naptha.ai
+
+PRIVATE_KEY=
+HUB_URL=ws://localhost:3001/rpc
+# HUB_URL=wss://hub.naptha.ai/rpc
+HUB_USERNAME=
+HUB_PASSWORD='''
+    with open(env_path, 'w') as env_file:
+        env_file.write(env_content)
+
 def zip_dir(directory_path: str) -> None:
     """
     Zip the specified directory and write it to a file on disk.
