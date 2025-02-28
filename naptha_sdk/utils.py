@@ -141,7 +141,8 @@ def get_env_data():
         "HUB_PASSWORD",
         "NODE_URL",
         "ROUTING_URL",
-        "INDIRECT_NODE_ID"
+        "INDIRECT_NODE_ID",
+        "AES_SECRET"
     ]
     env_varibles = dotenv_values(os.path.join(os.getcwd(), ".env"))
 

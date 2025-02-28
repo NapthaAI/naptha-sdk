@@ -2,6 +2,8 @@ from naptha_sdk.client.node import NodeClient, UserClient
 from naptha_sdk.schemas import AgentRun, MemoryRunInput, MemoryDeployment
 from naptha_sdk.utils import get_logger
 from typing import Union
+from naptha_sdk.schemas import SecretInput
+from typing import List
 
 logger = get_logger(__name__)
 
@@ -12,8 +14,8 @@ class Memory:
         memory_deployment = await node.create(module_type="memory", module_request=deployment)
         return memory_deployment
 
-    async def run(self, module_run_input: Union[AgentRun, MemoryRunInput]):
+    async def run(self, module_run_input: Union[AgentRun, MemoryRunInput], secrets: List[SecretInput] = []):
         logger.info(f"Running memory module on worker node {module_run_input.deployment.node}")
         node = NodeClient(module_run_input.deployment.node)
-        memory_run = await node.run_module(module_type="memory", run_input=module_run_input)
+        memory_run = await node.run_module(module_type="memory", run_input=module_run_input, secrets=secrets)
         return memory_run
