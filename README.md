@@ -60,14 +60,16 @@ It is good practice to install the SDK in a dedicated virtual environment. We re
 Create a new poetry virtual environment:
 
 ```bash
+git clone https://github.com/NapthaAI/naptha-sdk.git
 poetry new test-env
-source .venv/bin/activate
-pip install naptha-sdk
+cd test-env
+poetry add naptha-sdk
 ```
 
 You can also use in-built Python virtual environments:
 
 ```bash
+git clone https://github.com/NapthaAI/naptha-sdk.git
 python -m venv test-env
 source test-env/bin/activate
 ```
@@ -90,6 +92,8 @@ Your Naptha account is your identity on the Naptha platform. It allows you to:
 The simplest way to create a new account is through the interactive CLI. Run the following command:
 
 ```bash
+cd naptha-sdk
+cp .env.example .env # update your user_name and password here
 naptha signup
 ```
 
