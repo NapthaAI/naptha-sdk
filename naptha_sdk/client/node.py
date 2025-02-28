@@ -96,7 +96,7 @@ class NodeClient:
         if self.node.node_communication_protocol in ['ws', 'wss']:
             return await self.run_module_ws(module_type, run_input, secrets)
         elif self.node.node_communication_protocol == 'grpc':
-            return await self.run_module_grpc(module_type, run_input)
+            return await self.run_module_grpc(module_type, run_input, secrets)
         else:
             raise ValueError("Invalid node communication protocol. Node communication protocol must be either 'ws' or 'grpc'.")
 
@@ -127,7 +127,7 @@ class NodeClient:
             logger.error(f"Full traceback: {traceback.format_exc()}")
             raise Exception(response['message'])
 
-    async def run_module_grpc(self, module_type: str, run_input):
+    async def run_module_grpc(self, module_type: str, run_input, secrets: List[SecretInput] = []):
         async with grpc.aio.insecure_channel(self.node_url) as channel:
             stub = grpc_server_pb2_grpc.GrpcServerStub(channel)
 
@@ -193,12 +193,28 @@ class NodeClient:
                 f"{module_type}_deployment": deployment,
                 "signature": run_input.signature,  # new field from the updated proto
             }
-            request = grpc_server_pb2.ModuleRunRequest(**request_args)
 
+            # Convert secrets to proto Secret messages
+            if secrets:
+                proto_secrets = []
+                for secret in secrets:
+                    proto_secret = grpc_server_pb2.Secret(
+                        user_id=secret.user_id,
+                        secret_value=secret.secret_value,
+                        key_name=secret.key_name
+                    )
+                    proto_secrets.append(proto_secret)
+                request_args["secrets"] = proto_secrets
+
+            request = grpc_server_pb2.ModuleRunRequest(**request_args)
+            
             final_response = None
-            async for response in stub.RunModule(request, timeout=1800):
-                final_response = response
-                logger.info(f"Got response: {response}")
+            try:
+                async for response in stub.RunModule(request, timeout=1800):
+                    final_response = response
+            except Exception as e:
+                logger.error(f"Error during gRPC module execution: {str(e)}")
+                raise
 
             output_types = {
                 "agent": AgentRun,
