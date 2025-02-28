@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "naptha-sdk"
-version = "0.1.3"
+version = "1.0.4"
 description = "Python SDK for interacting with Naptha nodes and building distributed AI modules"
 authors = ["Richard Blythman <richardblythman@gmail.com>"]
 readme = "README.md"
