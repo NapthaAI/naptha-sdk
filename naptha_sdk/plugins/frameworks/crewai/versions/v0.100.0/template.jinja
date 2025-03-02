@@ -2,7 +2,8 @@ import yaml
 from pathlib import Path
 
 # Load agents_config from YAML file
-config_path = "{{ agent_name }}/config/agents.yaml"
+current_dir = Path(__file__).parent
+config_path = current_dir / "config/agents.yaml"
 with open(config_path, 'r') as f:
     agents_config = yaml.safe_load(f)
 
