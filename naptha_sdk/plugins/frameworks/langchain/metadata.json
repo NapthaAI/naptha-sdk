@@ -1,0 +1,30 @@
+{
+    "plugin_type": "framework",
+    "name": "langchain",
+    "supported_decorators": ["agent", "chain", "tool"],
+    "tested_package_and_python_versions": [
+        {
+            "template": "versions/v0.3.18/template.jinja",
+            "packages": [
+                {
+                    "langchain": "^0.3.18",
+                    "langchain-openai": "^0.3.5",
+                    "langchain-core": "^0.3.8"
+                },
+                {
+                    "langchain": "^0.3.19",
+                    "langchain-community": "^0.3.17",
+                    "langchain-openai": "^0.3.5"
+                }
+            ],
+            "python_versions": ">=3.10,<3.13"
+        }
+    ],
+    "officially_supported_versions": {
+        "langchain": ">=0.3,<0.4",
+        "langchain-openai": ">=0.3.5",
+        "langchain-core": ">=0.3.35"
+    },
+    "last_tested": "2025-02-18",
+    "packages_source_code": [{"package": "langchain", "url": "https://github.com/langchain-ai/langchain"}, {"package": "langchain-openai", "url": "https://github.com/langchain-ai/langchain/tree/master/libs/partners/openai"}, {"package": "langchain-core", "url": "https://github.com/langchain-ai/langchain/tree/master/libs/core"}]
+}
