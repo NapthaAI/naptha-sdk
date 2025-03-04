@@ -372,7 +372,7 @@ def generate_config(agent_name):
     with open(f'{directory}/deployment.json', 'w') as file:
         # Write the deployment config
         json.dump(deployment, file, indent=4)
-    with open(f'{directory}/llm_config.json', 'w') as file:
+    with open(f'{directory}/llm_configs.json', 'w') as file:
         # Write the deployment config
         json.dump(config, file, indent=4)
 
