@@ -176,7 +176,7 @@ def add_dependencies_to_pyproject(package_name, packages, framework_deps=None):
 
 def parse_deployment_file(deployment_file: str):
     """
-    Parse a single deployment.json file, returning a list of dicts
+    Parse a single llm_configs.json file, returning a list of dicts
     with the extracted/inferred fields.
     """
     results = []
@@ -220,8 +220,8 @@ def parse_deployment_file(deployment_file: str):
 def get_config_values(config_path):
     configs_to_scan = []
     for root, dirs, files in os.walk(config_path):
-        if "deployment.json" in files:
-            deployment_path = os.path.join(root, "deployment.json")
+        if "llm_configs.json" in files:
+            deployment_path = os.path.join(root, "llm_configs.json")
             configs_to_scan.append(deployment_path)
 
     all_results = []
@@ -332,6 +332,50 @@ def render_agent_code(
     content += final_block
     return content
 
+def generate_config(agent_name):
+    deployment = [
+        {
+            "name": "deployment_1",
+            "module": {"name": agent_name, "execution_type": "package", "type": "agent"},
+            "node": {"ip": "localhost"},
+            "config": {
+                "config_name": "config_1",
+                "llm_config": {"config_name": "model_2"},
+                "system_prompt": {
+                    "role": "You are a helpful AI assistant.",
+                    "persona": ""
+                }
+            }
+        }
+    ]
+    
+    config = [
+        {
+            "config_name": "model_1",
+            "client": "ollama",
+            "model": "ollama/phi",
+            "temperature": 0.7,
+            "max_tokens": 1000,
+            "api_base": "http://localhost:11434"
+        },
+        {
+            "config_name": "model_2",
+            "client": "openai",
+            "model": "gpt-4o-mini",
+            "temperature": 0.7,
+            "max_tokens": 1000,
+            "api_base": "https://api.openai.com/v1"
+        }
+    ]
+    directory = f'{AGENT_DIR}/{agent_name}/{agent_name}/configs'
+    os.makedirs(directory, exist_ok=True)
+    with open(f'{directory}/llm_configs.json', 'w') as file:
+        # Write the deployment config
+        json.dump(deployment, file, indent=4)
+    with open(f'{directory}/config.json', 'w') as file:
+        # Write the deployment config
+        json.dump(config, file, indent=4)
+
 def generate_schema(agent_name, params):
     schema_code = """from pydantic import BaseModel
 from typing import Union, Dict, Any, List, Optional
@@ -384,7 +428,7 @@ def add_files_to_package(agent_name, params, user_id):
 
     # Generate schema and component yaml
     generate_schema(agent_name, params)
-
+    generate_config(agent_name)
     # Create .env.example file
     env_example_path = os.path.join(package_path, ".env.example")
     env_content = """PRIVATE_KEY=
