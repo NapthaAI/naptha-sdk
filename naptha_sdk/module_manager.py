@@ -176,7 +176,7 @@ def add_dependencies_to_pyproject(package_name, packages, framework_deps=None):
 
 def parse_deployment_file(deployment_file: str):
     """
-    Parse a single llm_configs.json file, returning a list of dicts
+    Parse a single deployment.json file, returning a list of dicts
     with the extracted/inferred fields.
     """
     results = []
@@ -220,8 +220,8 @@ def parse_deployment_file(deployment_file: str):
 def get_config_values(config_path):
     configs_to_scan = []
     for root, dirs, files in os.walk(config_path):
-        if "llm_configs.json" in files:
-            deployment_path = os.path.join(root, "llm_configs.json")
+        if "deployment.json" in files:
+            deployment_path = os.path.join(root, "deployment.json")
             configs_to_scan.append(deployment_path)
 
     all_results = []
@@ -369,10 +369,10 @@ def generate_config(agent_name):
     ]
     directory = f'{AGENT_DIR}/{agent_name}/{agent_name}/configs'
     os.makedirs(directory, exist_ok=True)
-    with open(f'{directory}/llm_configs.json', 'w') as file:
+    with open(f'{directory}/deployment.json', 'w') as file:
         # Write the deployment config
         json.dump(deployment, file, indent=4)
-    with open(f'{directory}/config.json', 'w') as file:
+    with open(f'{directory}/llm_config.json', 'w') as file:
         # Write the deployment config
         json.dump(config, file, indent=4)
 
