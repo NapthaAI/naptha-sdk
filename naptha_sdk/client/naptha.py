@@ -50,7 +50,7 @@ class Naptha:
         await self.hub.close()
 
 
-    async def create_agent(self, name):
+    async def create_agent(self, name, module_url):
         async with self.hub:
             _, _, user_id = await self.hub.signin(self.hub_username, os.getenv("HUB_PASSWORD"))
             agent_config = {
@@ -58,7 +58,7 @@ class Naptha:
                 "name": name,
                 "description": name,
                 "author": self.hub.user_id,
-                "module_url": "None",
+                "module_url": module_url,  # Use the provided IPFS URL
                 "module_type": "agent",
                 "module_version": "v0.1",
                 "execution_type": "package",
@@ -211,12 +211,24 @@ def agent(name):
         write_code_to_package(name, agent_code)
         add_dependencies_to_pyproject(name, selective_import_modules + standard_import_modules)
         add_files_to_package(name, params, os.getenv("HUB_USERNAME"))
-
+        git_add_commit(name)
+        
+        # Create a publish_and_create function that first publishes to IPFS, then registers the agent
+        async def publish_and_create():
+            naptha = Naptha()
+            # First publish to IPFS
+            _, response = await publish_ipfs_package(name, decorator=True)
+            module_url = f"ipfs://{response['ipfs_hash']}"
+            logger.info(f"Published agent {name} to IPFS with URL: {module_url}")
+            
+            # Then register the agent with the IPFS URL
+            await naptha.create_agent(name, module_url)
+        
         loop = asyncio.get_event_loop()
         if loop.is_running():
-            asyncio.ensure_future(Naptha().create_agent(name))
+            asyncio.ensure_future(publish_and_create())
         else:
-            loop.run_until_complete(Naptha().create_agent(name))
+            loop.run_until_complete(publish_and_create())
 
         return func
     return decorator
