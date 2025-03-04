@@ -20,18 +20,25 @@ class PluginManager:
             Path(__file__).parent / "frameworks",
             # User-installed plugins
             Path("~/.naptha/plugins").expanduser(),
-            # Custom plugin path from environment variable
-            Path(os.environ.get("NAPTHA_PLUGIN_PATH", "")).expanduser(),
         ]
+        # Only add custom plugin path if specified in environment variable
+        custom_plugin_path = os.environ.get("NAPTHA_PLUGIN_PATH")
+        if custom_plugin_path:
+            self.plugin_dirs.append(Path(custom_plugin_path).expanduser())
         logger.info(f"Plugin directories: {self.plugin_dirs}")
-        self.load_plugins()
         
-        # Create directories if they don't exist
+        # Create directories if they don't exist, before loading plugins
         for dir_path in self.plugin_dirs:
-            if dir_path == Path("~/.naptha/plugins").expanduser():
-                # Create parent .naptha directory if needed
-                dir_path.parent.mkdir(parents=True, exist_ok=True)
-            dir_path.mkdir(parents=True, exist_ok=True)
+            try:
+                if dir_path == Path("~/.naptha/plugins").expanduser():
+                    # Create parent .naptha directory if needed
+                    dir_path.parent.mkdir(parents=True, exist_ok=True)
+                dir_path.mkdir(parents=True, exist_ok=True)
+            except Exception as e:
+                logger.error(f"Failed to create plugin directory {dir_path}: {str(e)}")
+        
+        # Load plugins after directories are created
+        self.load_plugins()
 
     def load_plugins(self):
         """Load plugins from both entry points and plugin directories."""
@@ -54,6 +61,9 @@ class PluginManager:
 
     def _load_from_directory(self, dir_path: Path):
         """Load plugins from a specified directory."""
+        if not dir_path.exists():
+            logger.info(f"Plugin directory {dir_path} does not exist, skipping.")
+            return
         logger.info(f"Loading plugins from directory: {dir_path}")
         for plugin_dir in dir_path.iterdir():
             if plugin_dir.is_dir() and (plugin_dir / "metadata.json").exists():
@@ -107,7 +117,6 @@ class PluginManager:
 
     def select_template(self, package_dependencies: dict) -> str:
         """Select the best template version based on project dependencies (for reference)."""
-        # This method is not modified as it's not directly relevant to the fix
         plugin = self.detect_framework(list(package_dependencies.keys()))
         if not plugin:
             return None
