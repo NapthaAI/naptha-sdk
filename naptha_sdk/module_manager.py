@@ -246,30 +246,6 @@ def render_agent_code(
     all_imports,
     package_dependencies,
 ):
-    # Log each module type with clear separation and formatting
-    logger.info("=== Module Information ===")
-
-    logger.info("\n=== Local Modules ===")
-    for module in local_modules:
-        logger.info(f"Name: {module.get('name', 'N/A')}\nSource: {module.get('source', 'N/A')}\n")
-
-    logger.info("\n=== Selective Import Modules ===")
-    for module in selective_import_modules:
-        logger.info(f"Name: {module.get('name', 'N/A')}\nModule: {module.get('module', 'N/A')}\nSource: {module.get('source', 'N/A')}\n")
-
-    logger.info("\n=== Standard Import Modules ===")
-    for module in standard_import_modules:
-        logger.info(f"Name: {module.get('name', 'N/A')}\n")
-
-    logger.info("\n=== Variable Modules ===")
-    for module in variable_modules:
-        logger.info(f"Name: {module.get('name', 'N/A')}\nModule: {module.get('module', 'N/A')}\nImport Needed: {module.get('import_needed', False)}\n")
-
-    logger.info("\n=== Union Modules ===")
-    for module in union_modules:
-        logger.info(f"Source: {module.get('source', 'N/A')}\n")
-
-    logger.info("=== End Module Information ===\n")
     plugin = plugin_manager.detect_framework(all_imports)
     if not plugin:
         raise ValueError(f"No supported framework detected for imports: {all_imports} or dependencies: {package_dependencies}")
