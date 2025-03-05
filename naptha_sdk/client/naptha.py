@@ -6,6 +6,7 @@ import os
 import time
 from pathlib import Path
 
+import tomlkit
 from naptha_sdk.client.hub import Hub
 from naptha_sdk.client.node import UserClient
 from naptha_sdk.configs import setup_module_deployment
@@ -48,7 +49,8 @@ class Naptha:
         """Async exit method for context manager"""
         await self.hub.close()
 
-    async def create_agent(self, name):
+
+    async def create_agent(self, name, module_url):
         async with self.hub:
             _, _, user_id = await self.hub.signin(self.hub_username, os.getenv("HUB_PASSWORD"))
             agent_config = {
@@ -56,13 +58,15 @@ class Naptha:
                 "name": name,
                 "description": name,
                 "author": self.hub.user_id,
-                "module_url": "None",
+                "module_url": module_url,  # Use the provided IPFS URL
                 "module_type": "agent",
                 "module_version": "v0.1",
-                "execution_type": "agent"
+                "execution_type": "package",
+                "module_entrypoint": "run.py",
+                "parameters": "",
             }
             logger.info(f"Registering Agent {agent_config}")
-            agent = await self.hub.create_or_update_agent(agent_config)
+            agent = await self.hub.create_or_update_module("agent", agent_config)
             if agent:
                 logger.info(f"Agent {name} created successfully")
             else:
@@ -74,10 +78,12 @@ class Naptha:
 
         if not decorator:
             module_path = Path.cwd()
-            deployment_path = module_path / module_path.name / 'configs/deployment.json'
-            with open(deployment_path, 'r') as f:
+            deployment_path = module_path / module_path.name / "configs" / "deployment.json"
+            with open(deployment_path, "r", encoding="utf-8") as f:
                 deployment = json.load(f)
-            module = deployment[0]['module']
+            module = deployment[0]["module"]
+            if "module_type" not in module:
+                module["module_type"] = "agent"
             modules = [module]
             if subdeployments:
                 deployment = await setup_module_deployment(module['module_type'], deployment_path)
@@ -88,19 +94,22 @@ class Naptha:
                             modules.append(submodule.module)
         else:
             path = Path.cwd() / AGENT_DIR
-            modules = [item.name for item in path.iterdir() if item.is_dir()]
-            for module in modules:
-                git_add_commit(module)
-                module = {
-                    "name": module,
-                    "description": module,
-                    "parameters": "None",
+            dir_items = [item.name for item in path.iterdir() if item.is_dir()]
+            modules = []
+            for mod_item in dir_items:
+                git_add_commit(mod_item)
+                mod_data = {
+                    "name": mod_item,
+                    "description": mod_item,
+                    "parameters": "",
                     "module_type": "agent",
                     "module_url": "None",
                     "module_version": "v0.1",
                     "module_entrypoint": "run.py",
                     "execution_type": "package"
                 }
+                modules.append(mod_data)
+
         for module in modules:
             if "module_url" in module and module['module_url'] != "None":
                 module_url = module['module_url']
@@ -112,10 +121,11 @@ class Naptha:
                     logger.info(f"Using provided URL for {module['module_type']} {module['name']}: {module_url}")
                 # Otherwise, publish to IPFS
                 else:
-                    _, response = await publish_ipfs_package(module['name'], decorator)
-                    module_url = f'ipfs://{response["ipfs_hash"]}'
-                    logger.info(f"Storing {module['module_type']} {module['name']} on IPFS")
-                    logger.info(f"IPFS Hash: {response['ipfs_hash']}. You can download it from http://provider.akash.pro:30584/ipfs/{response['ipfs_hash']}")
+                    _, response = await publish_ipfs_package(module["name"], decorator)
+                    module_url = f"ipfs://{response['ipfs_hash']}"
+                    logger.info(f"Storing {module['name']} on IPFS")
+                    logger.info(f"Module URL: {module_url}")
+                    logger.info(f"IPFS Hash: {response['ipfs_hash']}. You can download it from http://ipfs-gateway.naptha.work/ipfs/{response['ipfs_hash']}")
 
             if register:
                 # Register module with hub
@@ -123,15 +133,15 @@ class Naptha:
                     _, _, user_id = await self.hub.signin(self.hub_username, os.getenv("HUB_PASSWORD"))
                     module_config = {
                         "id": f"{module['module_type']}:{module['name']}",
-                        "name": module['name'],
-                        "description": module['description'],
-                        "parameters": module['parameters'],
+                        "name": module["name"],
+                        "description": module.get("description", "No description provided"),
+                        "parameters": module.get("parameters", ""),
                         "author": self.hub.user_id,
                         "module_url": module_url,
-                        "module_type": module['module_type'],
-                        "module_version": module['module_version'],
-                        "module_entrypoint": module['module_entrypoint'],
-                        "execution_type": module['execution_type'],
+                        "module_type": module["module_type"],
+                        "module_version": module.get("module_version", "v0.1"),
+                        "module_entrypoint": module.get("module_entrypoint", "run.py"),
+                        "execution_type": module.get("execution_type", "package"),
                     }
                     logger.info(f"Registering {module['module_type']} {module['name']} on Naptha Hub {module_config}")
                     module = await self.hub.create_or_update_module(module['module_type'], module_config)
@@ -168,22 +178,57 @@ class Naptha:
 def agent(name):
     def decorator(func):
         frame = inspect.currentframe()
+        package_dependencies = {}
         caller_frame = frame.f_back
         instantiation_file = caller_frame.f_code.co_filename
         variables = scrape_init(instantiation_file)
+        
+        # Parse pyproject.toml to get package dependencies
+        pyproject_path = Path(os.path.join(Path.cwd() / AGENT_DIR, name, "pyproject.toml"))
+        if pyproject_path.exists():
+            with open(pyproject_path, "r", encoding="utf-8") as f:
+                toml_data = tomlkit.load(f)
+            if "tool" in toml_data and "poetry" in toml_data["tool"] and "dependencies" in toml_data["tool"]["poetry"]:
+                deps = toml_data["tool"]["poetry"]["dependencies"]
+                for pkg_name, version in deps.items():
+                    if pkg_name == "python":
+                        package_dependencies["python_version"] = str(version)
+                    else:
+                        package_dependencies[pkg_name] = str(version)
+        else:
+            logger.warning(f"pyproject.toml not found at {pyproject_path}")        
+        
         params = scrape_func_params(func)
         agent_code, obj_name, local_modules, selective_import_modules, standard_import_modules, variable_modules, union_modules = scrape_func(func, variables)
-        agent_code = render_agent_code(name, agent_code, obj_name, local_modules, selective_import_modules, standard_import_modules, variable_modules, union_modules, params)
+                
+        # Collect all imports for framework detection
+        all_imports = (
+            [mod["module"] for mod in selective_import_modules if "module" in mod]
+            + [mod["name"] for mod in standard_import_modules]
+        )
+        agent_code = render_agent_code(name, agent_code, obj_name, local_modules, selective_import_modules, standard_import_modules, variable_modules, union_modules, params,all_imports,package_dependencies,)
         init_agent_package(name)
         write_code_to_package(name, agent_code)
         add_dependencies_to_pyproject(name, selective_import_modules + standard_import_modules)
         add_files_to_package(name, params, os.getenv("HUB_USERNAME"))
-
+        git_add_commit(name)
+        
+        # Create a publish_and_create function that first publishes to IPFS, then registers the agent
+        async def publish_and_create():
+            naptha = Naptha()
+            # First publish to IPFS
+            _, response = await publish_ipfs_package(name, decorator=True)
+            module_url = f"ipfs://{response['ipfs_hash']}"
+            logger.info(f"Published agent {name} to IPFS with URL: {module_url}")
+            
+            # Then register the agent with the IPFS URL
+            await naptha.create_agent(name, module_url)
+        
         loop = asyncio.get_event_loop()
         if loop.is_running():
-            asyncio.ensure_future(Naptha().create_agent(name))
+            asyncio.ensure_future(publish_and_create())
         else:
-            loop.run_until_complete(Naptha().create_agent(name))
+            loop.run_until_complete(publish_and_create())
 
         return func
     return decorator
