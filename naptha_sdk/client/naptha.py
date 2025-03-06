@@ -12,7 +12,7 @@ from naptha_sdk.client.node import UserClient
 from naptha_sdk.configs import setup_module_deployment
 from naptha_sdk.inference import InferenceClient
 from naptha_sdk.module_manager import AGENT_DIR, add_files_to_package, add_dependencies_to_pyproject, git_add_commit, \
-    init_agent_package, render_agent_code, write_code_to_package
+    init_agent_package, render_agent_code, write_code_to_package, publish_ipfs_package
 from naptha_sdk.schemas import User
 from naptha_sdk.scrape import scrape_init, scrape_func, scrape_func_params
 from naptha_sdk.user import get_public_key
