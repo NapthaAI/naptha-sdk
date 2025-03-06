@@ -309,6 +309,8 @@ def render_agent_code(
     return content
 
 def generate_config(agent_name):
+    logger.info(f"Generating configuration files for agent: {agent_name}")
+    
     deployment = [
         {
             "name": "deployment_1",
@@ -343,14 +345,22 @@ def generate_config(agent_name):
             "api_base": "https://api.openai.com/v1"
         }
     ]
+    
     directory = f'{AGENT_DIR}/{agent_name}/{agent_name}/configs'
+    logger.info(f"Creating configs directory: {directory}")
     os.makedirs(directory, exist_ok=True)
-    with open(f'{directory}/deployment.json', 'w') as file:
-        # Write the deployment config
+    
+    deployment_path = f'{directory}/deployment.json'
+    logger.info(f"Writing deployment configuration to: {deployment_path}")
+    with open(deployment_path, 'w') as file:
         json.dump(deployment, file, indent=4)
-    with open(f'{directory}/llm_configs.json', 'w') as file:
-        # Write the deployment config
+    
+    llm_config_path = f'{directory}/llm_configs.json'
+    logger.info(f"Writing LLM configuration to: {llm_config_path}")
+    with open(llm_config_path, 'w') as file:
         json.dump(config, file, indent=4)
+    
+    logger.info(f"Configuration generation complete for agent: {agent_name}")
 
 def generate_schema(agent_name, params):
     schema_code = """from pydantic import BaseModel
@@ -589,50 +599,50 @@ def zip_dir(directory_path: str) -> None:
     print(f"Zipped directory '{directory_path}' to '{output_zip_file}'")
     return output_zip_file
 
-async def write_to_ipfs(file_path):
-    """Write a file to IPFS, optionally publish to IPNS or update an existing IPNS record."""
-    try:
-        logger.info(f"Writing file to IPFS: {file_path}")
-        if not IPFS_GATEWAY_URL:
-            return (500, {"message": "IPFS_GATEWAY_URL not found"})
+# async def write_to_ipfs(file_path):
+#     """Write a file to IPFS, optionally publish to IPNS or update an existing IPNS record."""
+#     try:
+#         logger.info(f"Writing file to IPFS: {file_path}")
+#         if not IPFS_GATEWAY_URL:
+#             return (500, {"message": "IPFS_GATEWAY_URL not found"})
 
-        client = ipfshttpclient.connect(IPFS_GATEWAY_URL)
-        with tempfile.NamedTemporaryFile(mode="wb", delete=False) as tmpfile:
-            with open(file_path, "rb") as f:
-                content = f.read()
-            tmpfile.write(content)
-            tmpfile_name = tmpfile.name
+#         client = ipfshttpclient.connect(IPFS_GATEWAY_URL)
+#         with tempfile.NamedTemporaryFile(mode="wb", delete=False) as tmpfile:
+#             with open(file_path, "rb") as f:
+#                 content = f.read()
+#             tmpfile.write(content)
+#             tmpfile_name = tmpfile.name
 
-        result = client.add(tmpfile_name)
-        client.pin.add(result["Hash"])
-        os.unlink(tmpfile_name)
+#         result = client.add(tmpfile_name)
+#         client.pin.add(result["Hash"])
+#         os.unlink(tmpfile_name)
 
-        ipfs_hash = result["Hash"]
-        response = {
-            "message": "File written and pinned to IPFS",
-            "ipfs_hash": ipfs_hash,
-        }
+#         ipfs_hash = result["Hash"]
+#         response = {
+#             "message": "File written and pinned to IPFS",
+#             "ipfs_hash": ipfs_hash,
+#         }
 
-        return (201, response)
-    except Exception as e:
-        logger.error(f"Error writing file to IPFS: {e}")
-        import traceback
+#         return (201, response)
+#     except Exception as e:
+#         logger.error(f"Error writing file to IPFS: {e}")
+#         import traceback
 
-        logger.error(f"Error writing file to IPFS: {e}")
-        logger.error(f"Traceback: {traceback.format_exc()}")
-        return (500, {"message": f"Error writing file to IPFS: {e}"})
+#         logger.error(f"Error writing file to IPFS: {e}")
+#         logger.error(f"Traceback: {traceback.format_exc()}")
+#         return (500, {"message": f"Error writing file to IPFS: {e}"})
 
-async def publish_ipfs_package(agent_name, decorator=False):
-    package_path = f"{AGENT_DIR}/{agent_name}"
+# async def publish_ipfs_package(agent_name, decorator=False):
+#     package_path = f"{AGENT_DIR}/{agent_name}"
 
-    if not decorator:
-        output_zip_file = zip_dir_with_gitignore(Path.cwd())
-    else:
-        output_zip_file = zip_dir(package_path)
+#     if not decorator:
+#         output_zip_file = zip_dir_with_gitignore(Path.cwd())
+#     else:
+#         output_zip_file = zip_dir(package_path)
 
-    success, response = await write_to_ipfs(output_zip_file)
-    logger.info(f"Response: {response}")
-    return success, response
+#     success, response = await write_to_ipfs(output_zip_file)
+#     logger.info(f"Response: {response}")
+#     return success, response
 
 # Function to sort modules based on dependencies
 def sort_modules(modules, dependencies):
@@ -727,27 +737,27 @@ def read_gitignore(directory):
     ignored_files = [line.strip() for line in lines if line.strip() and not line.startswith("#")]
     return ignored_files
 
-def zip_dir_with_gitignore(directory_path):
-    ignored_files = read_gitignore(directory_path)
-    output_zip_file = f"./{os.path.basename(directory_path)}.zip"
+# def zip_dir_with_gitignore(directory_path):
+#     ignored_files = read_gitignore(directory_path)
+#     output_zip_file = f"./{os.path.basename(directory_path)}.zip"
 
-    # Convert patterns in .gitignore to absolute paths for comparison
-    ignored_patterns = [os.path.join(directory_path, pattern) for pattern in ignored_files]
+#     # Convert patterns in .gitignore to absolute paths for comparison
+#     ignored_patterns = [os.path.join(directory_path, pattern) for pattern in ignored_files]
 
-    with zipfile.ZipFile(output_zip_file, "w", zipfile.ZIP_DEFLATED) as zip_file:
-        for root, dirs, files in os.walk(directory_path):
-            dirs = [d for d in dirs if not any(fnmatch.fnmatch(os.path.join(root, d), pattern) for pattern in ignored_patterns)]
+#     with zipfile.ZipFile(output_zip_file, "w", zipfile.ZIP_DEFLATED) as zip_file:
+#         for root, dirs, files in os.walk(directory_path):
+#             dirs = [d for d in dirs if not any(fnmatch.fnmatch(os.path.join(root, d), pattern) for pattern in ignored_patterns)]
 
-            for file in files:
-                file_path = os.path.join(root, file)
+#             for file in files:
+#                 file_path = os.path.join(root, file)
 
-                if any(fnmatch.fnmatch(file_path, pattern) for pattern in ignored_patterns):
-                    continue
+#                 if any(fnmatch.fnmatch(file_path, pattern) for pattern in ignored_patterns):
+#                     continue
 
-                if file == output_zip_file.split("/")[1]:
-                    continue
+#                 if file == output_zip_file.split("/")[1]:
+#                     continue
 
-                zip_file.write(file_path, os.path.relpath(file_path, directory_path))
+#                 zip_file.write(file_path, os.path.relpath(file_path, directory_path))
 
-    logger.info(f"Zipped directory '{directory_path}' to '{output_zip_file}'")
-    return output_zip_file
+#     logger.info(f"Zipped directory '{directory_path}' to '{output_zip_file}'")
+#     return output_zip_file

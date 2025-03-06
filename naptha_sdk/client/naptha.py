@@ -12,7 +12,7 @@ from naptha_sdk.client.node import UserClient
 from naptha_sdk.configs import setup_module_deployment
 from naptha_sdk.inference import InferenceClient
 from naptha_sdk.module_manager import AGENT_DIR, add_files_to_package, add_dependencies_to_pyproject, git_add_commit, \
-    init_agent_package, publish_ipfs_package, render_agent_code, write_code_to_package
+    init_agent_package, render_agent_code, write_code_to_package
 from naptha_sdk.schemas import User
 from naptha_sdk.scrape import scrape_init, scrape_func, scrape_func_params
 from naptha_sdk.user import get_public_key
@@ -211,24 +211,24 @@ def agent(name):
         write_code_to_package(name, agent_code)
         add_dependencies_to_pyproject(name, selective_import_modules + standard_import_modules)
         add_files_to_package(name, params, os.getenv("HUB_USERNAME"))
-        git_add_commit(name)
+        # git_add_commit(name)
         
-        # Create a publish_and_create function that first publishes to IPFS, then registers the agent
-        async def publish_and_create():
-            naptha = Naptha()
-            # First publish to IPFS
-            _, response = await publish_ipfs_package(name, decorator=True)
-            module_url = f"ipfs://{response['ipfs_hash']}"
-            logger.info(f"Published agent {name} to IPFS with URL: {module_url}")
+        # # Create a publish_and_create function that first publishes to IPFS, then registers the agent
+        # async def publish_and_create():
+        #     naptha = Naptha()
+        #     # First publish to IPFS
+        #     _, response = await publish_ipfs_package(name, decorator=True)
+        #     module_url = f"ipfs://{response['ipfs_hash']}"
+        #     logger.info(f"Published agent {name} to IPFS with URL: {module_url}")
             
-            # Then register the agent with the IPFS URL
-            await naptha.create_agent(name, module_url)
+        #     # Then register the agent with the IPFS URL
+        #     await naptha.create_agent(name, module_url)
         
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            asyncio.ensure_future(publish_and_create())
-        else:
-            loop.run_until_complete(publish_and_create())
+        # loop = asyncio.get_event_loop()
+        # if loop.is_running():
+        #     asyncio.ensure_future(publish_and_create())
+        # else:
+        #     loop.run_until_complete(publish_and_create())
 
         return func
     return decorator

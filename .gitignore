@@ -166,3 +166,4 @@ cython_debug/
 *.pem
 
 examples/
+new_examples/
