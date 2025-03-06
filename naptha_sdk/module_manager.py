@@ -737,27 +737,27 @@ def read_gitignore(directory):
     ignored_files = [line.strip() for line in lines if line.strip() and not line.startswith("#")]
     return ignored_files
 
-# def zip_dir_with_gitignore(directory_path):
-#     ignored_files = read_gitignore(directory_path)
-#     output_zip_file = f"./{os.path.basename(directory_path)}.zip"
+def zip_dir_with_gitignore(directory_path):
+    ignored_files = read_gitignore(directory_path)
+    output_zip_file = f"./{os.path.basename(directory_path)}.zip"
 
-#     # Convert patterns in .gitignore to absolute paths for comparison
-#     ignored_patterns = [os.path.join(directory_path, pattern) for pattern in ignored_files]
+    # Convert patterns in .gitignore to absolute paths for comparison
+    ignored_patterns = [os.path.join(directory_path, pattern) for pattern in ignored_files]
 
-#     with zipfile.ZipFile(output_zip_file, "w", zipfile.ZIP_DEFLATED) as zip_file:
-#         for root, dirs, files in os.walk(directory_path):
-#             dirs = [d for d in dirs if not any(fnmatch.fnmatch(os.path.join(root, d), pattern) for pattern in ignored_patterns)]
+    with zipfile.ZipFile(output_zip_file, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        for root, dirs, files in os.walk(directory_path):
+            dirs = [d for d in dirs if not any(fnmatch.fnmatch(os.path.join(root, d), pattern) for pattern in ignored_patterns)]
 
-#             for file in files:
-#                 file_path = os.path.join(root, file)
+            for file in files:
+                file_path = os.path.join(root, file)
 
-#                 if any(fnmatch.fnmatch(file_path, pattern) for pattern in ignored_patterns):
-#                     continue
+                if any(fnmatch.fnmatch(file_path, pattern) for pattern in ignored_patterns):
+                    continue
 
-#                 if file == output_zip_file.split("/")[1]:
-#                     continue
+                if file == output_zip_file.split("/")[1]:
+                    continue
 
-#                 zip_file.write(file_path, os.path.relpath(file_path, directory_path))
+                zip_file.write(file_path, os.path.relpath(file_path, directory_path))
 
-#     logger.info(f"Zipped directory '{directory_path}' to '{output_zip_file}'")
-#     return output_zip_file
+    logger.info(f"Zipped directory '{directory_path}' to '{output_zip_file}'")
+    return output_zip_file
