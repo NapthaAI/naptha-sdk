@@ -599,50 +599,50 @@ def zip_dir(directory_path: str) -> None:
     print(f"Zipped directory '{directory_path}' to '{output_zip_file}'")
     return output_zip_file
 
-# async def write_to_ipfs(file_path):
-#     """Write a file to IPFS, optionally publish to IPNS or update an existing IPNS record."""
-#     try:
-#         logger.info(f"Writing file to IPFS: {file_path}")
-#         if not IPFS_GATEWAY_URL:
-#             return (500, {"message": "IPFS_GATEWAY_URL not found"})
+async def write_to_ipfs(file_path):
+    """Write a file to IPFS, optionally publish to IPNS or update an existing IPNS record."""
+    try:
+        logger.info(f"Writing file to IPFS: {file_path}")
+        if not IPFS_GATEWAY_URL:
+            return (500, {"message": "IPFS_GATEWAY_URL not found"})
 
-#         client = ipfshttpclient.connect(IPFS_GATEWAY_URL)
-#         with tempfile.NamedTemporaryFile(mode="wb", delete=False) as tmpfile:
-#             with open(file_path, "rb") as f:
-#                 content = f.read()
-#             tmpfile.write(content)
-#             tmpfile_name = tmpfile.name
+        client = ipfshttpclient.connect(IPFS_GATEWAY_URL)
+        with tempfile.NamedTemporaryFile(mode="wb", delete=False) as tmpfile:
+            with open(file_path, "rb") as f:
+                content = f.read()
+            tmpfile.write(content)
+            tmpfile_name = tmpfile.name
 
-#         result = client.add(tmpfile_name)
-#         client.pin.add(result["Hash"])
-#         os.unlink(tmpfile_name)
+        result = client.add(tmpfile_name)
+        client.pin.add(result["Hash"])
+        os.unlink(tmpfile_name)
 
-#         ipfs_hash = result["Hash"]
-#         response = {
-#             "message": "File written and pinned to IPFS",
-#             "ipfs_hash": ipfs_hash,
-#         }
+        ipfs_hash = result["Hash"]
+        response = {
+            "message": "File written and pinned to IPFS",
+            "ipfs_hash": ipfs_hash,
+        }
 
-#         return (201, response)
-#     except Exception as e:
-#         logger.error(f"Error writing file to IPFS: {e}")
-#         import traceback
+        return (201, response)
+    except Exception as e:
+        logger.error(f"Error writing file to IPFS: {e}")
+        import traceback
 
-#         logger.error(f"Error writing file to IPFS: {e}")
-#         logger.error(f"Traceback: {traceback.format_exc()}")
-#         return (500, {"message": f"Error writing file to IPFS: {e}"})
+        logger.error(f"Error writing file to IPFS: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return (500, {"message": f"Error writing file to IPFS: {e}"})
 
-# async def publish_ipfs_package(agent_name, decorator=False):
-#     package_path = f"{AGENT_DIR}/{agent_name}"
+async def publish_ipfs_package(agent_name, decorator=False):
+    package_path = f"{AGENT_DIR}/{agent_name}"
 
-#     if not decorator:
-#         output_zip_file = zip_dir_with_gitignore(Path.cwd())
-#     else:
-#         output_zip_file = zip_dir(package_path)
+    if not decorator:
+        output_zip_file = zip_dir_with_gitignore(Path.cwd())
+    else:
+        output_zip_file = zip_dir(package_path)
 
-#     success, response = await write_to_ipfs(output_zip_file)
-#     logger.info(f"Response: {response}")
-#     return success, response
+    success, response = await write_to_ipfs(output_zip_file)
+    logger.info(f"Response: {response}")
+    return success, response
 
 # Function to sort modules based on dependencies
 def sort_modules(modules, dependencies):
