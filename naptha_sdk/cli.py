@@ -827,6 +827,7 @@ async def main():
                               const=True,
                               metavar="URL")
     publish_parser.add_argument("-s", "--subdeployments", help="Publish subdeployments", action="store_true")
+    publish_parser.add_argument("-gh", "--github", help="Publish to GitHub", action="store_true")
 
     # Add API Key Command
     deploy_secrets_parser = subparsers.add_parser("deploy-secrets", help="Add API keys or tokens.")
@@ -1014,7 +1015,7 @@ async def main():
                     file=args.file
                 )
             elif args.command == "publish":
-                await naptha.publish_modules(args.decorator, args.register, args.subdeployments)
+                await naptha.publish_modules(args.decorator, args.register, args.subdeployments, args.github)
             elif args.command == "deploy-secrets":
                 public_key = await get_server_public_key(naptha)
                 existing_secrets = await list_secrets(naptha)

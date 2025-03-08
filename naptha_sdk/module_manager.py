@@ -18,8 +18,7 @@ import fnmatch
 from naptha_sdk.plugins.manager import PluginManager
 
 logger = get_logger(__name__)
-
-IPFS_GATEWAY_URL = "/dns/provider.akash.pro/tcp/31832/http"
+IPFS_GATEWAY_URL="/dns4/ipfs-api.naptha.work/tcp/443/https"
 AGENT_DIR = "naptha_modules"
 
 # Initialize plugin system
@@ -568,6 +567,8 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+poetry-cache/
 """
     with open(gitignore_path, "w") as gitignore_file:
         gitignore_file.write(gitignore_content)
@@ -588,15 +589,44 @@ HUB_PASSWORD='''
 
 def zip_dir(directory_path: str) -> None:
     """
-    Zip the specified directory and write it to a file on disk.
+    Zip the specified directory and write it to a file on disk,
+    excluding common large directories and files.
     """
     output_zip_file = f"{directory_path}.zip"
+    
+    # Common large directories and files to exclude
+    exclude_patterns = [
+        "**/__pycache__/**", "**/.git/**", "**/.venv/**", "**/venv/**",
+        "**/.pytest_cache/**", "**/node_modules/**", "**/.ipynb_checkpoints/**",
+        "**/*.pyc", "**/*.pyo", "**/*.pyd", "**/*.so", "**/*.dll", "**/*.exe",
+        "**/*.zip", "**/*.tar.gz", "**/*.tar", "**/*.db", "**/dist/**", 
+        "**/build/**", "**/*.egg-info/**", "**/.DS_Store", "**/poetry-cache/**",
+        "poetry-cache/**", "poetry-cache"  # Additional patterns to catch poetry-cache at root level
+    ]
+    
     with zipfile.ZipFile(output_zip_file, "w", zipfile.ZIP_DEFLATED) as zip_file:
         for root, dirs, files in os.walk(directory_path):
+            # Skip excluded directories
+            dirs[:] = [d for d in dirs if not any(
+                fnmatch.fnmatch(os.path.join(root, d), pattern) 
+                for pattern in exclude_patterns
+            )]
+            
             for file in files:
                 file_path = os.path.join(root, file)
+                
+                # Skip excluded files
+                if any(fnmatch.fnmatch(file_path, pattern) for pattern in exclude_patterns):
+                    continue
+                    
+                # Skip files larger than 10MB
+                if os.path.getsize(file_path) > 10 * 1024 * 1024:
+                    logger.warning(f"Skipping large file: {file_path} ({os.path.getsize(file_path) / 1024 / 1024:.2f} MB)")
+                    continue
+                    
                 zip_file.write(file_path, os.path.relpath(file_path, directory_path))
-    print(f"Zipped directory '{directory_path}' to '{output_zip_file}'")
+    
+    logger.info(f"Zipped directory '{directory_path}' to '{output_zip_file}'")
     return output_zip_file
 
 async def write_to_ipfs(file_path):
@@ -741,23 +771,47 @@ def zip_dir_with_gitignore(directory_path):
     ignored_files = read_gitignore(directory_path)
     output_zip_file = f"./{os.path.basename(directory_path)}.zip"
 
+    # Additional patterns to exclude large files/directories
+    additional_exclude_patterns = [
+        "**/__pycache__/**", "**/.git/**", "**/.venv/**", "**/venv/**",
+        "**/.pytest_cache/**", "**/node_modules/**", "**/.ipynb_checkpoints/**",
+        "**/*.pyc", "**/*.pyo", "**/*.pyd", "**/*.so", "**/*.dll", "**/*.exe",
+        "**/*.zip", "**/*.tar.gz", "**/*.tar", "**/*.db", "**/dist/**", 
+        "**/build/**", "**/*.egg-info/**", "**/.DS_Store", "**/poetry-cache/**",
+        "poetry-cache/**", "poetry-cache"  # Additional patterns to catch poetry-cache at root level
+    ]
+    
     # Convert patterns in .gitignore to absolute paths for comparison
     ignored_patterns = [os.path.join(directory_path, pattern) for pattern in ignored_files]
+    ignored_patterns.extend([os.path.join(directory_path, pattern) for pattern in additional_exclude_patterns])
 
+    total_size = 0
     with zipfile.ZipFile(output_zip_file, "w", zipfile.ZIP_DEFLATED) as zip_file:
         for root, dirs, files in os.walk(directory_path):
-            dirs = [d for d in dirs if not any(fnmatch.fnmatch(os.path.join(root, d), pattern) for pattern in ignored_patterns)]
+            # Filter directories
+            dirs[:] = [d for d in dirs if not any(
+                fnmatch.fnmatch(os.path.join(root, d), pattern) 
+                for pattern in ignored_patterns
+            )]
 
             for file in files:
                 file_path = os.path.join(root, file)
 
+                # Skip files that match ignored patterns
                 if any(fnmatch.fnmatch(file_path, pattern) for pattern in ignored_patterns):
                     continue
 
                 if file == output_zip_file.split("/")[1]:
                     continue
-
+                    
+                # Skip files larger than 10MB
+                if os.path.getsize(file_path) > 10 * 1024 * 1024:
+                    logger.warning(f"Skipping large file: {file_path} ({os.path.getsize(file_path) / 1024 / 1024:.2f} MB)")
+                    continue
+                
+                file_size = os.path.getsize(file_path)
+                total_size += file_size
                 zip_file.write(file_path, os.path.relpath(file_path, directory_path))
 
-    logger.info(f"Zipped directory '{directory_path}' to '{output_zip_file}'")
+    logger.info(f"Zipped directory '{directory_path}' to '{output_zip_file}' (Total size: {total_size / 1024 / 1024:.2f} MB)")
     return output_zip_file
