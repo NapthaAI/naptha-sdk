@@ -1,4 +1,4 @@
-[project]
+[tool.poetry]
 name = "naptha-sdk"
 version = "0.1.3"
 description = "Python SDK for interacting with Naptha nodes and building distributed AI modules"
