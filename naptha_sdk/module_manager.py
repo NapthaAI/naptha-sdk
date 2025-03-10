@@ -569,6 +569,7 @@ dmypy.json
 cython_debug/
 
 poetry-cache/
+*.pem
 """
     with open(gitignore_path, "w") as gitignore_file:
         gitignore_file.write(gitignore_content)
@@ -599,7 +600,7 @@ def zip_dir(directory_path: str) -> None:
         "**/__pycache__/**", "**/.git/**", "**/.venv/**", "**/venv/**",
         "**/.pytest_cache/**", "**/node_modules/**", "**/.ipynb_checkpoints/**",
         "**/*.pyc", "**/*.pyo", "**/*.pyd", "**/*.so", "**/*.dll", "**/*.exe",
-        "**/*.zip", "**/*.tar.gz", "**/*.tar", "**/*.db", "**/dist/**", 
+        "**/*.zip", "**/*.tar.gz", "**/*.tar", "**/*.db", "**/dist/**", "**/*.pem","*.pem",
         "**/build/**", "**/*.egg-info/**", "**/.DS_Store", "**/poetry-cache/**",
         "poetry-cache/**", "poetry-cache"  # Additional patterns to catch poetry-cache at root level
     ]
@@ -776,7 +777,7 @@ def zip_dir_with_gitignore(directory_path):
         "**/__pycache__/**", "**/.git/**", "**/.venv/**", "**/venv/**",
         "**/.pytest_cache/**", "**/node_modules/**", "**/.ipynb_checkpoints/**",
         "**/*.pyc", "**/*.pyo", "**/*.pyd", "**/*.so", "**/*.dll", "**/*.exe",
-        "**/*.zip", "**/*.tar.gz", "**/*.tar", "**/*.db", "**/dist/**", 
+        "**/*.zip", "**/*.tar.gz", "**/*.tar", "**/*.db", "**/dist/**", "**/*.pem","*.pem",
         "**/build/**", "**/*.egg-info/**", "**/.DS_Store", "**/poetry-cache/**",
         "poetry-cache/**", "poetry-cache"  # Additional patterns to catch poetry-cache at root level
     ]
