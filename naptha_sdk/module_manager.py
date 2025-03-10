@@ -588,6 +588,7 @@ HUB_PASSWORD='''
     with open(env_path, 'w') as env_file:
         env_file.write(env_content)
 
+
 def zip_dir(directory_path: str) -> None:
     """
     Zip the specified directory and write it to a file on disk,
@@ -629,6 +630,7 @@ def zip_dir(directory_path: str) -> None:
     
     logger.info(f"Zipped directory '{directory_path}' to '{output_zip_file}'")
     return output_zip_file
+
 
 async def write_to_ipfs(file_path):
     """Write a file to IPFS, optionally publish to IPNS or update an existing IPNS record."""
