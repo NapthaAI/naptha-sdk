@@ -1,32 +1,35 @@
-[tool.poetry]
+[project]
 name = "naptha-sdk"
 version = "0.1.3"
 description = "Python SDK for interacting with Naptha nodes and building distributed AI modules"
-authors = ["Richard Blythman <richardblythman@gmail.com>"]
+authors = [{ name = "Richard Blythman", email = "richardblythman@gmail.com" }]
+requires-python = "<=3.13,>=3.10"
 readme = "README.md"
+dependencies = [
+    "httpx<1.0.0,>=0.27.0",
+    "surrealdb<1.0.0,>=0.3.2",
+    "pyjwt<3.0.0,>=2.8.0",
+    "python-dotenv<2.0.0,>=1.0.1",
+    "payments-py<1.0.0,>=0.1.2",
+    "pyyaml<7.0.0,>=6.0.1",
+    "ecdsa<1.0.0,>=0.19.0",
+    "pytz<2025.0,>=2024.1",
+    "tabulate<1.0.0,>=0.9.0",
+    "tomlkit<1.0.0,>=0.13.2",
+    "ipfshttpclient<1.0.0,>=0.7.0",
+    "gitpython<4.0.0,>=3.1.43",
+    "grpcio<2.0.0,>=1.68.1",
+    "grpcio-tools<2.0.0,>=1.68.1",
+    "pytest<9.0.0,>=8.3.4",
+    "cryptography<45.0.0,>=44.0.0",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.10,<=3.13"
-httpx = "^0.27.0"
-surrealdb = "^0.3.2"
-pyjwt = "^2.8.0"
-python-dotenv = "^1.0.1"
-payments-py = "^0.1.2"
-pyyaml = "^6.0.1"
-ecdsa = "^0.19.0"
-pytz = "^2024.1"
-tabulate = "^0.9.0"
-tomlkit = "^0.13.2"
-ipfshttpclient = "^0.7.0"
-gitpython = "^3.1.43"
-grpcio = "^1.68.1"
-grpcio-tools = "^1.68.1"
-pytest = "^8.3.4"
-cryptography = "^44.0.0"
+[project.scripts]
+naptha = "naptha_sdk.cli:cli"
+
+[tool.pdm.build]
+includes = []
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry.scripts]
-naptha = "naptha_sdk.cli:cli"
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
