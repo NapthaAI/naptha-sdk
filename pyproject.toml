@@ -33,3 +33,9 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["naptha_sdk"]
+
+[project.entry-points."naptha_sdk.plugins"]
+langchain = "naptha_sdk.plugins.frameworks.langchain.plugin:LangChainPlugin"
+crewai = "naptha_sdk.plugins.frameworks.crewai.plugin:CrewAIPlugin"
+camel-ai = "naptha_sdk.plugins.frameworks.camel-ai.plugin:CameAIPlugin"
+
