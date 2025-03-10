@@ -27,7 +27,6 @@ from naptha_sdk.user import get_public_key, sign_consumer_id
 from naptha_sdk.utils import url_to_node, get_env_data, get_logger
 from naptha_sdk.secrets import create_secret, verify_and_reconstruct_rsa_key
 
-load_dotenv(override=True)
 logger = get_logger(__name__)
 
 async def list_nodes(naptha):
