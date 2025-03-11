@@ -483,17 +483,34 @@ class Naptha:
                                 module_version = module.get("module_version", "v0.1")
                                 # Create git tag
                                 logger.info(f"Creating git tag: {module_version}")
-                                await asyncio.to_thread(
-                                    subprocess.run, ['git', 'tag', '-a', module_version, '-m', f"Release {module_version}"],
-                                    check=True
-                                )
+                                
+                                # Check if tag already exists before creating it
+                                tag_exists = False
+                                try:
+                                    await asyncio.to_thread(
+                                        subprocess.run, ['git', 'show-ref', '--tags', f'refs/tags/{module_version}'],
+                                        check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                                    )
+                                    tag_exists = True
+                                    logger.info(f"Tag {module_version} already exists, skipping tag creation")
+                                except subprocess.CalledProcessError:
+                                    # Tag doesn't exist, we can create it
+                                    pass
+                                    
+                                if not tag_exists:
+                                    await asyncio.to_thread(
+                                        subprocess.run, ['git', 'tag', '-a', module_version, '-m', f"Release {module_version}"],
+                                        check=True
+                                    )
                                 
                                 # Push the tag to remote
                                 logger.info(f"Pushing git tag: {module_version}")
                                 await asyncio.to_thread(
                                     subprocess.run, ['git', 'push', 'origin', module_version],
-                                    check=True
+                                    check=False  # Don't raise error if tag already exists on remote
                                 )
+                                
+                                # Continue with the rest of the code...
                                 
                                 # Create GitHub release using the API
                                 logger.info(f"Creating GitHub release for tag: {module_version}")
