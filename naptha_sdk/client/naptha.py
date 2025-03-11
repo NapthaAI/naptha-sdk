@@ -477,6 +477,53 @@ class Naptha:
 
                     # Only attempt tag and release operations if we've successfully pushed to GitHub
                     if not large_files:
+                        # Create and push tag based on module version
+                        for module in modules:
+                            try:
+                                module_version = module.get("module_version", "v0.1")
+                                # Create git tag
+                                logger.info(f"Creating git tag: {module_version}")
+                                await asyncio.to_thread(
+                                    subprocess.run, ['git', 'tag', '-a', module_version, '-m', f"Release {module_version}"],
+                                    check=True
+                                )
+                                
+                                # Push the tag to remote
+                                logger.info(f"Pushing git tag: {module_version}")
+                                await asyncio.to_thread(
+                                    subprocess.run, ['git', 'push', 'origin', module_version],
+                                    check=True
+                                )
+                                
+                                # Create GitHub release using the API
+                                logger.info(f"Creating GitHub release for tag: {module_version}")
+                                release_data = {
+                                    "tag_name": module_version,
+                                    "name": f"Release {module_version}",
+                                    "body": f"Release notes for {module['name']} version {module_version}"
+                                }
+                                
+                                release_response = await client.post(
+                                    f'https://api.github.com/repos/{owner}/{name}/releases',
+                                    headers={
+                                        'Authorization': f'token {github_token}',
+                                        'Accept': 'application/vnd.github+json'
+                                    },
+                                    json=release_data
+                                )
+                                
+                                if release_response.status_code in (201, 200):
+                                    release_info = release_response.json()
+                                    logger.info(f"GitHub release created successfully: {release_info.get('html_url')}")
+                                else:
+                                    logger.error(f"Failed to create GitHub release. Status: {release_response.status_code}, Response: {release_response.text}")
+                            except subprocess.CalledProcessError as e:
+                                logger.error(f"Failed to create or push git tag: {str(e)}")
+                            except httpx.HTTPError as e:
+                                logger.error(f"Failed to create GitHub release: {str(e)}")
+                            except Exception as e:
+                                logger.error(f"Unexpected error during tag/release creation: {str(e)}")
+                                
                         # Use clean URL (without token) for module config
                         if not isinstance(register, str):
                             # Check if we had to fall back to IPFS (module_url already set)
@@ -594,24 +641,6 @@ def agent(name):
         write_code_to_package(name, agent_code)
         add_dependencies_to_pyproject(name, selective_import_modules + standard_import_modules)
         add_files_to_package(name, params, os.getenv("HUB_USERNAME"))
-        # git_add_commit(name)
-        
-        # # Create a publish_and_create function that first publishes to IPFS, then registers the agent
-        # async def publish_and_create():
-        #     naptha = Naptha()
-        #     # First publish to IPFS
-        #     _, response = await publish_ipfs_package(name, decorator=True)
-        #     module_url = f"ipfs://{response['ipfs_hash']}"
-        #     logger.info(f"Published agent {name} to IPFS with URL: {module_url}")
-            
-        #     # Then register the agent with the IPFS URL
-        #     await naptha.create_agent(name, module_url)
-        
-        # loop = asyncio.get_event_loop()
-        # if loop.is_running():
-        #     asyncio.ensure_future(publish_and_create())
-        # else:
-        #     loop.run_until_complete(publish_and_create())
 
         return func
     return decorator

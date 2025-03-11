@@ -541,7 +541,7 @@ ipython_config.py
 #Pipfile.lock
 
 # uv
-#uv.lock
+uv.lock
 
 # pdm
 #.pdm.toml
@@ -588,7 +588,6 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
-poetry-cache/
 *.pem
 """
     with open(gitignore_path, "w") as gitignore_file:
@@ -616,7 +615,6 @@ def zip_dir(directory_path: str) -> None:
     """
     output_zip_file = f"{directory_path}.zip"
     
-    # Simplified exclusion patterns without redundant Poetry entries
     exclude_patterns = [
         "**/__pycache__/**", "**/.git/**", "**/.venv/**", "**/venv/**",
         "**/.pytest_cache/**", "**/node_modules/**", "**/.ipynb_checkpoints/**",
