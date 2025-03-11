@@ -18,7 +18,7 @@ import fnmatch
 from naptha_sdk.plugins.manager import PluginManager
 
 logger = get_logger(__name__)
-IPFS_GATEWAY_URL="/dns4/ipfs-api.naptha.work/tcp/443/https"
+IPFS_GATEWAY_URL = "/dns4/ipfs-api.naptha.work/tcp/443/https"
 AGENT_DIR = "naptha_modules"
 
 # Initialize plugin system
@@ -63,8 +63,8 @@ def copy_configs_directory(source_dir, package_name):
         logger.warning(f"No configs directory found in {source_dir}")
         
     # Check and copy src/{package_name}/config directory if it exists
-    # Extract the package name from the source directory if needed
-    package_folder = os.path.basename(source_dir.rstrip('/'))
+    # Fix: Get the name directly from the Path object or convert to string first
+    package_folder = source_dir.name if hasattr(source_dir, 'name') else os.path.basename(str(source_dir))
     source_config = os.path.join(source_dir, "src", package_folder, "config")
     dest_config = os.path.join(AGENT_DIR, package_name, "config")
     logger.info(f"{dest_config}")
@@ -75,36 +75,48 @@ def copy_configs_directory(source_dir, package_name):
         logger.warning(f"No config directory found in {source_config}")
 
 def init_agent_package(package_name):
-    """Initialize a new poetry package with proper TOML structure"""
-    subprocess.run(["poetry", "new", f"{AGENT_DIR}/{package_name}"])
-
-    # Create initial pyproject.toml with proper structure
+    """Initialize a new package with proper TOML structure compatible with UV"""
+    package_dir = Path(AGENT_DIR) / package_name
+    package_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Create pyproject.toml with [project] table
     toml_content = tomlkit.document()
     toml_content["build-system"] = {
-        "requires": ["poetry-core"],
-        "build-backend": "poetry.core.masonry.api",
+        "requires": ["setuptools>=61.0"],
+        "build-backend": "setuptools.build_meta",
     }
-
-    toml_content["tool"] = {
-        "poetry": {
-            "name": package_name,
-            "version": "v0.1.0",
-            "description": "",
-            "authors": [],
-            "readme": "README.md",
-            "dependencies": {"python": ">=3.10,<3.13"},
-        }
+    toml_content["project"] = {
+        "name": package_name,
+        "version": "0.1.0",
+        "description": "",
+        "authors": [{"name": "Your Name", "email": "your.email@example.com"}],
+        "readme": "README.md",
+        "requires-python": ">=3.10,<3.13",
+        "dependencies": [],
     }
-
-    with open(f"{AGENT_DIR}/{package_name}/pyproject.toml", "w", encoding="utf-8") as f:
+    with open(package_dir / "pyproject.toml", "w", encoding="utf-8") as f:
         f.write(tomlkit.dumps(toml_content))
-
-    # Copy .env file from parent directory
-    print(f"parent_dir: {os.getcwd()}")
-    copy_env_file(os.getcwd(), package_name)
-    copy_configs_directory(os.getcwd(), os.path.join(package_name, package_name))
-
-    subprocess.run(["git", "init", f"{AGENT_DIR}/{package_name}"])
+    
+    # Create README.md
+    with open(package_dir / "README.md", "w", encoding="utf-8") as f:
+        f.write(f"# {package_name}\n")
+    
+    # Create package_name/__init__.py
+    (package_dir / package_name).mkdir()
+    with open(package_dir / package_name / "__init__.py", "w", encoding="utf-8") as f:
+        f.write("")
+    
+    # Create tests/__init__.py
+    (package_dir / "tests").mkdir()
+    with open(package_dir / "tests" / "__init__.py", "w", encoding="utf-8") as f:
+        f.write("")
+    
+    # Copy .env and configs
+    copy_env_file(Path.cwd(), package_name)
+    copy_configs_directory(Path.cwd(), package_dir / package_name)
+    
+    # Initialize git
+    subprocess.run(["git", "init", str(package_dir)])
 
 def is_std_lib(module_name):
     try:
@@ -115,17 +127,28 @@ def is_std_lib(module_name):
 
 def get_parent_project_dependencies():
     """Read dependencies from the parent project's pyproject.toml if it exists"""
-    parent_toml_path = os.path.join(os.getcwd(), "pyproject.toml")
-    if not os.path.exists(parent_toml_path):
+    parent_toml_path = Path.cwd() / "pyproject.toml"
+    if not parent_toml_path.exists():
         logger.info("No parent pyproject.toml found")
         return {}
     
     try:
         with open(parent_toml_path, "r", encoding="utf-8") as file:
             parent_data = tomlkit.parse(file.read())
-            
-        if "tool" in parent_data and "poetry" in parent_data["tool"] and "dependencies" in parent_data["tool"]["poetry"]:
-            return parent_data["tool"]["poetry"]["dependencies"]
+        
+        # Focus on standard [project] format
+        if "project" in parent_data and "dependencies" in parent_data["project"]:
+            deps = {}
+            for dep in parent_data["project"]["dependencies"]:
+                if "@" in dep:
+                    pkg, url = dep.split("@", 1)
+                    deps[pkg.strip()] = {"git": url.strip()}
+                else:
+                    match = re.match(r"(\w+)(.*)", dep)
+                    if match:
+                        pkg, version = match.groups()
+                        deps[pkg] = version.strip() if version else "*"
+            return deps
         return {}
     except Exception as e:
         logger.warning(f"Error reading parent pyproject.toml: {e}")
@@ -136,39 +159,36 @@ def add_dependencies_to_pyproject(package_name, packages, framework_deps=None):
     with open(f"{AGENT_DIR}/{package_name}/pyproject.toml", "r", encoding="utf-8") as file:
         data = tomlkit.parse(file.read())
 
-    if "tool" not in data:
-        data["tool"] = {"poetry": {"dependencies": {}}}
-    elif "poetry" not in data["tool"]:
-        data["tool"]["poetry"] = {"dependencies": {}}
-    elif "dependencies" not in data["tool"]["poetry"]:
-        data["tool"]["poetry"]["dependencies"] = {}
+    if "project" not in data:
+        data["project"] = {"dependencies": []}
+    elif "dependencies" not in data["project"]:
+        data["project"]["dependencies"] = []
 
-    dependencies = data["tool"]["poetry"]["dependencies"]
-    dependencies["python"] = ">=3.10,<3.13"
+    dependencies = data["project"]["dependencies"]
 
     # Use plugin-provided dependencies if available
     if framework_deps:
         for pkg, version in framework_deps.items():
-            dependencies[pkg] = version
+            dependencies.append(f"{pkg}{version}")
 
-    # Add other standard dependencies
-    dependencies["naptha-sdk"] = {
-        "git": "https://github.com/NapthaAI/naptha-sdk.git",
-        "branch": "plugins",
-    }
-    dependencies["python-dotenv"] = "*"
+    # Add core dependencies
+    dependencies.append("naptha-sdk @ git+https://github.com/NapthaAI/naptha-sdk.git@plugins")
+    dependencies.append("python-dotenv")
 
-    # Copy dependencies from parent project
+    # Copy dependencies from parent project using standard format only
     parent_deps = get_parent_project_dependencies()
     for pkg, version in parent_deps.items():
         # Skip dependencies we've already added
-        if pkg in dependencies:
+        if any(dep.startswith(pkg) for dep in dependencies):
             continue
         # Skip 'path' dependencies as they're likely local development paths
         if isinstance(version, dict) and "path" in version:
             continue
         # Add the dependency
-        dependencies[pkg] = version
+        if isinstance(version, str):
+            dependencies.append(f"{pkg}{version}")
+        elif isinstance(version, dict) and "git" in version:
+            dependencies.append(f"{pkg} @ git+{version['git']}@{version.get('branch', 'main')}")
 
     with open(f"{AGENT_DIR}/{package_name}/pyproject.toml", "w", encoding="utf-8") as file:
         file.write(tomlkit.dumps(data))
@@ -249,7 +269,7 @@ def render_agent_code(
     if not plugin:
         raise ValueError(f"No supported framework detected for imports: {all_imports} or dependencies: {package_dependencies}")
     content = ""
-    config_values=get_config_values(os.path.abspath("./"))
+    config_values = get_config_values(os.path.abspath("./"))
 
     # Standard imports
     for module in standard_import_modules:
@@ -520,8 +540,8 @@ ipython_config.py
 # pipenv
 #Pipfile.lock
 
-# poetry
-#poetry.lock
+# uv
+#uv.lock
 
 # pdm
 #.pdm.toml
@@ -596,14 +616,13 @@ def zip_dir(directory_path: str) -> None:
     """
     output_zip_file = f"{directory_path}.zip"
     
-    # Common large directories and files to exclude
+    # Simplified exclusion patterns without redundant Poetry entries
     exclude_patterns = [
         "**/__pycache__/**", "**/.git/**", "**/.venv/**", "**/venv/**",
         "**/.pytest_cache/**", "**/node_modules/**", "**/.ipynb_checkpoints/**",
         "**/*.pyc", "**/*.pyo", "**/*.pyd", "**/*.so", "**/*.dll", "**/*.exe",
-        "**/*.zip", "**/*.tar.gz", "**/*.tar", "**/*.db", "**/dist/**", "**/*.pem","*.pem",
-        "**/build/**", "**/*.egg-info/**", "**/.DS_Store", "**/poetry-cache/**",
-        "poetry-cache/**", "poetry-cache"  # Additional patterns to catch poetry-cache at root level
+        "**/*.zip", "**/*.tar.gz", "**/*.tar", "**/*.db", "**/dist/**", "**/*.pem",
+        "**/build/**", "**/*.egg-info/**", "**/.DS_Store", "**/poetry-cache/**"
     ]
     
     with zipfile.ZipFile(output_zip_file, "w", zipfile.ZIP_DEFLATED) as zip_file:

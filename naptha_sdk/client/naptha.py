@@ -128,10 +128,10 @@ class Naptha:
             # Read pyproject.toml
             with open('pyproject.toml', 'r') as f:
                 pyproject = tomlkit.load(f)
-            if 'tool' not in pyproject or 'poetry' not in pyproject['tool'] or 'name' not in pyproject['tool']['poetry'] or 'version' not in pyproject['tool']['poetry']:
-                raise ValueError("pyproject.toml is missing required fields: tool.poetry.name and tool.poetry.version")
-            name = pyproject['tool']['poetry']['name']
-            version = pyproject['tool']['poetry']['version']
+            if 'project' not in pyproject or 'name' not in pyproject['project'] or 'version' not in pyproject['project']:
+                raise ValueError("pyproject.toml is missing required fields: project.name and project.version")
+            name = pyproject['project']['name']
+            version = pyproject['project']['version']
 
             # Create GitHub repository with proper timeout settings and retry logic
             try:
@@ -567,13 +567,17 @@ def agent(name):
         if pyproject_path.exists():
             with open(pyproject_path, "r", encoding="utf-8") as f:
                 toml_data = tomlkit.load(f)
-            if "tool" in toml_data and "poetry" in toml_data["tool"] and "dependencies" in toml_data["tool"]["poetry"]:
-                deps = toml_data["tool"]["poetry"]["dependencies"]
-                for pkg_name, version in deps.items():
-                    if pkg_name == "python":
-                        package_dependencies["python_version"] = str(version)
+            if "project" in toml_data and "dependencies" in toml_data["project"]:
+                deps = toml_data["project"]["dependencies"]
+                for dep in deps:
+                    if "@" in dep:
+                        pkg, url = dep.split("@", 1)
+                        package_dependencies[pkg.strip()] = {"git": url.strip()}
                     else:
-                        package_dependencies[pkg_name] = str(version)
+                        match = re.match(r"(\w+)(.*)", dep)
+                        if match:
+                            pkg, version = match.groups()
+                            package_dependencies[pkg] = version.strip() if version else "*"
         else:
             logger.warning(f"pyproject.toml not found at {pyproject_path}")        
         
@@ -585,7 +589,7 @@ def agent(name):
             [mod["module"] for mod in selective_import_modules if "module" in mod]
             + [mod["name"] for mod in standard_import_modules]
         )
-        agent_code = render_agent_code(name, agent_code, obj_name, local_modules, selective_import_modules, standard_import_modules, variable_modules, union_modules, params,all_imports,package_dependencies,)
+        agent_code = render_agent_code(name, agent_code, obj_name, local_modules, selective_import_modules, standard_import_modules, variable_modules, union_modules, params, all_imports, package_dependencies)
         init_agent_package(name)
         write_code_to_package(name, agent_code)
         add_dependencies_to_pyproject(name, selective_import_modules + standard_import_modules)
