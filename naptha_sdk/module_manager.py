@@ -637,8 +637,8 @@ def zip_dir(directory_path: str) -> None:
         "**/__pycache__/**", "**/.git/**", "**/.venv/**", "**/venv/**",
         "**/.pytest_cache/**", "**/node_modules/**", "**/.ipynb_checkpoints/**",
         "**/*.pyc", "**/*.pyo", "**/*.pyd", "**/*.so", "**/*.dll", "**/*.exe",
-        "**/*.zip", "**/*.tar.gz", "**/*.tar", "**/*.db", "**/dist/**", "**/*.pem",
-        "**/build/**", "**/*.egg-info/**", "**/.DS_Store", "**/poetry-cache/**"
+        "**/*.zip", "**/*.tar.gz", "**/*.tar", "**/*.db", "**/db/**", "**/dist/**", "**/*.pem","*.pem",
+        "**/build/**", "**/*.egg-info/**", "**/.DS_Store"
     ]
     
     with zipfile.ZipFile(output_zip_file, "w", zipfile.ZIP_DEFLATED) as zip_file:
@@ -814,9 +814,8 @@ def zip_dir_with_gitignore(directory_path):
         "**/__pycache__/**", "**/.git/**", "**/.venv/**", "**/venv/**",
         "**/.pytest_cache/**", "**/node_modules/**", "**/.ipynb_checkpoints/**",
         "**/*.pyc", "**/*.pyo", "**/*.pyd", "**/*.so", "**/*.dll", "**/*.exe",
-        "**/*.zip", "**/*.tar.gz", "**/*.tar", "**/*.db", "**/dist/**", "**/*.pem","*.pem",
-        "**/build/**", "**/*.egg-info/**", "**/.DS_Store", "**/poetry-cache/**",
-        "poetry-cache/**", "poetry-cache"  # Additional patterns to catch poetry-cache at root level
+        "**/*.zip", "**/*.tar.gz", "**/*.tar", "**/*.db", "**/db/**", "**/dist/**", "**/*.pem","*.pem",
+        "**/build/**", "**/*.egg-info/**", "**/.DS_Store"
     ]
     
     # Convert patterns in .gitignore to absolute paths for comparison
