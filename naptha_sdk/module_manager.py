@@ -562,9 +562,6 @@ ipython_config.py
 # pipenv
 #Pipfile.lock
 
-# uv
-uv.lock
-
 # pdm
 #.pdm.toml
 #.pdm-python
