@@ -1,0 +1,22 @@
+{
+    "plugin_type": "framework",
+    "name": "camel-ai",
+    "supported_decorators": ["agent", "chain", "tool"],
+    "import_prefixes": ["camel"],
+    "tested_package_and_python_versions": [
+        {
+            "template": "versions/v0.2.20/template.jinja",
+            "packages": [
+                {
+                    "camel-ai": "0.2.20"
+                }
+            ],
+            "python_versions": ">=3.10,<3.13"
+        }
+    ],
+    "officially_supported_versions": {
+        "camel-ai": ">=0.2.14,0.2.22"
+    },
+    "last_tested": "2025-02-18",
+    "packages_source_code": [{"package": "camel-ai", "url": "https://github.com/camel-ai/camel-ai"}]
+}

@@ -1,10 +1,9 @@
-from dotenv import load_dotenv
-from git import Repo
 import importlib.util
 import ipfshttpclient
 import json
 from naptha_sdk.client.hub import Hub
 from naptha_sdk.utils import get_logger
+from git import Repo
 import os
 from pathlib import Path
 import re
@@ -16,202 +15,426 @@ import tomlkit
 import yaml
 import zipfile
 import fnmatch
+from naptha_sdk.plugins.manager import PluginManager
 
-load_dotenv()
 logger = get_logger(__name__)
+IPFS_GATEWAY_URL = "/dns4/ipfs-api.naptha.work/tcp/443/https"
+AGENT_DIR = "naptha_modules"
 
-IPFS_GATEWAY_URL="/dns/provider.akash.pro/tcp/31832/http"
-AGENT_DIR = "agent_pkgs"
+# Initialize plugin system
+plugin_manager = PluginManager()
+plugin_manager.load_plugins()
 
-# Certain packages cause issues with dependencies and can be slow to resolve, better to specify ranges
-PACKAGE_VERSIONS = {
-    "crewai": "^0.41.1",
-    "crewai_tools": ">=0.4.6,<0.5.0",
-    "embedchain": ">=0.1.113,<0.2.0",
-}
+def copy_env_file(source_dir, package_name):
+    """Copy .env and .pem files from source directory to package directory if they exist"""
+    import shutil
+
+    # Copy .env file
+    source_env = os.path.join(source_dir, ".env")
+    dest_env = os.path.join(AGENT_DIR, package_name, ".env")
+
+    if os.path.exists(source_env):
+        shutil.copy2(source_env, dest_env)
+        logger.info(f"Copied .env file from {source_env} to {dest_env}")
+    else:
+        logger.warning(f"No .env file found in {source_dir}")
+    
+    # Check for any .pem files
+    pem_files = [f for f in os.listdir(source_dir) if f.endswith('.pem')]
+    if pem_files:
+        for pem_file in pem_files:
+            source_pem = os.path.join(source_dir, pem_file)
+            dest_pem = os.path.join(AGENT_DIR, package_name, pem_file)
+            shutil.copy2(source_pem, dest_pem)
+            logger.info(f"Copied PEM file from {source_pem} to {dest_pem}")
+    else:
+        logger.warning(f"No .pem files found in {source_dir}")
+
+def copy_configs_directory(source_dir, package_name):
+    """Copy the configs directory from source to agent package if it exists."""
+    import shutil
+
+    source_configs = os.path.join(source_dir, "configs")
+    # Fix: Use package_name to construct the correct destination path
+    dest_configs = os.path.join(AGENT_DIR, package_name, package_name, "configs")
+    
+    if os.path.exists(source_configs) and os.path.isdir(source_configs):
+        # Ensure the destination directory structure exists
+        os.makedirs(os.path.dirname(dest_configs), exist_ok=True)
+        shutil.copytree(source_configs, dest_configs, dirs_exist_ok=True)
+        logger.info(f"Copied configs directory from {source_configs} to {dest_configs}")
+    else:
+        logger.warning(f"No configs directory found in {source_dir}")
+        
+    # Check and copy src/{package_name}/config directory if it exists
+    package_folder = source_dir.name if hasattr(source_dir, 'name') else os.path.basename(str(source_dir))
+    source_config = os.path.join(source_dir, "src", package_folder, "config")
+    dest_config = os.path.join(AGENT_DIR, package_name, package_name, "config")
+    
+    logger.info(f"Looking for config at: {source_config}")
+    if os.path.exists(source_config) and os.path.isdir(source_config):
+        os.makedirs(os.path.dirname(dest_config), exist_ok=True)
+        shutil.copytree(source_config, dest_config, dirs_exist_ok=True)
+        logger.info(f"Copied config directory from {source_config} to {dest_config}")
+    else:
+        logger.warning(f"No config directory found in {source_config}")
 
 def init_agent_package(package_name):
-    subprocess.run(["poetry", "new", f"{AGENT_DIR}/{package_name}"])
-    subprocess.run(["git", "init", f"{AGENT_DIR}/{package_name}"])
+    """Initialize a new package with proper TOML structure compatible with UV"""
+    package_dir = Path(AGENT_DIR) / package_name
+    package_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Create pyproject.toml with [project] table
+    toml_content = tomlkit.document()
+    toml_content["build-system"] = {
+        "requires": ["hatchling"],
+        "build-backend": "hatchling.build"
+    }
+    toml_content["project"] = {
+        "name": package_name,
+        "version": "0.1.0",
+        "description": "",
+        "authors": [{"name": "Your Name", "email": "your.email@example.com"}],
+        "readme": "README.md",
+        "requires-python": ">=3.10,<3.13",
+        "dependencies": []
+    }
+    
+    # Add tool.hatch.metadata section to allow direct references
+    toml_content["tool"] = {"hatch": {"metadata": {"allow-direct-references": True}}}
+    
+    with open(package_dir / "pyproject.toml", "w", encoding="utf-8") as f:
+        f.write(tomlkit.dumps(toml_content))
+    
+    # Create README.md
+    with open(package_dir / "README.md", "w", encoding="utf-8") as f:
+        f.write(f"# {package_name}\n")
+    
+    # Create package_name/__init__.py
+    (package_dir / package_name).mkdir()
+    with open(package_dir / package_name / "__init__.py", "w", encoding="utf-8") as f:
+        f.write("")
+    
+    # Create tests/__init__.py
+    (package_dir / "tests").mkdir()
+    with open(package_dir / "tests" / "__init__.py", "w", encoding="utf-8") as f:
+        f.write("")
+    
+    # Copy .env and configs
+    copy_env_file(Path.cwd(), package_name)
+    # Fix: Pass only package_name, not the full path
+    copy_configs_directory(Path.cwd(), package_name)
+    
+    # Initialize git
+    subprocess.run(["git", "init", str(package_dir)])
 
 def is_std_lib(module_name):
     try:
         module_spec = importlib.util.find_spec(module_name)
-        return module_spec is not None and 'site-packages' not in module_spec.origin
+        return module_spec is not None and "site-packages" not in module_spec.origin
     except ImportError:
         return False
 
-def add_dependencies_to_pyproject(package_name, packages):
-    # Adds dependencies with wildcard versioning
-    with open(f"{AGENT_DIR}/{package_name}/pyproject.toml", 'r', encoding='utf-8') as file:
+def get_parent_project_dependencies():
+    """Read dependencies from the parent project's pyproject.toml if it exists"""
+    parent_toml_path = Path.cwd() / "pyproject.toml"
+    if not parent_toml_path.exists():
+        logger.info("No parent pyproject.toml found")
+        return {}
+    
+    try:
+        with open(parent_toml_path, "r", encoding="utf-8") as file:
+            parent_data = tomlkit.parse(file.read())
+        
+        # Focus on standard [project] format
+        if "project" in parent_data and "dependencies" in parent_data["project"]:
+            deps = {}
+            for dep in parent_data["project"]["dependencies"]:
+                if "@" in dep:
+                    pkg, url = dep.split("@", 1)
+                    deps[pkg.strip()] = {"git": url.strip()}
+                else:
+                    match = re.match(r"(\w+)(.*)", dep)
+                    if match:
+                        pkg, version = match.groups()
+                        deps[pkg] = version.strip() if version else ""
+            return deps
+        return {}
+    except Exception as e:
+        logger.warning(f"Error reading parent pyproject.toml: {e}")
+        return {}
+
+def add_dependencies_to_pyproject(package_name, packages, framework_deps=None):
+    """Add dependencies to pyproject.toml using plugin-provided versions"""
+    with open(f"{AGENT_DIR}/{package_name}/pyproject.toml", "r", encoding="utf-8") as file:
         data = tomlkit.parse(file.read())
 
-    dependencies = data['tool']['poetry']['dependencies']
-    dependencies["python"] = ">=3.10,<3.13"
-    dependencies["naptha-sdk"] = {
-        "git": "https://github.com/NapthaAI/naptha-sdk.git",
-        "branch": "feat/run-agent-tools"
-    }
+    if "project" not in data:
+        data["project"] = {"dependencies": []}
+    elif "dependencies" not in data["project"]:
+        data["project"]["dependencies"] = []
 
-    packages_to_add = []
-    for package in packages:
-        curr_package = package['module'].split('.')[0]
-        if curr_package not in packages_to_add and not is_std_lib(curr_package):
-            dependencies[curr_package] = PACKAGE_VERSIONS.get(curr_package, "*")
-    dependencies["python-dotenv"] = "*"
+    dependencies = data["project"]["dependencies"]
 
-    # Serialize the TOML data and write it back to the file
-    with open(f"{AGENT_DIR}/{package_name}/pyproject.toml", 'w', encoding='utf-8') as file:
+    # Use plugin-provided dependencies if available
+    if framework_deps:
+        for pkg, version in framework_deps.items():
+            dependencies.append(f"{pkg}{version}")
+
+    # Add core dependencies
+    dependencies.append("naptha-sdk @ git+https://github.com/NapthaAI/naptha-sdk.git@plugins")
+    dependencies.append("python-dotenv")
+
+    # Copy dependencies from parent project using standard format only
+    parent_deps = get_parent_project_dependencies()
+    for pkg, version in parent_deps.items():
+        # Skip dependencies we've already added
+        if any(dep.startswith(pkg) for dep in dependencies):
+            continue
+        # Skip 'path' dependencies as they're likely local development paths
+        if isinstance(version, dict) and "path" in version:
+            continue
+        # Add the dependency
+        if isinstance(version, str):
+            dependencies.append(f"{pkg}{version}")
+        elif isinstance(version, dict) and "git" in version:
+            dependencies.append(f"{pkg} @ git+{version['git']}@{version.get('branch', 'main')}")
+
+    with open(f"{AGENT_DIR}/{package_name}/pyproject.toml", "w", encoding="utf-8") as file:
         file.write(tomlkit.dumps(data))
 
-def render_agent_code(agent_name, agent_code, obj_name, local_modules, selective_import_modules, standard_import_modules, variable_modules, union_modules, params):
-    # Add the imports for installed modules (e.g. crewai)
-    content = ''
+def parse_deployment_file(deployment_file: str):
+    """
+    Parse a single deployment.json file, returning a list of dicts
+    with the extracted/inferred fields.
+    """
+    results = []
+    try:
+        with open(deployment_file, "r") as f:
+            data = json.load(f)
+        for item in data:
+            module_name = item.get("module", {}).get("name", "")
+            module_type = item.get("module", {}).get("type", "agent")
 
+            deployment_name = item.get("name", "")
+
+            node_url = item.get("node", {}).get("ip", None)
+
+            config = item.get("config", {})
+
+            load_persona_data = "persona_module" in config
+
+            is_subdeployment = "agent_deployments" in item or "kb_deployments" in item
+
+            user_id = None
+
+            module_run_func_dict = {"agent": "AgentRunInput", "orchestrator": "OrchestratorRunInput"}
+
+            results.append(
+                {
+                    "module_type": module_type,
+                    "function": module_run_func_dict[module_type],
+                    "deployment_path": deployment_file,
+                    "node_url": node_url,
+                    "user_id": user_id,
+                    "deployment_name": deployment_name,
+                    "load_persona_data": load_persona_data,
+                    "is_subdeployment": is_subdeployment,
+                }
+            )
+    except Exception as e:
+        print(f"Error parsing {deployment_file}: {e}")
+    return results
+
+def get_config_values(config_path):
+    configs_to_scan = []
+    for root, dirs, files in os.walk(config_path):
+        if "deployment.json" in files:
+            deployment_path = os.path.join(root, "deployment.json")
+            configs_to_scan.append(deployment_path)
+
+    all_results = []
+    for path in configs_to_scan:
+        results = parse_deployment_file(path)
+        all_results.extend(results)
+
+    if not all_results:
+        return {}
+    return all_results[0]
+
+def render_agent_code(
+    agent_name,
+    agent_code,
+    obj_name,
+    local_modules,
+    selective_import_modules,
+    standard_import_modules,
+    variable_modules,
+    union_modules,
+    params,
+    all_imports,
+    package_dependencies,
+):
+    plugin = plugin_manager.detect_framework(all_imports)
+    if not plugin:
+        raise ValueError(f"No supported framework detected for imports: {all_imports} or dependencies: {package_dependencies}")
+    content = ""
+    config_values = get_config_values(os.path.abspath("./"))
+
+    # Standard imports
     for module in standard_import_modules:
-        line = f'import {module["name"]} \n'
-        content += line
+        content += f'import {module["name"]}\n'
 
+    # Selective imports
     for module in selective_import_modules:
-        line = f'from {module["module"]} import {module["name"]} \n'
-        content += line
+        content += f'from {module["module"]} import {module["name"]}\n'
 
+    # Variable modules
     for module in variable_modules:
         if module["module"] and module["import_needed"]:
-            content += f'from {module["module"]} import {module["name"]} \n'
+            content += f'from {module["module"]} import {module["name"]}\n'
 
-    if any('crewai' in module['module'] for module in selective_import_modules):
-        content += "from crewai import Task\n"
-
+    # Union modules
     for module in union_modules:
-        content += module['source']
+        content += module["source"]
 
-    # Add the naptha imports and logger setup
-    naptha_imports = f'''from dotenv import load_dotenv
-from {agent_name}.schemas import InputSchema
-from naptha_sdk.utils import get_logger
+    # Core framework imports
+    content += textwrap.dedent(f"""\
+    from dotenv import load_dotenv
+    from typing import Dict
+    from naptha_sdk.schemas import *
+    from naptha_sdk.user import sign_consumer_id
+    from naptha_sdk.utils import get_logger
+    from {agent_name}.schemas import InputSchema
 
-logger = get_logger(__name__)
+    logger = get_logger(__name__)
+    load_dotenv()
+    """)
 
-load_dotenv()
-
-'''
-    content += naptha_imports
+    # Add source from selective_import_modules (if any 'source' key exists)
     for module in selective_import_modules:
         if 'source' in module and module['source']:
             content += module['source'] + "\n"
-
-    # Add the source code for the local modules 
+    
+    # Add local module sources (like add_numbers_tool)
     for module in local_modules:
-        content += module['source'] + "\n"
+        content += module['source'] + "\n\n"
 
-    for module in variable_modules:
-        content += module['source'] + "\n"
-
-    # Convert class method to function
+    # Adjust the agent_code text (remove 'self.')
     agent_code = agent_code.replace('self.', '')
     agent_code = agent_code.replace('self', '')
-
+    
+    # Preserve original indentation in agent code
     content += textwrap.dedent(agent_code) + "\n\n"
 
-    param_str = ", ".join(f"inputs.{name}" for name, info in params.items())
+    # Get framework-specific final block
+    final_block = plugin.render_agent_code_final_block({
+        "agent_name": agent_name,
+        "obj_name": obj_name,
+        "params": params
+    })
 
-    # Define the new function signature
-    content += f"""def run(inputs: InputSchema, *args, **kwargs):
-    {agent_name}_0 = {obj_name}({param_str})
-
-    tool_input_class = globals().get(inputs.tool_input_type)
-    tool_input = tool_input_class(**inputs.tool_input_value)
-    method = getattr({agent_name}_0, inputs.tool_name, None)
-
-    return method(tool_input)
-
-if __name__ == "__main__":
-    from naptha_sdk.utils import load_yaml
-    from {agent_name}.schemas import InputSchema
-
-    cfg_path = "{agent_name}/component.yaml"
-    cfg = load_yaml(cfg_path)
-
-    # You will likely need to change the inputs dict
-    inputs = {{"tool_name": "execute_task", "tool_input_type": "Task", "tool_input_value": {{"description": "What is the market cap of AMZN?", "expected_output": "The market cap of AMZN"}}}}
-    inputs = InputSchema(**inputs)
-
-    response = run(inputs)
-    print(response)
-"""
-    
+    content += final_block
     return content
 
-def generate_component_yaml(agent_name, user_id):
-    component = {
-        'name': agent_name,
-        'type': agent_name,
-        'author': user_id,
-        'version': '0.1.0',
-        'description': agent_name,
-        'license': 'MIT',
-        'models': {
-            'default_model_provider': 'ollama',
-            'ollama': {
-                'model': 'ollama/llama3.1:70b',
-                'max_tokens': 1000,
-                'temperature': 0,
-                'api_base': 'http://localhost:11434'
-            }
-        },
-        'inputs': {
-            'system_message': 'You are a helpful AI assistant.',
-            'save': False,
-            'location': 'node'
-        },
-        'outputs': {
-            'filename': 'output.txt',
-            'save': False,
-            'location': 'node'
-        },
-        'implementation': {
-            'package': {
-                'entrypoint': 'run.py'
+def generate_config(agent_name):
+    """Generate configuration files for agent if they don't already exist."""
+    logger.info(f"Generating configuration files for agent: {agent_name}")
+    
+    # Define paths
+    directory = f'{AGENT_DIR}/{agent_name}/{agent_name}/configs'
+    deployment_path = f'{directory}/deployment.json'
+    llm_config_path = f'{directory}/llm_configs.json'
+    
+    # Check if config files already exist (from copy_configs_directory)
+    if os.path.exists(deployment_path) and os.path.exists(llm_config_path):
+        logger.info(f"Config files already exist in {directory}, skipping generation")
+        return
+    
+    # Create directory if it doesn't exist
+    os.makedirs(directory, exist_ok=True)
+    
+    # Define default configurations
+    deployment = [
+        {
+            "name": "deployment_1",
+            "module": {"name": agent_name, "execution_type": "package", "type": "agent"},
+            "node": {"ip": "localhost"},
+            "config": {
+                "config_name": "config_1",
+                "llm_config": {"config_name": "model_2"},
+                "system_prompt": {
+                    "role": "You are a helpful AI assistant.",
+                    "persona": ""
+                }
             }
         }
-    }
-
-    with open(f'{AGENT_DIR}/{agent_name}/{agent_name}/component.yaml', 'w') as file:
-        yaml.dump(component, file, default_flow_style=False)
+    ]
+    
+    config = [
+        {
+            "config_name": "model_1",
+            "client": "ollama",
+            "model": "ollama/phi",
+            "temperature": 0.7,
+            "max_tokens": 1000,
+            "api_base": "http://localhost:11434"
+        },
+        {
+            "config_name": "model_2",
+            "client": "openai",
+            "model": "gpt-4o-mini",
+            "temperature": 0.7,
+            "max_tokens": 1000,
+            "api_base": "https://api.openai.com/v1"
+        }
+    ]
+    
+    # Only write files if they don't exist
+    if not os.path.exists(deployment_path):
+        logger.info(f"Writing deployment configuration to: {deployment_path}")
+        with open(deployment_path, 'w') as file:
+            json.dump(deployment, file, indent=4)
+    
+    if not os.path.exists(llm_config_path):
+        logger.info(f"Writing LLM configuration to: {llm_config_path}")
+        with open(llm_config_path, 'w') as file:
+            json.dump(config, file, indent=4)
+    
+    logger.info(f"Configuration generation complete for agent: {agent_name}")
 
 def generate_schema(agent_name, params):
-    schema_code = '''from pydantic import BaseModel
-from typing import Any
+    schema_code = """from pydantic import BaseModel
+from typing import Union, Dict, Any, List, Optional
 
 class InputSchema(BaseModel):
-    tool_name: str
-    tool_input_type: str
-    tool_input_value: dict
-'''
+    func_name: str
+    input_type: Optional[str] = None
+    func_input_data: Optional[Union[Dict[str, Any], List[Dict[str, Any]], str]] = None
+"""
 
     for name, info in params.items():
         print("INFO", name, info)
-        if info['value'] is None:
-            if 'List' in str(info['type']):
-                schema_code += f'    {name}: list\n'
-            elif info['type'] is None:
-                schema_code += f'    {name}: Any\n'
+        if info["value"] is None:
+            if "List" in str(info["type"]):
+                schema_code += f"    {name}: list\n"
+            elif info["type"] is None:
+                schema_code += f"    {name}: Any\n"
             elif issubclass(info["type"], BaseModel):
-                schema_code += f'    {name}: dict\n'
+                schema_code += f"    {name}: dict\n"
             else:
-                schema_code += f'    {name}: {info["type"].__name__}\n'
+                schema_code += f"    {name}: {info['type'].__name__}\n"
         else:
-            if 'List' in str(info['type']):
-                schema_code += f'    {name}: list = {info["value"]}\n'
-            elif info['type'] is None:
-                schema_code += f'    {name}: Any = {info["value"]}\n'
+            if "List" in str(info["type"]):
+                schema_code += f"    {name}: list = {info['value']}\n"
+            elif info["type"] is None:
+                schema_code += f"    {name}: Any = {info['value']}\n"
             elif issubclass(info["type"], BaseModel):
-                schema_code += f'    {name}: dict = {info["value"]}\n'
+                schema_code += f"    {name}: dict = {info['value']}\n"
             else:
-                schema_code += f'    {name}: {info["type"].__name__} = {info["value"]}\n'
+                schema_code += f"    {name}: {info['type'].__name__} = {info['value']}\n"
 
-    with open(f'{AGENT_DIR}/{agent_name}/{agent_name}/schemas.py', 'w') as file:
+    with open(f"{AGENT_DIR}/{agent_name}/{agent_name}/schemas.py", "w") as file:
         file.write(schema_code)
 
 def git_add_commit(agent_name):
@@ -220,24 +443,174 @@ def git_add_commit(agent_name):
     subprocess.run(["git", "-C", f"{AGENT_DIR}/{agent_name}", "tag", "-f", "v0.1"])
 
 def write_code_to_package(agent_name, code):
-    package_path = f'{AGENT_DIR}/{agent_name}'
-    code_path = os.path.join(package_path, agent_name, 'run.py')
+    package_path = f"{AGENT_DIR}/{agent_name}"
+    code_path = os.path.join(package_path, agent_name, "run.py")
 
     os.makedirs(os.path.dirname(code_path), exist_ok=True)
-    with open(code_path, 'w') as file:
+    with open(code_path, "w") as file:
         file.write(code)
 
 def add_files_to_package(agent_name, params, user_id):
-    package_path = f'{AGENT_DIR}/{agent_name}'
+    package_path = f"{AGENT_DIR}/{agent_name}"
 
     # Generate schema and component yaml
     generate_schema(agent_name, params)
-    generate_component_yaml(agent_name, user_id)
-
+    generate_config(agent_name)
     # Create .env.example file
-    env_example_path = os.path.join(package_path, '.env.example')
-    with open(env_example_path, 'w') as env_file:
-        env_file.write('OPENAI_API_KEY=\n')
+    env_example_path = os.path.join(package_path, ".env.example")
+    env_content = """PRIVATE_KEY=
+
+OPENAI_API_KEY=
+HUB_URL=ws://localhost:3001/rpc
+HUB_USERNAME=
+HUB_PASSWORD=
+
+NODE_URL=http://localhost:7001"""
+    gitignore_path = os.path.join(package_path, ".gitignore")
+    with open(env_example_path, "w") as env_file:
+        env_file.write(env_content)
+
+    # Create .gitignore file
+    gitignore_content = """
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+# .python-version
+
+# pipenv
+#Pipfile.lock
+
+# pdm
+#.pdm.toml
+#.pdm-python
+#.pdm-build/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+*.pem
+"""
+    with open(gitignore_path, "w") as gitignore_file:
+        gitignore_file.write(gitignore_content)
 
 def create_env_file():
     env_path = ".env"
@@ -253,18 +626,47 @@ HUB_PASSWORD='''
     with open(env_path, 'w') as env_file:
         env_file.write(env_content)
 
+
 def zip_dir(directory_path: str) -> None:
     """
-    Zip the specified directory and write it to a file on disk.
+    Zip the specified directory and write it to a file on disk,
+    excluding common large directories and files.
     """
     output_zip_file = f"{directory_path}.zip"
+    
+    exclude_patterns = [
+        "**/__pycache__/**", "**/.git/**", "**/.venv/**", "**/venv/**",
+        "**/.pytest_cache/**", "**/node_modules/**", "**/.ipynb_checkpoints/**",
+        "**/*.pyc", "**/*.pyo", "**/*.pyd", "**/*.so", "**/*.dll", "**/*.exe",
+        "**/*.zip", "**/*.tar.gz", "**/*.tar", "**/*.db", "**/db/**", "**/dist/**", "**/*.pem","*.pem",
+        "**/build/**", "**/*.egg-info/**", "**/.DS_Store"
+    ]
+    
     with zipfile.ZipFile(output_zip_file, "w", zipfile.ZIP_DEFLATED) as zip_file:
         for root, dirs, files in os.walk(directory_path):
+            # Skip excluded directories
+            dirs[:] = [d for d in dirs if not any(
+                fnmatch.fnmatch(os.path.join(root, d), pattern) 
+                for pattern in exclude_patterns
+            )]
+            
             for file in files:
                 file_path = os.path.join(root, file)
+                
+                # Skip excluded files
+                if any(fnmatch.fnmatch(file_path, pattern) for pattern in exclude_patterns):
+                    continue
+                    
+                # Skip files larger than 10MB
+                if os.path.getsize(file_path) > 10 * 1024 * 1024:
+                    logger.warning(f"Skipping large file: {file_path} ({os.path.getsize(file_path) / 1024 / 1024:.2f} MB)")
+                    continue
+                    
                 zip_file.write(file_path, os.path.relpath(file_path, directory_path))
-    print(f"Zipped directory '{directory_path}' to '{output_zip_file}'")
+    
+    logger.info(f"Zipped directory '{directory_path}' to '{output_zip_file}'")
     return output_zip_file
+
 
 async def write_to_ipfs(file_path):
     """Write a file to IPFS, optionally publish to IPNS or update an existing IPNS record."""
@@ -272,18 +674,18 @@ async def write_to_ipfs(file_path):
         logger.info(f"Writing file to IPFS: {file_path}")
         if not IPFS_GATEWAY_URL:
             return (500, {"message": "IPFS_GATEWAY_URL not found"})
-        
+
         client = ipfshttpclient.connect(IPFS_GATEWAY_URL)
         with tempfile.NamedTemporaryFile(mode="wb", delete=False) as tmpfile:
             with open(file_path, "rb") as f:
-                content = f.read()            
+                content = f.read()
             tmpfile.write(content)
             tmpfile_name = tmpfile.name
-        
+
         result = client.add(tmpfile_name)
         client.pin.add(result["Hash"])
         os.unlink(tmpfile_name)
-        
+
         ipfs_hash = result["Hash"]
         response = {
             "message": "File written and pinned to IPFS",
@@ -294,18 +696,19 @@ async def write_to_ipfs(file_path):
     except Exception as e:
         logger.error(f"Error writing file to IPFS: {e}")
         import traceback
+
         logger.error(f"Error writing file to IPFS: {e}")
         logger.error(f"Traceback: {traceback.format_exc()}")
         return (500, {"message": f"Error writing file to IPFS: {e}"})
 
-async def publish_ipfs_package(agent_name, decorator = False):
+async def publish_ipfs_package(agent_name, decorator=False):
     package_path = f"{AGENT_DIR}/{agent_name}"
 
     if not decorator:
         output_zip_file = zip_dir_with_gitignore(Path.cwd())
     else:
         output_zip_file = zip_dir(package_path)
-    
+
     success, response = await write_to_ipfs(output_zip_file)
     logger.info(f"Response: {response}")
     return success, response
@@ -317,8 +720,8 @@ def sort_modules(modules, dependencies):
 
     while unsorted_modules:
         for mod in unsorted_modules:
-            mod_deps = dependencies[mod['name']]
-            if all(dep in [m['name'] for m in sorted_modules] for dep in mod_deps):
+            mod_deps = dependencies[mod["name"]]
+            if all(dep in [m["name"] for m in sorted_modules] for dep in mod_deps):
                 sorted_modules.append(mod)
                 unsorted_modules.remove(mod)
                 break
@@ -329,11 +732,11 @@ def sort_modules(modules, dependencies):
 def extract_dependencies(module, modules):
     dependencies = []
     for mod in modules:
-        if mod['name'] != module['name']:
+        if mod["name"] != module["name"]:
             # Use a negative lookahead to exclude matches within quotes
-            pattern = r'\b' + re.escape(mod['name']) + r'\b(?=([^"\']*["\'][^"\']*["\'])*[^"\']*$)'
-            if re.search(pattern, module['source']):
-                dependencies.append(mod['name'])
+            pattern = r"\b" + re.escape(mod["name"]) + r"\b(?=([^\"']*[\"'][^\"']*[\"'])*[^\"']*$)"
+            if re.search(pattern, module["source"]):
+                dependencies.append(mod["name"])
     return dependencies
 
 def load_input_schema(repo_name):
@@ -355,78 +758,98 @@ async def load_persona(persona_module):
     async with Hub(hub_url) as hub:
         success, _, _ = await hub.signin(hub_username, hub_password)
         if not success:
-            raise ConnectionError(f"Failed to authenticate with Hub.")            
+            raise ConnectionError(f"Failed to authenticate with Hub.")
 
-        personas = await hub.list_modules("persona", persona_module['name'])
+        personas = await hub.list_personas(persona_module["name"])
     persona = personas[0]
-    persona_url = persona['module_url']
+    persona_url = persona["module_url"]
 
     # Clone the repo
-    repo_name = persona_url.split('/')[-1]
+    repo_name = persona_url.split("/")[-1]
     repo_path = Path(f"{AGENT_DIR}/{repo_name}")
-    
+
     # Remove existing repo if it exists
-    if repo_path.exists():
+    if (repo_path).exists():
         import shutil
+
         shutil.rmtree(repo_path)
-        
+
     _ = Repo.clone_from(persona_url, to_path=str(repo_path))
-    
-    persona_file = repo_path / persona['module_entrypoint']
+
+    persona_file = repo_path / persona["module_entrypoint"]
     if not persona_file.exists():
         logger.error(f"Persona file not found in repository {repo_name}")
         return None
-            
+
     # Load based on file extension
-    with persona_file.open('r') as f:
-        if persona_file.suffix == '.json':
+    with persona_file.open("r") as f:
+        if persona_file.suffix == ".json":
             persona_data = json.load(f)
-        elif persona_file.suffix in ['.yml', '.yaml']:
+        elif persona_file.suffix in [".yml", ".yaml"]:
             persona_data = yaml.safe_load(f)
         else:
             logger.error(f"Unsupported file type {persona_file.suffix} in {repo_name}")
             return None
-        
 
-    # input_schema = load_input_schema(repo_name)
     return persona_data
-        
-    
-    
+
 def read_gitignore(directory):
-    gitignore_path = os.path.join(directory, '.gitignore')
-    
+    gitignore_path = os.path.join(directory, ".gitignore")
+
     if not os.path.exists(gitignore_path):
         logger.info(f"No .gitignore file found in {directory}")
         return []
-    
-    with open(gitignore_path, 'r') as file:
+
+    with open(gitignore_path, "r") as file:
         lines = file.readlines()
 
-    ignored_files = [line.strip() for line in lines if line.strip() and not line.startswith('#')]
+    ignored_files = [line.strip() for line in lines if line.strip() and not line.startswith("#")]
     return ignored_files
 
 def zip_dir_with_gitignore(directory_path):
     ignored_files = read_gitignore(directory_path)
     output_zip_file = f"./{os.path.basename(directory_path)}.zip"
 
+    # Additional patterns to exclude large files/directories
+    additional_exclude_patterns = [
+        "**/__pycache__/**", "**/.git/**", "**/.venv/**", "**/venv/**",
+        "**/.pytest_cache/**", "**/node_modules/**", "**/.ipynb_checkpoints/**",
+        "**/*.pyc", "**/*.pyo", "**/*.pyd", "**/*.so", "**/*.dll", "**/*.exe",
+        "**/*.zip", "**/*.tar.gz", "**/*.tar", "**/*.db", "**/db/**", "**/dist/**", "**/*.pem","*.pem",
+        "**/build/**", "**/*.egg-info/**", "**/.DS_Store"
+    ]
+    
     # Convert patterns in .gitignore to absolute paths for comparison
     ignored_patterns = [os.path.join(directory_path, pattern) for pattern in ignored_files]
+    ignored_patterns.extend([os.path.join(directory_path, pattern) for pattern in additional_exclude_patterns])
 
+    total_size = 0
     with zipfile.ZipFile(output_zip_file, "w", zipfile.ZIP_DEFLATED) as zip_file:
         for root, dirs, files in os.walk(directory_path):
-            dirs = [d for d in dirs if not any(fnmatch.fnmatch(os.path.join(root, d), pattern) for pattern in ignored_patterns)]
-            
+            # Filter directories
+            dirs[:] = [d for d in dirs if not any(
+                fnmatch.fnmatch(os.path.join(root, d), pattern) 
+                for pattern in ignored_patterns
+            )]
+
             for file in files:
                 file_path = os.path.join(root, file)
 
+                # Skip files that match ignored patterns
                 if any(fnmatch.fnmatch(file_path, pattern) for pattern in ignored_patterns):
                     continue
-                
-                if file == output_zip_file.split('/')[1]:
-                    continue
 
+                if file == output_zip_file.split("/")[1]:
+                    continue
+                    
+                # Skip files larger than 10MB
+                if os.path.getsize(file_path) > 10 * 1024 * 1024:
+                    logger.warning(f"Skipping large file: {file_path} ({os.path.getsize(file_path) / 1024 / 1024:.2f} MB)")
+                    continue
+                
+                file_size = os.path.getsize(file_path)
+                total_size += file_size
                 zip_file.write(file_path, os.path.relpath(file_path, directory_path))
 
-    logger.info(f"Zipped directory '{directory_path}' to '{output_zip_file}'")
+    logger.info(f"Zipped directory '{directory_path}' to '{output_zip_file}' (Total size: {total_size / 1024 / 1024:.2f} MB)")
     return output_zip_file
