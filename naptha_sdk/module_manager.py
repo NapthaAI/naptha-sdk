@@ -87,8 +87,8 @@ def init_agent_package(package_name):
     # Create pyproject.toml with [project] table
     toml_content = tomlkit.document()
     toml_content["build-system"] = {
-        "requires": ["setuptools>=61.0"],
-        "build-backend": "setuptools.build_meta",
+        "requires": ["hatchling"],
+        "build-backend": "hatchling.build"
     }
     toml_content["project"] = {
         "name": package_name,
@@ -97,7 +97,7 @@ def init_agent_package(package_name):
         "authors": [{"name": "Your Name", "email": "your.email@example.com"}],
         "readme": "README.md",
         "requires-python": ">=3.10,<3.13",
-        "dependencies": [],
+        "dependencies": []
     }
     with open(package_dir / "pyproject.toml", "w", encoding="utf-8") as f:
         f.write(tomlkit.dumps(toml_content))
