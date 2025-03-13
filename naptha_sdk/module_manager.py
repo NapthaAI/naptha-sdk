@@ -153,7 +153,7 @@ def get_parent_project_dependencies():
                     match = re.match(r"(\w+)(.*)", dep)
                     if match:
                         pkg, version = match.groups()
-                        deps[pkg] = version.strip() if version else "*"
+                        deps[pkg] = version.strip() if version else ""
             return deps
         return {}
     except Exception as e:
