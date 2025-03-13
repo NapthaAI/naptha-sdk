@@ -55,20 +55,25 @@ def copy_configs_directory(source_dir, package_name):
     import shutil
 
     source_configs = os.path.join(source_dir, "configs")
-    dest_configs = os.path.join(AGENT_DIR, package_name, "configs")
+    # Fix: Use package_name to construct the correct destination path
+    dest_configs = os.path.join(AGENT_DIR, package_name, package_name, "configs")
+    
     if os.path.exists(source_configs) and os.path.isdir(source_configs):
+        # Ensure the destination directory structure exists
+        os.makedirs(os.path.dirname(dest_configs), exist_ok=True)
         shutil.copytree(source_configs, dest_configs, dirs_exist_ok=True)
         logger.info(f"Copied configs directory from {source_configs} to {dest_configs}")
     else:
         logger.warning(f"No configs directory found in {source_dir}")
         
     # Check and copy src/{package_name}/config directory if it exists
-    # Fix: Get the name directly from the Path object or convert to string first
     package_folder = source_dir.name if hasattr(source_dir, 'name') else os.path.basename(str(source_dir))
     source_config = os.path.join(source_dir, "src", package_folder, "config")
-    dest_config = os.path.join(AGENT_DIR, package_name, "config")
-    logger.info(f"{dest_config}")
+    dest_config = os.path.join(AGENT_DIR, package_name, package_name, "config")
+    
+    logger.info(f"Looking for config at: {source_config}")
     if os.path.exists(source_config) and os.path.isdir(source_config):
+        os.makedirs(os.path.dirname(dest_config), exist_ok=True)
         shutil.copytree(source_config, dest_config, dirs_exist_ok=True)
         logger.info(f"Copied config directory from {source_config} to {dest_config}")
     else:
@@ -113,7 +118,8 @@ def init_agent_package(package_name):
     
     # Copy .env and configs
     copy_env_file(Path.cwd(), package_name)
-    copy_configs_directory(Path.cwd(), package_dir / package_name)
+    # Fix: Pass only package_name, not the full path
+    copy_configs_directory(Path.cwd(), package_name)
     
     # Initialize git
     subprocess.run(["git", "init", str(package_dir)])
@@ -328,8 +334,23 @@ def render_agent_code(
     return content
 
 def generate_config(agent_name):
+    """Generate configuration files for agent if they don't already exist."""
     logger.info(f"Generating configuration files for agent: {agent_name}")
     
+    # Define paths
+    directory = f'{AGENT_DIR}/{agent_name}/{agent_name}/configs'
+    deployment_path = f'{directory}/deployment.json'
+    llm_config_path = f'{directory}/llm_configs.json'
+    
+    # Check if config files already exist (from copy_configs_directory)
+    if os.path.exists(deployment_path) and os.path.exists(llm_config_path):
+        logger.info(f"Config files already exist in {directory}, skipping generation")
+        return
+    
+    # Create directory if it doesn't exist
+    os.makedirs(directory, exist_ok=True)
+    
+    # Define default configurations
     deployment = [
         {
             "name": "deployment_1",
@@ -365,19 +386,16 @@ def generate_config(agent_name):
         }
     ]
     
-    directory = f'{AGENT_DIR}/{agent_name}/{agent_name}/configs'
-    logger.info(f"Creating configs directory: {directory}")
-    os.makedirs(directory, exist_ok=True)
+    # Only write files if they don't exist
+    if not os.path.exists(deployment_path):
+        logger.info(f"Writing deployment configuration to: {deployment_path}")
+        with open(deployment_path, 'w') as file:
+            json.dump(deployment, file, indent=4)
     
-    deployment_path = f'{directory}/deployment.json'
-    logger.info(f"Writing deployment configuration to: {deployment_path}")
-    with open(deployment_path, 'w') as file:
-        json.dump(deployment, file, indent=4)
-    
-    llm_config_path = f'{directory}/llm_configs.json'
-    logger.info(f"Writing LLM configuration to: {llm_config_path}")
-    with open(llm_config_path, 'w') as file:
-        json.dump(config, file, indent=4)
+    if not os.path.exists(llm_config_path):
+        logger.info(f"Writing LLM configuration to: {llm_config_path}")
+        with open(llm_config_path, 'w') as file:
+            json.dump(config, file, indent=4)
     
     logger.info(f"Configuration generation complete for agent: {agent_name}")
 
