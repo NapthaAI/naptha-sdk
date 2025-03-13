@@ -99,6 +99,10 @@ def init_agent_package(package_name):
         "requires-python": ">=3.10,<3.13",
         "dependencies": []
     }
+    
+    # Add tool.hatch.metadata section to allow direct references
+    toml_content["tool"] = {"hatch": {"metadata": {"allow-direct-references": True}}}
+    
     with open(package_dir / "pyproject.toml", "w", encoding="utf-8") as f:
         f.write(tomlkit.dumps(toml_content))
     
