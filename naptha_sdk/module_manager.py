@@ -532,8 +532,6 @@ cover/
 # Django stuff:
 *.log
 local_settings.py
-db.sqlite3
-db.sqlite3-journal
 
 # Flask stuff:
 instance/
@@ -638,7 +636,7 @@ def zip_dir(directory_path: str) -> None:
         "**/__pycache__/**", "**/.git/**", "**/.venv/**", "**/venv/**",
         "**/.pytest_cache/**", "**/node_modules/**", "**/.ipynb_checkpoints/**",
         "**/*.pyc", "**/*.pyo", "**/*.pyd", "**/*.so", "**/*.dll", "**/*.exe",
-        "**/*.zip", "**/*.tar.gz", "**/*.tar", "**/*.db", "**/db/**", "**/dist/**", "**/*.pem","*.pem",
+        "**/*.zip", "**/*.tar.gz", "**/*.tar", "**/dist/**", "**/*.pem","*.pem",
         "**/build/**", "**/*.egg-info/**", "**/.DS_Store"
     ]
     
@@ -815,7 +813,7 @@ def zip_dir_with_gitignore(directory_path):
         "**/__pycache__/**", "**/.git/**", "**/.venv/**", "**/venv/**",
         "**/.pytest_cache/**", "**/node_modules/**", "**/.ipynb_checkpoints/**",
         "**/*.pyc", "**/*.pyo", "**/*.pyd", "**/*.so", "**/*.dll", "**/*.exe",
-        "**/*.zip", "**/*.tar.gz", "**/*.tar", "**/*.db", "**/db/**", "**/dist/**", "**/*.pem","*.pem",
+        "**/*.zip", "**/*.tar.gz", "**/*.tar", "**/dist/**", "**/*.pem","*.pem",
         "**/build/**", "**/*.egg-info/**", "**/.DS_Store"
     ]
     
