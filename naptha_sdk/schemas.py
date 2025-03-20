@@ -432,3 +432,37 @@ class SecretInput(BaseModel):
     def model_dict(self):
         model_dict = self.model_dump()
         return model_dict
+    
+# MCP
+class MCPDeployment(BaseModel):
+    node: Union[NodeConfig, NodeConfigUser, Dict]
+    name: Optional[str] = None
+    module: Optional[Dict] = None
+    config: Optional[Dict] = None
+    initialized: Optional[bool] = False
+
+class MCPRun(BaseModel):
+    consumer_id: str
+    inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
+    deployment: MCPDeployment
+    signature: str
+    status: str = "pending"
+    error: bool = False
+    id: Optional[str] = None
+    results: list[str] = []
+    error_message: Optional[str] = None
+    created_time: Optional[str] = None
+    start_processing_time: Optional[str] = None
+    completed_time: Optional[str] = None
+    duration: Optional[float] = None
+    signature: str
+
+    def model_dict(self):
+        model_dict = self.dict()
+        return model_dict
+    
+class MCPRunInput(BaseModel):
+    consumer_id: str
+    inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
+    deployment: MCPDeployment
+    signature: str

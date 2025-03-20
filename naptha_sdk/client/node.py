@@ -15,7 +15,8 @@ from google.protobuf import struct_pb2
 from naptha_sdk.client import grpc_server_pb2
 from naptha_sdk.client import grpc_server_pb2_grpc
 from naptha_sdk.schemas import AgentRun, AgentRunInput, EnvironmentRun, EnvironmentRunInput, OrchestratorRun, \
-    OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, KBDeployment, KBRunInput, KBRun, MemoryDeployment, MemoryRunInput, MemoryRun, ToolRunInput, ToolRun, NodeConfig, NodeConfigUser, ToolDeployment, SecretInput
+    OrchestratorRunInput, AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, KBDeployment, KBRunInput, KBRun, MemoryDeployment, MemoryRunInput, MemoryRun, ToolRunInput, ToolRun, NodeConfig, NodeConfigUser, \
+    ToolDeployment, SecretInput, MCPRunInput, MCPRun, MCPDeployment
 from naptha_sdk.utils import get_logger, node_to_url
 
 logger = get_logger(__name__)
@@ -259,7 +260,7 @@ class UserClient:
         logger.info(f"Node URL: {self.node_url}")
 
     async def create(self, module_type: str,
-                     module_request: Union[AgentDeployment, EnvironmentDeployment, KBDeployment, OrchestratorDeployment, ToolDeployment]):
+                     module_request: Union[AgentDeployment, EnvironmentDeployment, KBDeployment, OrchestratorDeployment, ToolDeployment, MCPDeployment]):
         """Generic method to create either an agent, orchestrator, environment, tool, kb or memory.
 
         Args:
@@ -358,6 +359,10 @@ class UserClient:
     async def run_memory_and_poll(self, memory_input: MemoryDeployment, secrets: List[SecretInput] = []) -> MemoryDeployment:
         """Run a memory module and poll for results until completion."""
         return await self._run_and_poll(memory_input, 'memory', secrets)
+    
+    async def run_mcp_and_poll(self, mcp_input: MCPDeployment, secrets: List[SecretInput] = []) -> MCPDeployment:
+        """Run a memory module and poll for results until completion."""
+        return await self._run_and_poll(mcp_input, 'mcp', secrets)
 
     async def check_user(self, user_input: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -436,7 +441,8 @@ class UserClient:
             'environment': EnvironmentRunInput,
             'kb': KBRunInput,
             'memory': MemoryRunInput,
-            'tool': ToolRunInput
+            'tool': ToolRunInput,
+            'mcp': MCPRunInput
         }[module_type]
         
         if isinstance(run_input, dict):
@@ -472,7 +478,8 @@ class UserClient:
                     'environment': EnvironmentRun,
                     'kb': KBRun,
                     'memory': MemoryRun,
-                    'tool': ToolRun
+                    'tool': ToolRun,
+                    'mcp': MCPRun
                 }[module_type]
                 return return_class(**json.loads(response.text))
         except HTTPStatusError as e:
@@ -512,14 +519,14 @@ class UserClient:
 
     async def check_run(
         self, 
-        module_run: Union[AgentRun, OrchestratorRun, EnvironmentRun, KBRun, MemoryRun, ToolRun], 
+        module_run: Union[AgentRun, OrchestratorRun, EnvironmentRun, KBRun, MemoryRun, ToolRun, MCPRun], 
         module_type: str
-    ) -> Union[AgentRun, OrchestratorRun, EnvironmentRun, KBRun, MemoryRun, ToolRun]:
+    ) -> Union[AgentRun, OrchestratorRun, EnvironmentRun, KBRun, MemoryRun, ToolRun, MCPRun]:
         """Generic method to check the status of a module run.
         
         Args:
-            module_run: Either AgentRun, OrchestratorRun, EnvironmentRun, ToolRun, KBRun or MemoryRun object
-            module_type: Either 'agent', 'orchestrator', 'environment', 'tool', 'kb' or 'memory'
+            module_run: Either AgentRun, OrchestratorRun, EnvironmentRun, ToolRun, KBRun, MemoryRun or MCPRun object
+            module_type: Either 'agent', 'orchestrator', 'environment', 'tool', 'kb', 'memory' or 'mcp'
         """
         try:
             async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
@@ -535,7 +542,8 @@ class UserClient:
                 'environment': EnvironmentRun,
                 'kb': KBRun,
                 'memory': MemoryRun,
-                'tool': ToolRun
+                'tool': ToolRun,
+                'mcp': MCPRun
             }[module_type]
             return return_class(**json.loads(response.text))
         except HTTPStatusError as e:
@@ -562,6 +570,9 @@ class UserClient:
 
     async def check_memory_run(self, memory_run: MemoryRun) -> MemoryRun:
         return await self.check_run(memory_run, 'memory')
+    
+    async def check_mcp_run(self, mcp_run: MCPRun) -> MCPRun:
+        return await self.check_run(mcp_run, 'mcp')
     
     async def _send_request(self, method: str, endpoint: str, data: dict = {}, params: dict = {}) -> str:
         try:
