@@ -516,6 +516,10 @@ class UserClient:
     async def run_memory(self, memory_run_input: MemoryRunInput, secrets: List[SecretInput] = []) -> MemoryRun:
         """Run a memory module on a node"""
         return await self._run_module(memory_run_input, 'memory', secrets)
+    
+    async def run_mcp(self, mcp_run_input: MCPRunInput, secrets: List[SecretInput] = []) -> MCPRun:
+        """Run a memory module on a node"""
+        return await self._run_module(mcp_run_input, 'mcp', secrets)
 
     async def check_run(
         self, 
