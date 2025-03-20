@@ -466,3 +466,7 @@ class MCPRunInput(BaseModel):
     inputs: Optional[Union[Dict, BaseModel, DockerParams]] = None
     deployment: MCPDeployment
     signature: str
+
+    def model_dict(self):
+        model_dict = self.dict()
+        return model_dict
