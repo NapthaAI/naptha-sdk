@@ -53,29 +53,39 @@ If you find this repo useful, please don't forget to star ⭐!
 
 ## 🧩 Installing the SDK
 
-### Set up a Virtual Environment
+You can install the SDK using PyPI or from source. We recommend using `uv` as a package manager. Follow the installation instructions [here](https://docs.astral.sh/uv/getting-started/installation/) to install `uv`.
 
-It is good practice to install the SDK in a dedicated virtual environment. We recommend using Poetry to manage your dependencies.
+### Install within an existing project
 
-If you don't already have a poetry virtual environment, create a new one:
+If you want to install the naptha-sdk as part of an existing project (e.g. [to deploy existing agents from third-party frameworks on the Web of Agents](https://docs.naptha.ai/Integrations/Decorators)), it is good practice to do so within a dedicated virtual environment. If you don't already have a virtual environment, create a new one using `uv`:
 
 ```bash
-poetry init --python ">=3.10,<3.13"
+uv init --python ">=3.10,<3.13"
 ```
 
 Then install the SDK:
 
 ```bash
-poetry add naptha-sdk
+uv add naptha-sdk
 source .venv/bin/activate
 ```
 
-Alternatively, you can use in-built Python virtual environments:
+Alternatively, if you have an existing project that doesn't use `uv` you can also install using:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
 pip install naptha-sdk
+```
+
+### Install from source
+
+If you are a developer contributing to the Naptha SDK, you will want to install from source using:
+
+```bash
+git clone https://github.com/NapthaAI/naptha-sdk.git
+cd naptha-sdk
+uv venv
+source .venv/bin/activate
+uv pip install .
 ```
 
 ## 🔥 Creating Your Naptha Identity
@@ -85,7 +95,7 @@ Your Naptha account is your identity on the Naptha platform. It allows you to:
 - Deploy and run agents, tools, environments and other modules on Naptha Nodes (via a public/private keypair)
 - Access and interact with the Naptha Hub's features and services (via a username and password)
 
-The simplest way to create a new account is through the interactive CLI. Run the following command:
+The simplest way to create a new account is through the interactive CLI. The following command will prompt you to create an account by entering a username and password (it also automatically generates a private key and stores it in your .env file):
 
 ```bash
 naptha signup
