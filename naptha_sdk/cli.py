@@ -7,6 +7,11 @@ from rich.console import Console
 from rich.table import Table
 from rich import box
 import json
+import importlib.metadata
+import shutil
+from git import Repo
+from pathlib import Path
+from naptha_sdk.client.plugin import PluginCLI
 
 from naptha_sdk.client.hub import user_setup_flow
 from naptha_sdk.client.naptha import Naptha
@@ -22,6 +27,7 @@ from naptha_sdk.user import get_public_key, sign_consumer_id
 from naptha_sdk.utils import url_to_node, get_env_data, get_logger
 from naptha_sdk.secrets import create_secret, verify_and_reconstruct_rsa_key
 
+load_dotenv(override=True)
 logger = get_logger(__name__)
 
 async def list_nodes(naptha):
@@ -727,6 +733,17 @@ async def main():
     personas_parser.add_argument("-u", '--update', type=str, help='Metadata in "key=value" format')
     personas_parser.add_argument('-d', '--delete', action='store_true', help='Delete a persona')
 
+    # Plugin parser
+    plugin_parser = subparsers.add_parser("plugins", help="Manage plugins")
+    plugin_subparsers = plugin_parser.add_subparsers(dest="plugin_cmd", required=True)
+    add_parser = plugin_subparsers.add_parser("add", help="Add a plugin from Git repository")
+    add_parser.add_argument("-u", "--url", required=True, help="Git repository URL")
+    remove_parser = plugin_subparsers.add_parser("remove", help="Remove an installed plugin")
+    remove_parser.add_argument("-n", "--name", required=True, help="Plugin name to remove")
+    update_parser = plugin_subparsers.add_parser("update", help="Update plugins")
+    update_parser.add_argument("-n", "--name", help="Specific plugin to update (omit for all)")
+    list_parser = plugin_subparsers.add_parser("list", help="List installed plugins")
+    
     # Tool parser
     tools_parser = subparsers.add_parser("tools", help="List available tools.")
     tools_parser.add_argument('module_name', nargs='?', help='Optional tool name')
@@ -811,6 +828,7 @@ async def main():
                               const=True,
                               metavar="URL")
     publish_parser.add_argument("-s", "--subdeployments", help="Publish subdeployments", action="store_true")
+    publish_parser.add_argument("-gh", "--github", help="Publish to GitHub", action="store_true")
 
     # Add API Key Command
     deploy_secrets_parser = subparsers.add_parser("deploy-secrets", help="Add API keys or tokens.")
@@ -830,7 +848,7 @@ async def main():
         elif args.command in [
             "nodes", "agents", "orchestrators", "environments", 
             "personas", "kbs", "memories", "tools", "run", "inference", 
-            "publish", "create", "storage", "deploy-secrets"
+            "publish", "create", "storage", "deploy-secrets", "plugins"
         ]:
             if not naptha.hub.is_authenticated:
                 if not hub_username or not hub_password:
@@ -875,6 +893,18 @@ async def main():
                     module_config = _parse_metadata_args(args, "orchestrator")
                     if module_config:
                         await naptha.hub.create_module("orchestrator", module_config)
+                else:
+                    print("Invalid command.")
+                    
+            elif args.command == "plugins":
+                if args.plugin_cmd == "add":
+                    await PluginCLI.add_plugin(naptha, args.url)
+                elif args.plugin_cmd == "remove":
+                    await PluginCLI.remove_plugin(naptha, args.name)
+                elif args.plugin_cmd == "update":
+                    await PluginCLI.update_plugin(naptha, args.name)
+                elif args.plugin_cmd == "list":
+                    await PluginCLI.list_plugins(naptha) 
                 else:
                     print("Invalid command.")
             elif args.command == "environments":
@@ -986,7 +1016,7 @@ async def main():
                     file=args.file
                 )
             elif args.command == "publish":
-                await naptha.publish_modules(args.decorator, args.register, args.subdeployments)
+                await naptha.publish_modules(args.decorator, args.register, args.subdeployments, args.github)
             elif args.command == "deploy-secrets":
                 public_key = await get_server_public_key(naptha)
                 existing_secrets = await list_secrets(naptha)
