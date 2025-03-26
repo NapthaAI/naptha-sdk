@@ -332,11 +332,11 @@ async def user_setup_flow(hub_url, public_key):
                     username = input("Enter username: ")
                     existing_user = await hub.get_user_by_username(username)
                     if existing_user:
-                        print(f"Username '{username}' already exists. Please choose a different username.")
+                        logger.info(f"Username '{username}' already exists. Please choose a different username.")
                         continue
                     password = input("Enter password: ")
                     public_key, private_key_path = generate_keypair(f"{username}.pem")
-                    print(f"Signing up user: {username} with public key: {public_key}")
+                    logger.info(f"Signing up user: {username} with public key: {public_key}")
                     success, token, user_id = await hub.signup(username, password, public_key)
                     if success:
                         add_credentials_to_env(username, password, private_key_path)
@@ -352,7 +352,7 @@ async def user_setup_flow(hub_url, public_key):
                     logger.info("No public key provided. Generating new keypair...")
                     public_key, private_key_path = generate_keypair(f"{username}.pem")
 
-                print(f"Signing up user: {username} with public key: {public_key}")
+                logger.debug(f"Signing up user: {username} with public key: {public_key}")
                 success, token, user_id = await hub.signup(username, password, public_key)
                 if success:
                     if private_key_path:

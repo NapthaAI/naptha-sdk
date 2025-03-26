@@ -77,7 +77,7 @@ def sign_consumer_id(consumer_id, private_key):
 
 def get_private_key_from_pem(private_key_path: str) -> str:
     pem_path = root_path / private_key_path
-    print(f"Getting private key from {pem_path}")
+    logger.debug(f"Getting private key from {pem_path}")
     if not pem_path.exists():
         raise FileNotFoundError(f"User private key file not found at {pem_path}")
     with open(pem_path, "r") as f:

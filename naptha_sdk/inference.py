@@ -40,7 +40,7 @@ class InferenceClient:
                     json=inference_input.model_dump(),
                     headers=headers
                 )
-                print("Response: ", response.text)
+                logger.info("Response: ", response.text)
                 response.raise_for_status()
                 return ModelResponse(**json.loads(response.text))
         except HTTPStatusError as e:
@@ -51,7 +51,7 @@ class InferenceClient:
             logger.error(error_msg)
             raise
         except Exception as e:
-            print(f"An unexpected error occurred: {e}")
+            logger.error(f"An unexpected error occurred: {e}")
             raise
 
     async def list_models(self, return_wildcard_routes: bool = False) -> Dict:

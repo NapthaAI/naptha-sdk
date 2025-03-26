@@ -5,7 +5,9 @@ from naptha_sdk.client.hub import list_nodes
 from naptha_sdk.client.node import UserClient
 from naptha_sdk.module_manager import load_persona
 from naptha_sdk.schemas import AgentDeployment, EnvironmentDeployment, LLMConfig, OrchestratorDeployment, ToolDeployment, KBDeployment, KBConfig, MemoryDeployment, MemoryConfig, AgentConfig, EnvironmentConfig, ToolConfig, OrchestratorConfig, NodeConfig
-from naptha_sdk.utils import url_to_node
+from naptha_sdk.utils import url_to_node, get_logger
+
+logger = get_logger(__name__)
 
 def load_llm_configs(llm_configs_path):
     with open(llm_configs_path, "r") as file:
@@ -18,13 +20,13 @@ async def load_node_metadata(deployment, node_url, is_subdeployment):
         if node_url is None:
             raise Exception("Node URL is required. Please make sure you've added NODE_URL=<node_url> to your .env file.")
 
-    print(f"Loading node metadata for {deployment['node']['ip']}")
+    logger.debug(f"Loading node metadata for {deployment['node']['ip']}")
     if not is_subdeployment or deployment["node"]["ip"] == "localhost":
         deployment["node"] = url_to_node(node_url)
     else:
         deployment["node"] = await list_nodes(deployment["node"]["ip"])
         deployment["node"] = NodeConfig(**deployment["node"])
-    print(f"Node metadata loaded {deployment['node']}")
+    logger.info(f"Node metadata loaded {deployment['node']}")
     return deployment
 
 async def check_register_user(deployment, user_id=None):
@@ -32,11 +34,11 @@ async def check_register_user(deployment, user_id=None):
     user = await node.check_user(user_input={"public_key": user_id.split(":")[-1]})
 
     if user['is_registered'] == True:
-        print("Found user...", user)
+        logger.info("Found user...", user)
     else:
-        print("No user found. Registering user...")
+        logger.info("No user found. Registering user...")
         user = await node.register_user(user_input=user)
-        print(f"User registered: {user}.")
+        logger.info(f"User registered: {user}.")
 
 async def load_module_config_data(module_type, deployment, load_persona_data=False):
 
@@ -103,7 +105,7 @@ async def load_subdeployments(deployment, node_url=None, user_id=None):
             memory_deployment = await setup_module_deployment("memory", configs_path / "memory_deployments.json", node_url, user_id, deployment_name, is_subdeployment=True)
             memory_deployments.append(memory_deployment)
         deployment["memory_deployments"] = memory_deployments
-    print(f"Subdeployments loaded {deployment}")
+    logger.info(f"Subdeployments loaded {deployment}")
     return deployment
 
 async def setup_module_deployment(module_type: str, deployment_path: str, node_url: str = None, user_id: str = None, deployment_name: str = None, load_persona_data=False, is_subdeployment: bool = False):
