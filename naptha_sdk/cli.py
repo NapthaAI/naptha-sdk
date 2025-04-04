@@ -372,6 +372,8 @@ async def run(
         print(f"Agent run input: {agent_run_input}")
 
         agent_run = await naptha.node.run_agent_and_poll(agent_run_input, secrets=secrets)
+        if agent_run.status == 'error':
+            raise Exception(f"error {module_type} {module_name.split(':')[-1]} Error in _run_module_async: {agent_run.error_message}")
 
     elif module_type == "tool":
         print("Running Tool...")
@@ -388,6 +390,8 @@ async def run(
             signature=sign_consumer_id(user['id'], os.getenv("PRIVATE_KEY"))
         )
         tool_run = await naptha.node.run_tool_and_poll(tool_run_input, secrets=secrets)
+        if tool_run.status == 'error':
+            raise Exception(f"error {module_type} {module_name.split(':')[-1]} Error in _run_module_async: {tool_run.error_message}")
 
     elif module_type == "orchestrator":
         print("Running Orchestrator...")
@@ -409,6 +413,9 @@ async def run(
             signature=sign_consumer_id(user['id'], os.getenv("PRIVATE_KEY"))
         )
         orchestrator_run = await naptha.node.run_orchestrator_and_poll(orchestrator_run_input, secrets=secrets)
+        print(f"DEBUG: Status after completion: {orchestrator_run.status}")
+        if orchestrator_run.status == 'error':
+            raise Exception(f"error {module_type} {module_name.split(':')[-1]} Error in _run_module_async: {orchestrator_run.error_message}")
 
     elif module_type == "environment":
         print("Running Environment...")
@@ -426,6 +433,8 @@ async def run(
             signature=sign_consumer_id(user['id'], os.getenv("PRIVATE_KEY"))
         )
         environment_run = await naptha.node.run_environment_and_poll(environment_run_input, secrets=secrets)
+        if environment_run.status == 'error':
+            raise Exception(f"error {module_type} {module_name.split(':')[-1]} Error in _run_module_async: {environment_run.error_message}")
 
     elif module_type == "kb":
         print("Running Knowledge Base...")
@@ -443,6 +452,8 @@ async def run(
             signature=sign_consumer_id(user['id'], os.getenv("PRIVATE_KEY"))
         )
         kb_run = await naptha.node.run_kb_and_poll(kb_run_input, secrets=secrets)
+        if kb_run.status == 'error':
+            raise Exception(f"error {module_type} {module_name.split(':')[-1]} Error in _run_module_async: {kb_run.error_message}")
     elif module_type == "memory":
         print("Running Memory Module...")
 
@@ -458,9 +469,12 @@ async def run(
             deployment=memory_deployment,
             signature=sign_consumer_id(user['id'], os.getenv("PRIVATE_KEY"))
         )
-        memory_run = await naptha.node.run_memory_and_poll(memory_run_input, secrets=secrets)     
+        memory_run = await naptha.node.run_memory_and_poll(memory_run_input, secrets=secrets)
+        if memory_run.status == 'error':
+            raise Exception(f"error {module_type} {module_name.split(':')[-1]} Error in _run_module_async: {memory_run.error_message}")
     else:
         print(f"Module type {module_type} not supported.")
+        raise Exception(f"Module type {module_type} not supported.")
 
 async def storage_interaction(naptha, storage_type, operation, path, data=None, schema=None, options=None, file=None):
     """Handle storage interactions using StorageClient"""
@@ -1030,8 +1044,10 @@ def cli():
         print("\nOperation cancelled by user")
         sys.exit(1)
     except Exception as e:
-        print(f"Error: {str(e)}")
-        print(f"Full traceback: {traceback.format_exc()}")
+        error_message = str(e)
+        print(error_message)
+        if "Full traceback" not in error_message:  # Only print traceback if not already in the error message
+            print(f"Full traceback: {traceback.format_exc()}")
         sys.exit(1)
 
 if __name__ == "__main__":
