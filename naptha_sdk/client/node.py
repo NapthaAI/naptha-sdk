@@ -267,7 +267,7 @@ class UserClient:
             module_request: Either AgentDeployment, EnvironmentDeployment, OrchestratorDeployment, ToolDeployment, KBDeployment or MemoryDeployment
         """
 
-        print(f"Creating {module_type}...")
+        logger.info(f"Creating {module_type}...")
 
         endpoint = f"{self.node_url}/{module_type}/create"
         try:
@@ -293,7 +293,7 @@ class UserClient:
             logger.error(error_msg)
             raise
         except Exception as e:
-            print(f"An unexpected error occurred: {e}")
+            logger.error(f"An unexpected error occurred: {e}")
             raise
 
     async def _run_and_poll(self, run_input: Union[AgentRunInput, EnvironmentRunInput, OrchestratorRunInput, KBRunInput, ToolRunInput, Dict], module_type: str, secrets: List[SecretInput] = []) -> Union[AgentRun, EnvironmentRun, OrchestratorRun, KBRun, ToolRun, Dict]:
@@ -303,24 +303,24 @@ class UserClient:
             run_input: Either AgentRunInput, OrchestratorRunInput, EnvironmentRunInput, KBRunInput, ToolRunInput or Dict
             module_type: Either 'agent', 'orchestrator', 'environment', 'tool' or 'kb'
         """
-        print(f"Run input: {run_input}")
-        print(f"Module type: {module_type}")
+        logger.info(f"Run input: {run_input}")
+        logger.info(f"Module type: {module_type}")
         # Start the run
         run = await getattr(self, f'run_{module_type}')(run_input, secrets)
-        print(f"{module_type.title()} run started: {run}")
+        logger.info(f"{module_type.title()} run started: {run}")
 
         current_results_len = 0
         while True:
             run = await getattr(self, f'check_{module_type}_run')(run)
 
             output = f"{run.status} {getattr(run, f'deployment').module['module_type']} {getattr(run, f'deployment').module['name']}"
-            print(output)
+            logger.info(output)
 
             results = run.results
             status = run.status
 
             if len(results) > current_results_len:
-                print("Output: ", results[-1])
+                logger.info("Output: ", results[-1])
                 current_results_len += 1
 
             if status in ['completed', 'error']:
@@ -329,10 +329,10 @@ class UserClient:
             time.sleep(3)
 
         if status == 'completed':
-            print(results)
+            logger.info(results)
         else:
             error_msg = run.error_message
-            print(error_msg)
+            logger.error(error_msg)
         return run
 
     async def run_agent_and_poll(self, agent_run_input: AgentRunInput, secrets: List[SecretInput] = []) -> AgentRun:
@@ -423,9 +423,9 @@ class UserClient:
             run_input: Either AgentRunInput, OrchestratorRunInput, EnvironmentRunInput, or ToolRunInput
             module_type: Either 'agent', 'orchestrator', 'environment', or 'tool'
         """
-        print(f"Running {module_type}...")
-        print(f"Run input: {run_input}")
-        print(f"Node URL: {self.node_url}")
+        logger.info(f"Running {module_type}...")
+        logger.info(f"Run input: {run_input}")
+        logger.info(f"Node URL: {self.node_url}")
 
         endpoint = f"{self.node_url}/{module_type}/run"
         
@@ -483,7 +483,7 @@ class UserClient:
             logger.error(error_msg)
             raise
         except Exception as e:
-            print(f"An unexpected error occurred: {e}")
+            logger.error(f"An unexpected error occurred: {e}")
             raise
 
     async def run_agent(self, agent_run_input: AgentRunInput, secrets: List[SecretInput] = []) -> AgentRun:

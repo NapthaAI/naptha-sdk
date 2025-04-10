@@ -7,6 +7,9 @@ import sys
 import typing
 from typing import TypeVar
 import yaml
+from naptha_sdk.utils import get_logger
+
+logger = get_logger(__name__)
 
 def is_local_module(module):
     if not hasattr(module, '__file__'):
@@ -74,14 +77,14 @@ def get_obj_dependencies(context_globals, fn_code, processed=None):
     variables = []
     for name, obj in context_globals.items():
         if name in fn_code and obj not in processed:
-            print("name", name, "obj", obj, type(obj), type(obj).__name__)
+            logger.debug(f"name: {name}, obj: {obj}, type: {type(obj)}, type name: {type(obj).__name__}")
             if name.startswith("__"):
                 continue
 
             processed.add(obj)  # Add the current object to the set of processed objects
 
             if "Union" in type(obj).__name__:
-                print("Union", obj.__args__)
+                logger.debug(f"Union: {obj.__args__}")
                 args_str = ', '.join(arg.__name__ if hasattr(arg, '__name__') else str(arg) for arg in obj.__args__)
                 variables.append({"type": "union", "target": name, "value": f"Union[{args_str}]"})
                 for arg in obj.__args__:

@@ -6,11 +6,17 @@ from dotenv import dotenv_values
 
 logger = logging.getLogger(__name__)
 
+logger_mapping = {
+    "debug": logging.DEBUG,
+    "info": logging.INFO,
+    "warning": logging.WARNING,
+    "error": logging.ERROR,
+    "critical": logging.CRITICAL
+}
+
 def get_logger(name):
     logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
     handler = logging.StreamHandler()
-    handler.setLevel(logging.DEBUG)
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
@@ -57,7 +63,7 @@ def add_credentials_to_env(username, password, private_key_path):
     with open(env_file_path, 'w') as env_file:
         env_file.writelines(updated_lines)
 
-    print("Your credentials have been updated in the .env file. You can now use these credentials to authenticate in future sessions.")
+    logger.debug("Your credentials have been updated in the .env file. You can now use these credentials to authenticate in future sessions.")
 
 def write_private_key_to_file(private_key, username):
     private_key_file_path = os.path.join(os.getcwd(), f'{username}.pem')
@@ -85,7 +91,7 @@ def update_private_key_in_env(private_key_path):
     with open(env_file_path, 'w') as env_file:
         env_file.writelines(updated_lines)
 
-    print("Your private key have been updated in the .env file")
+    logger.debug("Your private key have been updated in the .env file")
 
 class AsyncMixin:
     def __init__(self, *args, **kwargs):
@@ -141,7 +147,7 @@ def get_env_data():
         "HUB_PASSWORD",
         "NODE_URL",
         "ROUTING_URL",
-        "INDIRECT_NODE_ID"
+        "INDIRECT_NODE_ID",
     ]
     env_varibles = dotenv_values(os.path.join(os.getcwd(), ".env"))
 

@@ -191,7 +191,7 @@ class InputSchema(BaseModel):
 '''
 
     for name, info in params.items():
-        print("INFO", name, info)
+        logger.debug(f"schema params: {name}, {info}")
         if info['value'] is None:
             if 'List' in str(info['type']):
                 schema_code += f'    {name}: list\n'
@@ -263,7 +263,7 @@ def zip_dir(directory_path: str) -> None:
             for file in files:
                 file_path = os.path.join(root, file)
                 zip_file.write(file_path, os.path.relpath(file_path, directory_path))
-    print(f"Zipped directory '{directory_path}' to '{output_zip_file}'")
+    logger.info(f"Zipped directory '{directory_path}' to '{output_zip_file}'")
     return output_zip_file
 
 async def write_to_ipfs(file_path):

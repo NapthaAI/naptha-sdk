@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import logging
 from dotenv import load_dotenv
 import os
 import shlex
@@ -19,7 +20,7 @@ from naptha_sdk.storage.schemas import (
     ReadStorageRequest, UpdateStorageRequest, SearchStorageRequest, StorageType
 )
 from naptha_sdk.user import get_public_key, sign_consumer_id
-from naptha_sdk.utils import url_to_node, get_env_data, get_logger
+from naptha_sdk.utils import url_to_node, get_env_data, get_logger, logger_mapping
 from naptha_sdk.secrets import create_secret, verify_and_reconstruct_rsa_key
 
 logger = get_logger(__name__)
@@ -155,7 +156,7 @@ async def list_modules(naptha, module_type=None, module_name=None):
 
 async def list_servers(naptha):
     servers = await naptha.hub.list_servers()
-    print(servers)
+    logger.debug(servers)
     if not servers:
         console = Console()
         console.print("[red]No servers found.[/red]")
@@ -214,11 +215,11 @@ async def create(
     user = await naptha.node.check_user(user_input={"public_key": naptha.hub.public_key})
 
     if user['is_registered']:
-        print("Found user...", user)
+        logger.info("Found user...", user)
     else:
-        print("No user found. Registering user...")
+        logger.info("No user found. Registering user...")
         user = await naptha.node.register_user(user_input=user)
-        print(f"User registered: {user}.")
+        logger.info(f"User registered: {user}.")
 
     # Create auxiliary deployments if needed
     aux_deployments = {
@@ -300,7 +301,7 @@ async def create(
 
     deployment = deployment_configs[module_type]()
     result = await naptha.node.create(module_type, deployment)
-    print(f"{module_type.title()} creation result: {result}")
+    logger.info(f"{module_type.title()} creation result: {result}")
 
 
 async def run(
@@ -321,11 +322,11 @@ async def run(
     user = await naptha.node.check_user(user_input={"public_key": naptha.hub.public_key})
 
     if user['is_registered'] == True:
-        print("Found user...", user)
+        logger.info("Found user...", user)
     else:
-        print("No user found. Registering user...")
+        logger.info("No user found. Registering user...")
         user = await naptha.node.register_user(user_input=user)
-        print(f"User registered: {user}.")
+        logger.info(f"User registered: {user}.")
 
     # Handle sub-deployments
     agent_deployments = []
@@ -351,7 +352,7 @@ async def run(
 
 
     if module_type == "agent":
-        print("Running Agent...")
+        logger.info("Running Agent...")
 
         agent_deployment = AgentDeployment(
             module={"id": module_name, "name": module_name.split(":")[-1], "module_type": module_type}, 
@@ -369,12 +370,12 @@ async def run(
             "deployment": agent_deployment.model_dump(),
             "signature": sign_consumer_id(user['id'], os.getenv("PRIVATE_KEY"))
         }
-        print(f"Agent run input: {agent_run_input}")
+        logger.debug(f"Agent run input: {agent_run_input}")
 
         agent_run = await naptha.node.run_agent_and_poll(agent_run_input, secrets=secrets)
 
     elif module_type == "tool":
-        print("Running Tool...")
+        logger.info("Running Tool...")
         tool_deployment = ToolDeployment(
             module={"id": module_name, "name": module_name.split(":")[-1], "module_type": module_type},
             node=url_to_node(os.getenv("NODE_URL")),
@@ -390,7 +391,7 @@ async def run(
         tool_run = await naptha.node.run_tool_and_poll(tool_run_input, secrets=secrets)
 
     elif module_type == "orchestrator":
-        print("Running Orchestrator...")
+        logger.info("Running Orchestrator...")
 
         orchestrator_deployment = OrchestratorDeployment(
             module={"id": module_name, "name": module_name.split(":")[-1], "module_type": module_type}, 
@@ -411,7 +412,7 @@ async def run(
         orchestrator_run = await naptha.node.run_orchestrator_and_poll(orchestrator_run_input, secrets=secrets)
 
     elif module_type == "environment":
-        print("Running Environment...")
+        logger.info("Running Environment...")
 
         environment_deployment = EnvironmentDeployment(
             module={"id": module_name, "name": module_name.split(":")[-1], "module_type": module_type}, 
@@ -428,7 +429,7 @@ async def run(
         environment_run = await naptha.node.run_environment_and_poll(environment_run_input, secrets=secrets)
 
     elif module_type == "kb":
-        print("Running Knowledge Base...")
+        logger.info("Running Knowledge Base...")
 
         kb_deployment = KBDeployment(
             module={"id": module_name, "name": module_name.split(":")[-1], "module_type": module_type}, 
@@ -444,7 +445,7 @@ async def run(
         )
         kb_run = await naptha.node.run_kb_and_poll(kb_run_input, secrets=secrets)
     elif module_type == "memory":
-        print("Running Memory Module...")
+        logger.info("Running Memory Module...")
 
         memory_deployment = MemoryDeployment(
             module={"id": module_name, "name": module_name.split(":")[-1], "module_type": module_type}, 
@@ -460,12 +461,12 @@ async def run(
         )
         memory_run = await naptha.node.run_memory_and_poll(memory_run_input, secrets=secrets)     
     else:
-        print(f"Module type {module_type} not supported.")
+        logger.error(f"Module type {module_type} not supported.")
 
 async def storage_interaction(naptha, storage_type, operation, path, data=None, schema=None, options=None, file=None):
     """Handle storage interactions using StorageClient"""
     storage_client = StorageClient(naptha.node.node)
-    print(f"Storage interaction: {storage_type}, {operation}, {path}, {data}, {schema}, {options}, {file}")
+    logger.debug(f"Storage interaction: {storage_type}, {operation}, {path}, {data}, {schema}, {options}, {file}")
 
     try:
         # Convert string storage type to enum
@@ -482,7 +483,7 @@ async def storage_interaction(naptha, storage_type, operation, path, data=None, 
                         options=json.loads(options) if options else {}
                     )
                     result = await storage_client.execute(request)
-                    print(f"Create {storage_type} result: {result}")
+                    logger.info(f"Create {storage_type} result: {result}")
                     return result
                     
             elif operation == "read":
@@ -492,7 +493,7 @@ async def storage_interaction(naptha, storage_type, operation, path, data=None, 
                     options=json.loads(options) if options else {}
                 )
                 result = await storage_client.execute(request)
-                print(f"Read {storage_type} result: {result}")
+                logger.info(f"Read {storage_type} result: {result}")
                 # Handle downloaded file
                 if isinstance(result.data, bytes):
                     output_dir = "./downloads"
@@ -500,7 +501,7 @@ async def storage_interaction(naptha, storage_type, operation, path, data=None, 
                     output_path = os.path.join(output_dir, os.path.basename(path))
                     with open(output_path, 'wb') as f:
                         f.write(result.data)
-                    print(f"File downloaded to: {output_path}")
+                    logger.info(f"File downloaded to: {output_path}")
                 return result
 
         # Handle database and other operations
@@ -563,11 +564,11 @@ async def storage_interaction(naptha, storage_type, operation, path, data=None, 
                 )
 
         result = await storage_client.execute(request)
-        print(f"{operation} {storage_type} result: {result}")
+        logger.info(f"{operation} {storage_type} result: {result}")
         return result
 
     except Exception as e:
-        print(f"Storage operation failed: {str(e)}")
+        logger.error(f"Storage operation failed: {str(e)}")
         raise
 
 def _parse_list_arg(args, arg_name, default=None, split_char=','):
@@ -614,10 +615,10 @@ def _parse_str_args(args):
     # Parse parameters and config using the same function
     if hasattr(args, 'parameters') and args.parameters:
         args.parameters = _parse_json_or_str_arg(args.parameters)
-        print("Parsed parameters:", args.parameters)
+        logger.debug("Parsed parameters:", args.parameters)
     if hasattr(args, 'config') and args.config:
         args.config = _parse_json_or_str_arg(args.config)
-        print("Parsed config:", args.config)
+        logger.debug("Parsed config:", args.config)
         
     return args
 
@@ -657,7 +658,7 @@ def _parse_metadata_args(args, module_type):
         required_metadata = ['description', 'parameters', 'module_url']
         missing_metadata = [param for param in required_metadata if param not in parsed_params]
         if missing_metadata:
-            print(f"Missing required metadata: {', '.join(missing_metadata)}")
+            logger.error(f"Missing required metadata: {', '.join(missing_metadata)}")
             return None
         
         module_config = {
@@ -693,6 +694,12 @@ async def main():
     naptha = Naptha()
 
     parser = argparse.ArgumentParser(description="CLI with for Naptha")
+    parser.add_argument(
+        "-l", "--log-level", 
+        default="info",
+        help="Set log level, default is INFO, choose from: debug, info, warning, error, critical",
+        type=str,
+    )
     subparsers = parser.add_subparsers(title="commands", dest="command")
 
     # Node parser
@@ -825,6 +832,11 @@ async def main():
         args = parser.parse_args()
         args = _parse_str_args(args)
         args.public_key = naptha.hub.public_key
+        
+        logging.basicConfig()
+        for logger_name in logging.root.manager.loggerDict:
+            if logger_name.startswith("naptha_sdk"):
+                logging.getLogger(logger_name).setLevel(logger_mapping[args.log_level])
         if args.command == "signup":
             _, _ = await user_setup_flow(hub_url, public_key)
         elif args.command in [
@@ -834,12 +846,12 @@ async def main():
         ]:
             if not naptha.hub.is_authenticated:
                 if not hub_username or not hub_password:
-                    print(
+                    logger.error(
                         "Please set HUB_USERNAME and HUB_PASSWORD environment variables or sign up first (run naptha signup).")
                     return
                 success, _, _ = await naptha.hub.signin(hub_username, hub_password)
                 if not success:
-                    print("Authentication failed. Please check your username and password.")
+                    logger.error("Authentication failed. Please check your username and password.")
                     return
 
             if args.command == "nodes":
@@ -861,7 +873,7 @@ async def main():
                     if module_config:
                         await naptha.hub.create_module("agent", module_config)
                 else:
-                    print("Invalid command.")
+                    logger.error("Invalid command.")
             elif args.command == "orchestrators":
                 if not args.module_name:
                     await list_modules(naptha, module_type='orchestrator')
@@ -876,7 +888,7 @@ async def main():
                     if module_config:
                         await naptha.hub.create_module("orchestrator", module_config)
                 else:
-                    print("Invalid command.")
+                    logger.error("Invalid command.")
             elif args.command == "environments":
                 if not args.module_name:
                     await list_modules(naptha, module_type='environment')
@@ -891,7 +903,7 @@ async def main():
                     if module_config:
                         await naptha.hub.create_module("environment", module_config)
                 else:
-                    print("Invalid command.")
+                    logger.error("Invalid command.")
             elif args.command == "tools":
                 if not args.module_name:
                     await list_modules(naptha, module_type='tool')
@@ -906,7 +918,7 @@ async def main():
                     if module_config:
                         await naptha.hub.create_module("tool", module_config)
                 else:
-                    print("Invalid command.")
+                    logger.error("Invalid command.")
             elif args.command == "personas":
                 if not args.module_name:
                     await list_modules(naptha, module_type='persona')
@@ -921,7 +933,7 @@ async def main():
                     if module_config:
                         await naptha.hub.create_module("persona", module_config)
                 else:
-                    print("Invalid command.")
+                    logger.error("Invalid command.")
             elif args.command == "memories":
                 if not args.module_name:
                     await list_modules(naptha, module_type='memory')
@@ -967,7 +979,7 @@ async def main():
             elif args.command == "inference":
                 if args.inference_command == "models":
                     response = await naptha.inference_client.list_models()
-                    print("Response: ", response)
+                    logger.debug("Response: ", response)
                 else:
                     request = ChatCompletionRequest(
                         messages=[{"role": "user", "content": args.prompt}],
@@ -1027,11 +1039,11 @@ def cli():
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\nOperation cancelled by user")
+        logger.info("\nOperation cancelled by user")
         sys.exit(1)
     except Exception as e:
-        print(f"Error: {str(e)}")
-        print(f"Full traceback: {traceback.format_exc()}")
+        logger.error(f"Error: {str(e)}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
         sys.exit(1)
 
 if __name__ == "__main__":
